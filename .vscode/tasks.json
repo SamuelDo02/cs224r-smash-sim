@@ -13,7 +13,7 @@
         "--filter",
         ":- .gitignore",
         "-e",
-        "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/science.ed25519 -p 8822",
+        "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null",
         ".",
         "notebook_eric_llms:/opt/projects/hal2/"
       ],
