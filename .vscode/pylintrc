@@ -1,0 +1,147 @@
+[MASTER]
+
+ignore-patterns=.*\.sync\.py,.*\_test\.py,test_.*\.py
+jobs=0 # auto-detect the number of processors available to use.
+persistent=yes
+limit-inference-results=100
+
+# maybe useful (https://pylint.pycqa.org/en/latest/technical_reference/extensions.html)
+load-plugins=research.ratchets.ratchet_pylint
+
+# attempt to correct misconfiguration
+suggestion-mode=yes
+
+unsafe-load-any-extension=no
+extension-pkg-whitelist=pydantic
+
+[MESSAGES CONTROL]
+
+# Only show warnings with the listed confidence levels. Leave empty to show
+# all. Valid levels: HIGH, INFERENCE, INFERENCE_FAILURE, UNDEFINED.
+confidence=
+
+# Refer to https://docs.pylint.org/en/1.6.0/features.html#pylint-checkers-options-and-switches
+# TODO: Current approach is to "not disable" what we want to enable – may be a better way of doing things.
+disable=
+    # Groups (pylint --list-groups)
+    # See https://pylint.pycqa.org/en/latest/technical_reference/features.html
+        # async,
+        # basic,
+            missing-class-docstring,
+            missing-function-docstring,
+            missing-module-docstring,
+            unnecessary-lambda-assignment,
+            broad-exception-caught,
+        # classes,
+        design,
+        # exceptions,
+        format,
+        imports,
+        logging,
+        metrics,
+        # miscellaneous,
+            use-symbolic-message-instead,
+        # newstyle,
+        # refactoring,
+        similarities, # maybe useful
+        spelling,     # maybe useful
+        stdlib,
+        string,
+        # threading,
+        # typecheck,
+          not-an-iterable,
+          no-member,  # doesn't understand self types well (i.e. mutable_clone())
+          unsubscriptable-object, # https://github.com/PyCQA/pylint/issues/3488
+          unpacking-non-sequence, # just another place where it falls down
+          assignment-from-no-return, # bad with stubs
+        unsupported_version,
+        # variables,    # maybe useful for is_* bool checks, etc
+          global-statement,
+        # Defaults disabled not appearing in reference
+            raw-checker-failed,
+            bad-inline-option,
+            locally-disabled,
+            file-ignored,
+            suppressed-message,
+            useless-suppression,
+            deprecated-pragma,
+
+enable=c-extension-no-member
+
+
+[REPORTS]
+output-format=msvs # text, parseable, colorized, json
+reports=no
+score=no
+
+
+# TODO might be nice but need to be able to add-to-dictionary _very_ easily
+[SPELLING]
+
+# Limits count of emitted suggestions for spelling mistakes.
+max-spelling-suggestions=4
+
+# Spelling dictionary name. Available dictionaries: none. To make it work,
+# install the 'python-enchant' package.
+spelling-dict=
+
+# List of comma separated words that should be considered directives if they
+# appear and the beginning of a comment and should not be checked.
+spelling-ignore-comment-directives=fmt: on,fmt: off,noqa:,noqa,nosec,isort:skip,mypy:
+
+# List of comma separated words that should not be checked.
+spelling-ignore-words=
+
+# A path to a file that contains the private dictionary; one word per line.
+spelling-private-dict-file=
+
+# Tells whether to store unknown words to the private dictionary (see the
+# --spelling-private-dict-file option) instead of raising a message.
+spelling-store-unknown-words=no
+
+
+[BASIC]
+class-const-naming-style=UPPER_CASE
+const-naming-style=UPPER_CASE
+class-naming-style=PascalCase
+class-attribute-naming-style=any
+argument-naming-style=snake_case
+attr-naming-style=snake_case
+function-naming-style=snake_case
+method-naming-style=snake_case
+module-naming-style=snake_case
+
+variable-rgx=[a-z0-9_]{1,50}$ # more permissive snake case
+const-rgx=[A-Z_][A-Z0-9_]{2,50}$
+
+good-names=T,T_cov,T_contra,db
+
+include-naming-hint=no
+inlinevar-naming-style=any
+property-classes=abc.abstractproperty
+
+
+[CLASSES]
+check-protected-access-in-special-methods=no
+
+defining-attr-methods=__init__,
+                      __new__,
+                      setUp,
+                      __post_init__
+
+exclude-protected=_asdict,
+                  _fields,
+                  _replace,
+                  _source,
+                  _make
+
+valid-classmethod-first-arg=cls
+valid-metaclass-classmethod-first-arg=cls
+
+
+[EXCEPTIONS]
+
+overgeneral-exceptions=BaseException,Exception
+
+[TYPECHECK]
+generated-members=numpy.*, torch.*

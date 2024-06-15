@@ -1,0 +1,107 @@
+{
+  // See: [VS Code setup notes](/docs/VSCODE.md)
+  "python.defaultInterpreterPath": ".env/bin/python",
+  "python.analysis.extraPaths": [
+    "science",
+    "computronium",
+    "imbutils",
+    "automaton",
+    "carbs",
+    "standalone",
+    "formatters/pyfixfmt"
+  ],
+  "jupyter.jupyterServerType": "remote",
+  //
+  // PYTHONPATH settings
+  //
+  // This file is .gitignored, but it would be nice to say what belongs in here.
+  "python.envFile": "${workspaceFolder}/.vscode/env",
+  //
+  // Analysis & Linting (mypy, pylint, pylance)
+  //
+  "python.languageServer": "Pylance",
+  "python.analysis.autoImportCompletions": true,
+  // Pyright Type Checking, disabled by default. See /docs/VSCODE.md section for more info
+  "python.analysis.typeCheckingMode": "off",
+  "pylint.args": [
+    "--rcfile=${workspaceFolder}/.vscode/pylintrc"
+  ],
+  "mypy-type-checker.preferDaemon": false,
+  "mypy-type-checker.args": [
+    "--config-file=mypy.ini"
+  ],
+  //
+  // File sync to notebook
+  //
+  "triggerTaskOnSave.tasks": {
+    "rsync.toNotebook": [
+      "*"
+    ]
+  },
+  //
+  // Formatting
+  //
+  "editor.formatOnSave": true,
+  // *.ipynb notebook formatting removes imports not used by the first cell, which is all of them, which is very annoying.
+  "notebook.formatOnSave.enabled": false,
+  "python.formatting.provider": "none",
+  "python.formatting.blackArgs": [],
+  "black-formatter.importStrategy": "fromEnvironment",
+  // TODO(mjr): Check if this will use the default env if just python or if the script can be used
+  "black-formatter.path": [
+    ".vscode/pyfixfmt_as_black.py"
+  ],
+  "black-formatter.args": [
+    "--config=pyproject.toml"
+  ],
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.formatOnSave": true,
+    // prevents black from complaining about lack of range formatting
+    "editor.formatOnPaste": false,
+    "editor.tabSize": 4
+  },
+  "files.exclude": {
+    "**/.vscode": false,
+    "standalone/avalon": true,
+    // secrets and secret access control
+    "public_keys": true,
+    "**/.gitsecret": true,
+    // python env and generated files
+    ".env": true,
+    "**/.mypy_cache": true,
+    "**/.pytest_cache": true,
+    // git and other misc dotfiles
+    "**/.git": true,
+    "**/.DS_Store": true,
+    "**/.import": true,
+    "**/.jetbrains": true,
+    "**/.idea": true
+  },
+  //
+  // Pytest
+  //
+  // TODO(mjr): Rather thna try and invert the notebook/local relationship via Remote SSH ATM,
+  // maybe we could try some of the following:
+  // 1. Fixup/patch local discovery so it can find and run what _can_ be run locally without exploding
+  // 2. Shoehorn an SSH intermedary into the local discovery process (
+  //       I tried hacking a script to effectively `ssh pytest` but seemed jank
+  //    )
+  // 3. Figure out how to run python commands against a forwarded jupyter python executable
+  //
+  // Run pytest directly from VS Code
+  "python.testing.pytestPath": ".env/bin/pytest",
+  "python.testing.pytestArgs": [
+    // Some parts of our codebase seem to freeze up VS Code's pytest discovery, so excluding most of it.
+    // Just some examples:
+    "standalone/llms/llms/coding_questions/nix_pytest",
+    "standalone/llms/llms/agent_common/code_utils",
+    "-s",
+    "-vv"
+  ],
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestEnabled": true,
+  "jupyter.kernels.excludePythonEnvironments": [
+    ".env/bin/python"
+  ]
+}

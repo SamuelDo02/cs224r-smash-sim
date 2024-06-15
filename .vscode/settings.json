@@ -1,0 +1,78 @@
+{
+  "python.defaultInterpreterPath": ".venv/bin/python",
+  "python.analysis.extraPaths": [
+    "science",
+    "computronium",
+    "automaton",
+    "carbs",
+    "standalone",
+    // "standalone/avalon",
+    "formatters/pyfixfmt"
+  ],
+  "jupyter.jupyterServerType": "remote",
+  //
+  // PYTHONPATH settings
+  //
+  "python.envFile": "${workspaceFolder}/.vscode/env",
+  // 
+  // Analysis & Linting (mypy, pylint, pylance)
+  //
+  "python.languageServer": "Pylance",
+  "python.analysis.autoImportCompletions": true,
+  "python.analysis.typeCheckingMode": "basic",
+  "python.linting.enabled": true,
+  "python.linting.mypyEnabled": true,
+  "python.linting.mypyArgs": [
+    "--cache-fine-grained",
+    "--no-pretty",
+    "--show-column-numbers",
+    "--show-error-codes",
+    "--config-file=standalone/research/mypy.ini",
+    "--disallow-untyped-defs"
+  ],
+  "python.linting.pylintEnabled": true,
+  "python.linting.pylintArgs": [
+    "--rcfile=${workspaceFolder}/.vscode/pylintrc"
+  ],
+  "triggerTaskOnSave.tasks": {
+    "rsync.syncToController": [
+      "*"
+    ],
+    "datagen.generateGodotCode": [
+      "*.gd"
+    ]
+  },
+  // 
+  // Formatting
+  //
+  "editor.formatOnSave": true,
+  "python.formatting.provider": "none",
+  "python.formatting.blackArgs": [],
+  "black-formatter.importStrategy": "fromEnvironment",
+  "black-formatter.path": [
+    ".venv/bin/python",
+    ".vscode/pyfixfmt_as_black.py"
+  ],
+  "black-formatter.args": [
+    "--config=pyproject.toml"
+  ],
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.formatOnSave": true,
+    // prevents black from complaining
+    "editor.formatOnPaste": false,
+    "editor.tabSize": 4
+  },
+  "files.exclude": {
+    "**/.gitsecret": true,
+    "**/.vscode": false,
+    "**/.git": true,
+    "**/CVS": true,
+    "**/.DS_Store": true,
+    ".env": true,
+    "public_keys": true
+  },
+  "jupyter.kernels.excludePythonEnvironments": [
+    ".env/bin/python"
+  ]
+}

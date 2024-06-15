@@ -1,0 +1,18 @@
+{
+  "recommendations": [
+    // Includes Pylance, Debugger
+    "ms-python.python",
+    "ms-toolsai.jupyter",
+    // Copilot
+    "GitHub.copilot",
+    // Used to trigger rsync.toNotebook
+    "Gruntfuggly.triggertaskonsave",
+    // We adapt pyfixfmt to this API in .vscode/pyfixfmt_as_black.py
+    "ms-python.black-formatter",
+    // Configured in .vscode/pylintrc
+    "ms-python.pylint",
+    "ms-python.mypy-type-checker",
+    "timonwong.shellcheck",
+    // - vscodevim.vim (https://marketplace.visualstudio.com/items?itemName=vscodevim.vim)
+  ]
+}
