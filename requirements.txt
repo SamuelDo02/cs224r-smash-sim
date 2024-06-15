@@ -1,8 +1,6 @@
-attrs
-black
-isort
 melee @ git+https://github.com/vladfi1/libmelee
-numpy
-pandas
-pyarrow
-torch
+numpy==1.24.4
+pandas==2.1.0
+pyarrow==14.0.2
+pyarrow-hotfix==0.6
+torch==2.3.0
