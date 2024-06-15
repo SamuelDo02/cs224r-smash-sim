@@ -1,4 +1,3 @@
-import enum
 from enum import Enum
 from typing import Final
 from typing import Literal
