@@ -1,5 +1,11 @@
+import enum
 from enum import Enum
-from typing import Literal, Final, Tuple
+from typing import Final
+from typing import Literal
+from typing import Tuple
+
+# SLP preprocessing
+
 
 # Gamestate
 STAGES: Final[Tuple[str, ...]] = (
@@ -8,7 +14,7 @@ STAGES: Final[Tuple[str, ...]] = (
     "pokemon_stadium",
     "dreamland",
     "fountain_of_dreams",
-    "yoshis_story"
+    "yoshis_story",
 )
 CHARACTERS: Final[Tuple[str, ...]] = (
     "mario",
@@ -36,11 +42,13 @@ CHARACTERS: Final[Tuple[str, ...]] = (
     "pichu",
     "gameandwatch",
     "ganondorf",
-    "roy"
+    "roy",
 )
+
 
 class Character(Enum):
     """"""
+
     MARIO = 0x00
     FOX = 0x01
     CPTFALCON = 0x02
@@ -51,11 +59,11 @@ class Character(Enum):
     SHEIK = 0x07
     NESS = 0x08
     PEACH = 0x09
-    POPO = 0x0a
-    PIKACHU = 0x0c
-    SAMUS = 0x0d
-    YOSHI = 0x0e
-    JIGGLYPUFF = 0x0f
+    POPO = 0x0A
+    PIKACHU = 0x0C
+    SAMUS = 0x0D
+    YOSHI = 0x0E
+    JIGGLYPUFF = 0x0F
     MEWTWO = 0x10
     LUIGI = 0x11
     MARTH = 0x12
@@ -66,7 +74,16 @@ class Character(Enum):
     PICHU = 0x17
     GAMEANDWATCH = 0x18
     GANONDORF = 0x19
-    ROY = 0x1a
+    ROY = 0x1A
+
+
+class Stage(Enum):
+    FINAL_DESTINATION = 1
+    BATTLEFIELD = 2
+    POKEMON_STADIUM = 3
+    DREAMLAND = 4
+    FOUNTAIN_OF_DREAMS = 5
+    YOSHIS_STORY = 6
 
 
 # Evaluation

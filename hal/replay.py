@@ -1,39 +1,74 @@
+from typing import List
 from typing import Optional
 
-import attr
-import numpy as np
+from melee import GameState
+from pyarrow import schema
+
+REPLAY_PARQUET_SCHEMA = schema(
+    [
+        pyarrow.field("id", pyarrow.int64()),
+        pyarrow.field("stage", pyarrow.string()),
+        pyarrow.field("frame_count", pyarrow.int64()),
+        pyarrow.field(
+            "player1",
+            pyarrow.struct(
+                [
+                    pyarrow.field("character", pyarrow.string()),
+                    pyarrow.field("nickname", pyarrow.string()),
+                    pyarrow.field("pos_x", pyarrow.list_(pyarrow.float64())),
+                    pyarrow.field("pos_y", pyarrow.list_(pyarrow.float64())),
+                    pyarrow.field("percent", pyarrow.list_(pyarrow.float64())),
+                    pyarrow.field("shield", pyarrow.list_(pyarrow.float64())),
+                    pyarrow.field("stock", pyarrow.list_(pyarrow.int64())),
+                    pyarrow.field("facing", pyarrow.list_(pyarrow.bool_())),
+                    pyarrow.field("action", pyarrow.list_(pyarrow.int64())),
+                    pyarrow.field("invulnerable", pyarrow.list_(pyarrow.bool_())),
+                    pyarrow.field("jumps_left", pyarrow.list_(pyarrow.int64())),
+                    pyarrow.field("on_ground", pyarrow.list_(pyarrow.bool_())),
+                    pyarrow.field("ecb_right", pyarrow.list_(pyarrow.float64())),
+                    pyarrow.field("ecb_left", pyarrow.list_(pyarrow.float64())),
+                    pyarrow.field("ecb_top", pyarrow.list_(pyarrow.float64())),
+                    pyarrow.field("ecb_bottom", pyarrow.list_(pyarrow.float64())),
+                    pyarrow.field("speed_air_x_self", pyarrow.list_(pyarrow.float64())),
+                    pyarrow.field("speed_y_self", pyarrow.list_(pyarrow.float64())),
+                    pyarrow.field("speed_x_attack", pyarrow.list_(pyarrow.float64())),
+                    pyarrow.field("speed_y_attack", pyarrow.list_(pyarrow.float64())),
+                    pyarrow.field("speed_ground_x_self", pyarrow.list_(pyarrow.float64())),
+                ]
+            ),
+        ),
+        pyarrow.field(
+            "player2",
+            pyarrow.struct(
+                [
+                    pyarrow.field("character", pyarrow.string()),
+                    pyarrow.field("nickname", pyarrow.string()),
+                    pyarrow.field("pos_x", pyarrow.list_(pyarrow.float64())),
+                    pyarrow.field("pos_y", pyarrow.list_(pyarrow.float64())),
+                    pyarrow.field("percent", pyarrow.list_(pyarrow.float64())),
+                    pyarrow.field("shield", pyarrow.list_(pyarrow.float64())),
+                    pyarrow.field("stock", pyarrow.list_(pyarrow.int64())),
+                    pyarrow.field("facing", pyarrow.list_(pyarrow.bool_())),
+                    pyarrow.field("action", pyarrow.list_(pyarrow.int64())),
+                    pyarrow.field("invulnerable", pyarrow.list_(pyarrow.bool_())),
+                    pyarrow.field("jumps_left", pyarrow.list_(pyarrow.int64())),
+                    pyarrow.field("on_ground", pyarrow.list_(pyarrow.bool_())),
+                    pyarrow.field("ecb_right", pyarrow.list_(pyarrow.float64())),
+                    pyarrow.field("ecb_left", pyarrow.list_(pyarrow.float64())),
+                    pyarrow.field("ecb_top", pyarrow.list_(pyarrow.float64())),
+                    pyarrow.field("ecb_bottom", pyarrow.list_(pyarrow.float64())),
+                    pyarrow.field("speed_air_x_self", pyarrow.list_(pyarrow.float64())),
+                    pyarrow.field("speed_y_self", pyarrow.list_(pyarrow.float64())),
+                    pyarrow.field("speed_x_attack", pyarrow.list_(pyarrow.float64())),
+                    pyarrow.field("speed_y_attack", pyarrow.list_(pyarrow.float64())),
+                    pyarrow.field("speed_ground_x_self", pyarrow.list_(pyarrow.float64())),
+                ]
+            ),
+        ),
+    ]
+)
 
 
-@attr.s(auto_attribs=True, frozen=True)
-class PlayerState:
-    """Stack player state attributes across replay frames."""
-    character: str
-    nickname: str
-    pos_x: np.ndarray[float]
-    pos_y: np.ndarray[float]
-    percent: np.ndarray[float]
-    shield: np.ndarray[float]
-    stock: np.ndarray[int]
-    facing: np.ndarray[bool]
-    action: np.ndarray[int]
-    invulnerable: np.ndarray[bool]
-    jumps_left: np.ndarray[int]
-    on_ground: np.ndarray[bool]
-    ecb_right: Optional[np.ndarray[float]] = None
-    ecb_left: Optional[np.ndarray[float]] = None
-    ecb_top: Optional[np.ndarray[float]] = None
-    ecb_bottom: Optional[np.ndarray[float]] = None
-    speed_air_x_self: Optional[np.ndarray[float]] = None
-    speed_y_self: Optional[np.ndarray[float]] = None
-    speed_x_attack: Optional[np.ndarray[float]] = None
-    speed_y_attack: Optional[np.ndarray[float]] = None
-    speed_ground_x_self: Optional[np.ndarray[float]] = None
-
-
-@attr.s(auto_attribs=True, frozen=True)
-class Replay:
-    id: int
-    stage: str
-    frame_count: int
-    player1: PlayerState
-    player2: PlayerState
+def process_slp_file(slp_file_path: str) -> None:
+    """Process an SLP file and save the data to a Parquet file."""
+    ...
