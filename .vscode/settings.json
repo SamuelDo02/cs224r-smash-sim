@@ -32,9 +32,9 @@
   // File sync to notebook
   //
   "triggerTaskOnSave.tasks": {
-    "rsync.toNotebook": [
-      "*"
-    ],
+    // "rsync.toNotebook": [
+    //   "*"
+    // ],
   },
   // 
   // Formatting
