@@ -1,12 +1,6 @@
 {
   "python.defaultInterpreterPath": ".venv/bin/python",
   "python.analysis.extraPaths": [
-    "science",
-    "computronium",
-    "automaton",
-    "carbs",
-    "standalone",
-    // "standalone/avalon",
     "formatters/pyfixfmt"
   ],
   "jupyter.jupyterServerType": "remote",
@@ -34,13 +28,13 @@
   "python.linting.pylintArgs": [
     "--rcfile=${workspaceFolder}/.vscode/pylintrc"
   ],
+  //
+  // File sync to notebook
+  //
   "triggerTaskOnSave.tasks": {
-    "rsync.syncToController": [
+    "rsync.toNotebook": [
       "*"
     ],
-    "datagen.generateGodotCode": [
-      "*.gd"
-    ]
   },
   // 
   // Formatting

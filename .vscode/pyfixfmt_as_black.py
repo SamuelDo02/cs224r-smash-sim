@@ -12,7 +12,6 @@ from argparse import ArgumentParser
 from pathlib import Path
 
 import black
-
 from pyfixfmt import run_all_fixers_on_str
 from pyfixfmt.config import Config
 from pyfixfmt.config import attempt_loading_toml
