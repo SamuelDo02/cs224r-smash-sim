@@ -37,8 +37,10 @@ EOF
 
 # Create a Python file with the remote paths
 cat << PYTHON_EOF > $LOCAL_PROJ_DIR/hal/emulator_paths.py
-  REMOTE_EMULATOR_PATH = "$REMOTE_EMULATOR_DIR/squashfs-root/AppRun.wrapped"
-  REMOTE_CISO_PATH = "$REMOTE_EMULATOR_DIR/ssbm.ciso"
+from typing import Final
+
+REMOTE_EMULATOR_PATH: Final[str] = "$REMOTE_EMULATOR_DIR/squashfs-root/AppRun.wrapped"
+REMOTE_CISO_PATH: Final[str] = "$REMOTE_EMULATOR_DIR/ssbm.ciso"
 PYTHON_EOF
 rsync -avz --delete --filter=":- .gitignore" -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR" $LOCAL_PROJ_DIR/ $notebook:$REMOTE_PROJ_DIR/
 
