@@ -31,7 +31,7 @@ ssh $notebook /bin/bash << EOF
   sudo apt-get install p7zip-full libasound2 libegl1 libgl1 libusb-1.0-0 libglib2.0-0 libgdk-pixbuf2.0-0 libpangocairo-1.0-0 -y
   cd $REMOTE_EMULATOR_DIR
   7za x $EMULATOR_FILE_NAME
-  mv $CISO_NAME ssbm.ciso
+  mv "$CISO_NAME" ssbm.ciso
   ./Slippi_Online-Ubuntu20.04-x86_64.AppImage --appimage-extract
 EOF
 
@@ -40,5 +40,6 @@ cat << PYTHON_EOF > $LOCAL_PROJ_DIR/hal/emulator_paths.py
   REMOTE_EMULATOR_PATH = "$REMOTE_EMULATOR_DIR/squashfs-root/AppRun.wrapped"
   REMOTE_CISO_PATH = "$REMOTE_EMULATOR_DIR/ssbm.ciso"
 PYTHON_EOF
+rsync -avz --delete --filter=":- .gitignore" -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR" $LOCAL_PROJ_DIR/ $notebook:$REMOTE_PROJ_DIR/
 
 echo "${Yellow}Synced emulator & iso and created emulator_paths.py"
