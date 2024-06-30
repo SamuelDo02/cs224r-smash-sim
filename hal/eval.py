@@ -55,11 +55,6 @@ def self_play_menu_helper(
                 start=True,
             )
 
-        active_buttons = tuple(button for button, state in controller_1.current.button.items() if state == True)
-        print(f"Controller 1: {active_buttons=}")
-        active_buttons = tuple(button for button, state in controller_2.current.button.items() if state == True)
-        print(f"Controller 2: {active_buttons=}")
-
     # If we're at the stage select screen, choose a stage
     elif gamestate.menu_state == enums.Menu.STAGE_SELECT:
         MenuHelper.choose_stage(
@@ -144,6 +139,12 @@ def run_episode() -> None:
         #   And can warn you if it's taking too long
         if console.processingtime * 1000 > 12:
             print("WARNING: Last frame took " + str(console.processingtime * 1000) + "ms to process.")
+
+        print(f"frame {i}: {gamestate.menu_state=}")
+        active_buttons = tuple(button for button, state in controller_1.current.button.items() if state == True)
+        print(f"Controller 1: {active_buttons=}")
+        active_buttons = tuple(button for button, state in controller_2.current.button.items() if state == True)
+        print(f"Controller 2: {active_buttons=}")
 
         # What menu are we in?
         if gamestate.menu_state in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
