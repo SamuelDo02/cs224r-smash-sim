@@ -29,6 +29,8 @@ def self_play_menu_helper(
     elif gamestate.menu_state == enums.Menu.CHARACTER_SELECT:
         player_1 = gamestate.players[controller_1.port]
         player_1_character_selected = player_1.character == character_1
+
+        print(f"{player_1_character_selected=}")
         if not player_1_character_selected:
             MenuHelper.choose_character(
                 character=character_1,
@@ -123,7 +125,6 @@ def run_episode() -> None:
         gamestate = console.step()
         if gamestate is None:
             continue
-        print(f"{gamestate.menu_state=}")
 
         # The console object keeps track of how long your bot is taking to process frames
         #   And can warn you if it's taking too long
