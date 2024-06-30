@@ -36,35 +36,62 @@ def self_play_menu_helper(
 
         # print(f"{player_1_character_selected=}")
         # print(f"{player_2_character_selected=}")
-        if not player_1_character_selected:
+        # if not player_1_character_selected:
+        #     MenuHelper.choose_character(
+        #         character=character_1,
+        #         gamestate=gamestate,
+        #         controller=controller_1,
+        #         cpu_level=0,
+        #         costume=0,
+        #         swag=False,
+        #         start=False,
+        #     )
+        # else:
+        #     if not released and player_1.coin_down:
+        #         # eric: this seems to prevent controller 1 from pressing A at all?
+        #         controller_1.release_all()
+        #         released = True
+
+        #     MenuHelper.choose_character(
+        #         character=character_2,
+        #         gamestate=gamestate,
+        #         controller=controller_2,
+        #         cpu_level=0,
+        #         costume=1,
+        #         swag=False,
+        #         start=True,
+        #     )
+
+        if not player_2_character_selected:
             MenuHelper.choose_character(
-                character=character_1,
+                character=character_2,
                 gamestate=gamestate,
-                controller=controller_1,
+                controller=controller_2,
                 cpu_level=0,
                 costume=0,
                 swag=False,
                 start=False,
             )
         else:
-            if not released and player_1.coin_down:
+            if not released and player_2.coin_down:
                 # eric: this seems to prevent controller 1 from pressing A at all?
-                controller_1.release_all()
+                controller_2.release_all()
                 released = True
 
             MenuHelper.choose_character(
-                character=character_2,
+                character=character_1,
                 gamestate=gamestate,
-                controller=controller_2,
+                controller=controller_1,
                 cpu_level=0,
                 costume=1,
                 swag=False,
                 start=True,
             )
-            active_buttons = tuple(button for button, state in controller_1.current.button.items() if state == True)
-            print(f"Controller 1: {active_buttons=}")
-            active_buttons = tuple(button for button, state in controller_2.current.button.items() if state == True)
-            print(f"Controller 2: {active_buttons=}")
+
+        active_buttons = tuple(button for button, state in controller_1.current.button.items() if state == True)
+        print(f"Controller 1: {active_buttons=}")
+        active_buttons = tuple(button for button, state in controller_2.current.button.items() if state == True)
+        print(f"Controller 2: {active_buttons=}")
 
     # If we're at the stage select screen, choose a stage
     elif gamestate.menu_state == enums.Menu.STAGE_SELECT:
