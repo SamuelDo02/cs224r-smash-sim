@@ -49,6 +49,7 @@ def self_play_menu_helper(
         else:
             if not released:
                 controller_1.release_all()
+                released = True
 
             MenuHelper.choose_character(
                 character=character_2,
