@@ -54,7 +54,7 @@ def self_play_menu_helper(
                 swag=False,
                 start=True,
             )
-            active_buttons = tuple(state for state in controller_1.current.button.values() if state == True)
+            active_buttons = tuple(button for button, state in controller_1.current.button.items() if state == True)
             print(f"{active_buttons=}")
 
     # If we're at the stage select screen, choose a stage
