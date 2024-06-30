@@ -2,17 +2,18 @@ import argparse
 import signal
 import sys
 from pathlib import Path
-from typing import Final
 
 import melee
 from melee import enums
 from melee.menuhelper import MenuHelper
 
 from hal.emulator_paths import LOCAL_CISO_PATH
+from hal.emulator_paths import LOCAL_DOLPHIN_HOME_PATH
 from hal.emulator_paths import LOCAL_GUI_EMULATOR_PATH
 from hal.emulator_paths import LOCAL_HEADLESS_EMULATOR_PATH
+from hal.emulator_paths import REMOTE_DOLPHIN_HOME_PATH
+from hal.emulator_paths import REMOTE_EMULATOR_PATH
 
-DOLPHIN_HOME_PATH: Final[Path] = Path("/home/egu/Slippi")
 PLAYER_1_PORT = 1
 PLAYER_2_PORT = 4
 
@@ -67,24 +68,25 @@ def self_play_menu_helper(
 
 
 def run_episode() -> None:
-    parser = argparse.ArgumentParser(description="Run a Melee episode")
+    parser = argparse.ArgumentParser(description="Run Melee in emulator")
     parser.add_argument("--local", action="store_true", help="Run in local mode")
     parser.add_argument("--no-gui", action="store_true", help="Run without GUI")
     args = parser.parse_args()
 
-    DOLPHIN_HOME_PATH.mkdir(exist_ok=True)
-
     if args.local:
+        dolphin_home_path = LOCAL_DOLPHIN_HOME_PATH
         emulator_path = LOCAL_HEADLESS_EMULATOR_PATH if args.no_gui else LOCAL_GUI_EMULATOR_PATH
     else:
+        dolphin_home_path = REMOTE_DOLPHIN_HOME_PATH
         if not args.no_gui:
             print("Remote mode only supports headless operation. Forcing --no-gui.")
-        emulator_path = LOCAL_HEADLESS_EMULATOR_PATH
+        emulator_path = REMOTE_EMULATOR_PATH
 
+    Path(dolphin_home_path).mkdir(exist_ok=True)
     console_kwargs = {
         "path": emulator_path,
         "is_dolphin": True,
-        "dolphin_home_path": str(DOLPHIN_HOME_PATH),
+        "dolphin_home_path": dolphin_home_path,
         "tmp_home_directory": False,
         "blocking_input": True,
         "gfx_backend": "Null",
