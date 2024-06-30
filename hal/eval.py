@@ -55,7 +55,9 @@ def self_play_menu_helper(
                 start=True,
             )
             active_buttons = tuple(button for button, state in controller_1.current.button.items() if state == True)
-            print(f"{active_buttons=}")
+            print(f"Controller 1: {active_buttons=}")
+            active_buttons = tuple(button for button, state in controller_2.current.button.items() if state == True)
+            print(f"Controller 2: {active_buttons=}")
 
     # If we're at the stage select screen, choose a stage
     elif gamestate.menu_state == enums.Menu.STAGE_SELECT:
