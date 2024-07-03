@@ -1,7 +1,6 @@
 import multiprocessing as mp
 import os
 from typing import List
-from typing import Optional
 
 import attr
 import melee
@@ -9,37 +8,113 @@ import pyarrow as pa
 import pyarrow.dataset as ds
 from loguru import logger
 
+schema = pa.schema(
+    [
+        ("replay_uuid", pa.int64()),
+        ("frame", pa.int32()),
+        ("stage", pa.int8()),
+        ("p1_port", pa.int8()),
+        ("p1_character", pa.int8()),
+        ("p1_stock", pa.int8()),
+        ("p1_facing", pa.bool_()),
+        ("p1_invulnerable", pa.bool_()),
+        ("p1_position_x", pa.float32()),
+        ("p1_position_y", pa.float32()),
+        ("p1_percent", pa.float32()),
+        ("p1_shield_strength", pa.float32()),
+        ("p1_jumps_left", pa.int8()),
+        ("p2_port", pa.int8()),
+        ("p2_character", pa.int8()),
+        ("p2_stock", pa.int8()),
+        ("p2_facing", pa.bool_()),
+        ("p2_invulnerable", pa.bool_()),
+        ("p2_position_x", pa.float32()),
+        ("p2_position_y", pa.float32()),
+        ("p2_percent", pa.float32()),
+        ("p2_shield_strength", pa.float32()),
+        ("p2_jumps_left", pa.int8()),
+    ]
+)
+
+# Simplified enum mappings
+EXCLUDED_STAGES = (
+    "NO_STAGE",
+    "RANDOM_STAGE",
+)
+IDX_BY_STAGE = {
+    stage: i for i, stage in enumerate(stage for stage in melee.Stage if stage.name not in EXCLUDED_STAGES)
+}
+STAGE_BY_IDX = {i: stage.name for stage, i in IDX_BY_STAGE.items()}
+
+EXCLUDED_CHARACTERS = ("NANA", "WIREFRAME_MALE", "WIREFRAME_FEMALE", "GIGA_BOWSER", "SANDBAG", "UNKNOWN_CHARACTER")
+IDX_BY_CHARACTER = {
+    char: i for i, char in enumerate(char for char in melee.Character if char.name not in EXCLUDED_CHARACTERS)
+}
+CHARACTER_BY_IDX = {i: char.name for char, i in IDX_BY_CHARACTER.items()}
+
+IDX_BY_ACTION = {action: i for i, action in enumerate(melee.Action)}
+ACTION_BY_IDX = {i: action.name for action, i in IDX_BY_ACTION.items()}
+
 
 @attr.s(auto_attribs=True, frozen=True)
 class FrameData:
+    replay_uuid: int
     frame: int
-    stage: str
-    player1_character: Optional[str]
-    player2_character: Optional[str]
-    player1_x: Optional[float]
-    player1_y: Optional[float]
-    player2_x: Optional[float]
-    player2_y: Optional[float]
-    player1_percent: Optional[float]
-    player2_percent: Optional[float]
-    player1_stock: Optional[int]
-    player2_stock: Optional[int]
+    stage: int
+    p1_port: int
+    p1_character: int
+    p1_stock: int
+    p1_facing: bool
+    p1_invulnerable: bool
+    p1_position_x: float
+    p1_position_y: float
+    p1_percent: float
+    p1_shield_strength: float
+    p1_jumps_left: int
+    p2_port: int
+    p2_character: int
+    p2_stock: int
+    p2_facing: bool
+    p2_invulnerable: bool
+    p2_position_x: float
+    p2_position_y: float
+    p2_percent: float
+    p2_shield_strength: float
+    p2_jumps_left: int
 
 
-def extract_frame_data(gamestate: melee.GameState) -> FrameData:
+def extract_frame_data(gamestate: melee.GameState, replay_uuid: int) -> FrameData:
+    players = sorted(gamestate.players.items())
+    if len(players) != 2:
+        raise ValueError(f"Expected 2 players, got {len(players)}")
+
+    p1_port, p1 = players[0]
+    p2_port, p2 = players[1]
+
     return FrameData(
+        replay_uuid=replay_uuid,
         frame=gamestate.frame,
-        stage=gamestate.stage.name,
-        player1_character=gamestate.players[1].character.name if 1 in gamestate.players else None,
-        player2_character=gamestate.players[2].character.name if 2 in gamestate.players else None,
-        player1_x=gamestate.players[1].x if 1 in gamestate.players else None,
-        player1_y=gamestate.players[1].y if 1 in gamestate.players else None,
-        player2_x=gamestate.players[2].x if 2 in gamestate.players else None,
-        player2_y=gamestate.players[2].y if 2 in gamestate.players else None,
-        player1_percent=gamestate.players[1].percent if 1 in gamestate.players else None,
-        player2_percent=gamestate.players[2].percent if 2 in gamestate.players else None,
-        player1_stock=gamestate.players[1].stock if 1 in gamestate.players else None,
-        player2_stock=gamestate.players[2].stock if 2 in gamestate.players else None,
+        stage=gamestate.stage.value,
+        p1_port=p1_port,
+        p1_character=p1.character.value,
+        p1_stock=p1.stock,
+        p1_facing=p1.facing,
+        p1_invulnerable=p1.invulnerable,
+        p1_position_x=float(p1.position.x),
+        p1_position_y=float(p1.position.y),
+        p1_percent=p1.percent,
+        p1_shield_strength=p1.shield_strength,
+        p1_jumps_left=p1.jumps_left,
+        p2_port=p2_port,
+        p2_character=p2.character.value,
+        p2_stock=p2.stock,
+        p2_facing=p2.facing,
+        p2_invulnerable=p2.invulnerable,
+        p2_position_x=float(p2.position.x),
+        p2_position_y=float(p2.position.y),
+        p2_percent=p2.percent,
+        p2_shield_strength=p2.shield_strength,
+        p2_jumps_left=p2.jumps_left,
     )
 
 
@@ -48,24 +123,36 @@ def process_replay(replay_path: str) -> List[FrameData]:
     try:
         console.connect()
     except Exception as e:
-        print(f"Error connecting to console: {e}")
+        logger.error(f"Error connecting to console: {e}")
         return []
 
-    try:
-        gamestate = console.step()
-    except Exception as e:
-        logger.debug(f"{e}. Could not read gamestate from {replay_path}.")
-        return None
+    frame_data = []
+    replay_uuid = hash(replay_path)
+
+    while True:
+        try:
+            gamestate = console.step()
+            if gamestate is None:
+                break
+            frame_data.append(extract_frame_data(gamestate, replay_uuid))
+        except Exception as e:
+            logger.debug(f"Could not read gamestate from {replay_path}: {e}")
+            break
+
+    return frame_data
 
 
 def write_dataset(data: List[FrameData], output_dir: str) -> None:
-    table = pa.Table.from_pylist([vars(frame) for frame in data])
+    table = pa.Table.from_pylist([attr.asdict(frame) for frame in data], schema=schema)
     ds.write_dataset(table, output_dir, format="parquet", partitioning=["stage"])
 
 
 def process_and_write(replay_path: str, output_dir: str) -> None:
     data = process_replay(replay_path)
-    write_dataset(data, os.path.join(output_dir, os.path.basename(replay_path)))
+    if data:
+        write_dataset(data, os.path.join(output_dir, os.path.basename(replay_path)))
+    else:
+        logger.warning(f"No data extracted from {replay_path}")
 
 
 def process_replays(replay_paths: List[str], output_dir: str) -> None:
@@ -73,5 +160,7 @@ def process_replays(replay_paths: List[str], output_dir: str) -> None:
         pool.starmap(process_and_write, [(path, output_dir) for path in replay_paths])
 
 
-# if __name__ == "__main__":
-# process_replays(replay_paths, output_path)
+if __name__ == "__main__":
+    # Add command-line argument parsing here if needed
+    # process_replays(replay_paths, output_path)
+    pass
