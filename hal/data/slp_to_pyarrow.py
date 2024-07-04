@@ -1,5 +1,7 @@
+import argparse
 import multiprocessing as mp
-import os
+import random
+from pathlib import Path
 from typing import List
 
 import attr
@@ -8,8 +10,8 @@ import pyarrow as pa
 import pyarrow.dataset as ds
 from loguru import logger
 
-from hal.data.primitives import SCHEMA
 from hal.data.primitives import FrameData
+from hal.data.primitives import SCHEMA
 
 
 def extract_frame_data(gamestate: melee.GameState, replay_uuid: int) -> FrameData:
@@ -109,25 +111,52 @@ def process_replay(replay_path: str) -> List[FrameData]:
     return frame_data
 
 
-def write_dataset(data: List[FrameData], output_dir: str) -> None:
+def write_dataset(data: List[FrameData], output_path: str) -> None:
     table = pa.Table.from_pylist([attr.asdict(frame) for frame in data], schema=SCHEMA)
-    ds.write_dataset(table, output_dir, format="parquet", partitioning=["stage"])
+    ds.write_dataset(table, output_path, format="parquet", partitioning=["stage"])
 
 
-def process_and_write(replay_path: str, output_dir: str) -> None:
+def process_and_write(replay_path: str, output_path: str) -> None:
     data = process_replay(replay_path)
     if data:
-        write_dataset(data, os.path.join(output_dir, os.path.basename(replay_path)))
+        write_dataset(data, output_path)
     else:
         logger.warning(f"No data extracted from {replay_path}")
 
 
-def process_replays(replay_paths: List[str], output_dir: str) -> None:
-    with mp.Pool() as pool:
-        pool.starmap(process_and_write, [(path, output_dir) for path in replay_paths])
+def split_train_val_test(
+    input_paths: tuple[Path, ...], train_split: float = 0.9, val_split: float = 0.05, test_split: float = 0.05
+) -> dict[str, tuple[Path, ...]]:
+    assert train_split + val_split + test_split == 1.0
+    n = len(input_paths)
+    train_end = int(n * train_split)
+    val_end = train_end + int(n * val_split)
+    return {
+        "train": tuple(input_paths[:train_end]),
+        "val": tuple(input_paths[train_end:val_end]),
+        "test": tuple(input_paths[val_end:]),
+    }
+
+
+def process_replays(replay_dir: str, output_dir: str, seed: int) -> None:
+    # Randomly shuffle the replay paths and split into train, val, and test
+    random.seed(seed)
+    replay_paths = list(Path(replay_dir).rglob("*.slp"))
+    random.shuffle(replay_paths)
+
+    splits = split_train_val_test(input_paths=tuple(replay_paths))
+    for split, paths in splits.items():
+        split_dir = Path(output_dir) / split
+        split_dir.mkdir(parents=True, exist_ok=True)
+        with mp.Pool() as pool:
+            pool.starmap(process_and_write, [(path, split_dir) for path in paths])
 
 
 if __name__ == "__main__":
-    # Add command-line argument parsing here if needed
-    # process_replays(replay_paths, output_path)
-    pass
+    parser = argparse.ArgumentParser(description="Process Melee replay files and store frame data in parquet.")
+    parser.add_argument("--replay_dir", required=True, help="Input directory containing .slp replay files")
+    parser.add_argument("--output-dir", required=True, help="Output directory for processed data")
+    parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility")
+    args = parser.parse_args()
+
+    process_replays(args.replay_paths, args.output_dir, args.seed)
