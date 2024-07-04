@@ -34,6 +34,15 @@ schema = pa.schema(
         ("p1_speed_x_attack", pa.float32()),
         ("p1_speed_y_attack", pa.float32()),
         ("p1_speed_ground_x_self", pa.float32()),
+        ("p1_ecb_bottom_x", pa.float32()),
+        ("p1_ecb_bottom_y", pa.float32()),
+        ("p1_ecb_top_x", pa.float32()),
+        ("p1_ecb_top_y", pa.float32()),
+        ("p1_ecb_left_x", pa.float32()),
+        ("p1_ecb_left_y", pa.float32()),
+        ("p1_ecb_right_x", pa.float32()),
+        ("p1_ecb_right_y", pa.float32()),
+        # Player 2
         ("p2_port", pa.int8()),
         ("p2_character", pa.int8()),
         ("p2_position_x", pa.float32()),
@@ -55,6 +64,14 @@ schema = pa.schema(
         ("p2_speed_x_attack", pa.float32()),
         ("p2_speed_y_attack", pa.float32()),
         ("p2_speed_ground_x_self", pa.float32()),
+        ("p2_ecb_bottom_x", pa.float32()),
+        ("p2_ecb_bottom_y", pa.float32()),
+        ("p2_ecb_top_x", pa.float32()),
+        ("p2_ecb_top_y", pa.float32()),
+        ("p2_ecb_left_x", pa.float32()),
+        ("p2_ecb_left_y", pa.float32()),
+        ("p2_ecb_right_x", pa.float32()),
+        ("p2_ecb_right_y", pa.float32()),
     ]
 )
 
