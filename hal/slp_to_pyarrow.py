@@ -106,6 +106,14 @@ class FrameData:
     p1_speed_x_attack: float
     p1_speed_y_attack: float
     p1_speed_ground_x_self: float
+    p1_ecb_bottom_x: float
+    p1_ecb_bottom_y: float
+    p1_ecb_top_x: float
+    p1_ecb_top_y: float
+    p1_ecb_left_x: float
+    p1_ecb_left_y: float
+    p1_ecb_right_x: float
+    p1_ecb_right_y: float
 
     p2_port: int
     p2_character: int
@@ -129,6 +137,14 @@ class FrameData:
     p2_speed_x_attack: float
     p2_speed_y_attack: float
     p2_speed_ground_x_self: float
+    p2_ecb_bottom_x: float
+    p2_ecb_bottom_y: float
+    p2_ecb_top_x: float
+    p2_ecb_top_y: float
+    p2_ecb_left_x: float
+    p2_ecb_left_y: float
+    p2_ecb_right_x: float
+    p2_ecb_right_y: float
 
 
 def extract_frame_data(gamestate: melee.GameState, replay_uuid: int) -> FrameData:
@@ -164,6 +180,14 @@ def extract_frame_data(gamestate: melee.GameState, replay_uuid: int) -> FrameDat
         p1_speed_x_attack=p1.speed_x_attack,
         p1_speed_y_attack=p1.speed_y_attack,
         p1_speed_ground_x_self=p1.speed_ground_x_self,
+        p1_ecb_bottom_x=p1.ecb_bottom[0],
+        p1_ecb_bottom_y=p1.ecb_bottom[1],
+        p1_ecb_top_x=p1.ecb_top[0],
+        p1_ecb_top_y=p1.ecb_top[1],
+        p1_ecb_left_x=p1.ecb_left[0],
+        p1_ecb_left_y=p1.ecb_left[1],
+        p1_ecb_right_x=p1.ecb_right[0],
+        p1_ecb_right_y=p1.ecb_right[1],
         p2_port=p2_port,
         p2_character=p2.character.value,
         p2_stock=p2.stock,
@@ -185,6 +209,14 @@ def extract_frame_data(gamestate: melee.GameState, replay_uuid: int) -> FrameDat
         p2_speed_x_attack=p2.speed_x_attack,
         p2_speed_y_attack=p2.speed_y_attack,
         p2_speed_ground_x_self=p2.speed_ground_x_self,
+        p2_ecb_bottom_x=p2.ecb_bottom[0],
+        p2_ecb_bottom_y=p2.ecb_bottom[1],
+        p2_ecb_top_x=p2.ecb_top[0],
+        p2_ecb_top_y=p2.ecb_top[1],
+        p2_ecb_left_x=p2.ecb_left[0],
+        p2_ecb_left_y=p2.ecb_left[1],
+        p2_ecb_right_x=p2.ecb_right[0],
+        p2_ecb_right_y=p2.ecb_right[1],
     )
 
 
