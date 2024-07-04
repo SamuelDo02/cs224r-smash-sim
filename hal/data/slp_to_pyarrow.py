@@ -14,6 +14,9 @@ import pyarrow.parquet as pq
 from loguru import logger
 from tqdm import tqdm
 
+from hal.data.constants import IDX_BY_ACTION
+from hal.data.constants import IDX_BY_CHARACTER
+from hal.data.constants import IDX_BY_STAGE
 from hal.data.primitives import SCHEMA
 
 FrameData = Dict[str, Any]
@@ -30,9 +33,10 @@ def extract_frame_data(gamestate: melee.GameState, replay_uuid: int) -> FrameDat
     return dict(
         replay_uuid=replay_uuid,
         frame=gamestate.frame,
-        stage=gamestate.stage.value,
+        stage=IDX_BY_STAGE[gamestate.stage],
+        # Player 1 state
         p1_port=p1_port,
-        p1_character=p1.character.value,
+        p1_character=IDX_BY_CHARACTER[p1.character],
         p1_stock=p1.stock,
         p1_facing=int(p1.facing),
         p1_invulnerable=int(p1.invulnerable),
@@ -41,7 +45,7 @@ def extract_frame_data(gamestate: melee.GameState, replay_uuid: int) -> FrameDat
         p1_percent=p1.percent,
         p1_shield_strength=p1.shield_strength,
         p1_jumps_left=p1.jumps_left,
-        p1_action=p1.action.value,
+        p1_action=IDX_BY_ACTION[p1.action],
         p1_action_frame=p1.action_frame,
         p1_invulnerability_left=p1.invulnerability_left,
         p1_hitlag_left=p1.hitlag_left,
@@ -60,8 +64,9 @@ def extract_frame_data(gamestate: melee.GameState, replay_uuid: int) -> FrameDat
         p1_ecb_left_y=p1.ecb_left[1],
         p1_ecb_right_x=p1.ecb_right[0],
         p1_ecb_right_y=p1.ecb_right[1],
+        # Player 2 state
         p2_port=p2_port,
-        p2_character=p2.character.value,
+        p2_character=IDX_BY_CHARACTER[p2.character],
         p2_stock=p2.stock,
         p2_facing=int(p2.facing),
         p2_invulnerable=int(p2.invulnerable),
@@ -70,7 +75,7 @@ def extract_frame_data(gamestate: melee.GameState, replay_uuid: int) -> FrameDat
         p2_percent=p2.percent,
         p2_shield_strength=p2.shield_strength,
         p2_jumps_left=p2.jumps_left,
-        p2_action=p2.action.value,
+        p2_action=IDX_BY_ACTION[p2.action],
         p2_action_frame=p2.action_frame,
         p2_invulnerability_left=p2.invulnerability_left,
         p2_hitlag_left=p2.hitlag_left,
@@ -132,8 +137,11 @@ def write_dataset_incrementally(replay_paths: Tuple[str, ...], output_path: str,
                 frames_processed += len(replay_data)
 
                 if len(batch) >= batch_size:
-                    table = pa.Table.from_pylist(batch, schema=SCHEMA)
-                    writer.write_table(table)
+                    try:
+                        table = pa.Table.from_pylist(batch, schema=SCHEMA)
+                        writer.write_table(table)
+                    except ValueError as e:
+                        logger.error(f"Error writing batch: {e}")
                     batch = []
                     pbar.set_description(f"Processed {frames_processed} frames")
 

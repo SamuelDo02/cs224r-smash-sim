@@ -1,4 +1,5 @@
 from melee import Action
+from melee import Button
 from melee import Character
 from melee import Stage
 
@@ -23,3 +24,13 @@ CHARACTER_BY_IDX: dict[int, str] = {i: char.name for char, i in IDX_BY_CHARACTER
 
 IDX_BY_ACTION: dict[Action, int] = {action: i for i, action in enumerate(Action)}
 ACTION_BY_IDX: dict[int, str] = {i: action.name for action, i in IDX_BY_ACTION.items()}
+
+EXCLUDED_BUTTONS: tuple[str, ...] = (
+    "BUTTON_D_DOWN",
+    "BUTTON_D_LEFT",
+    "BUTTON_D_RIGHT",
+)
+IDX_BY_BUTTON: dict[Button, int] = {
+    button: i for i, button in enumerate(button for button in Button if button.name not in EXCLUDED_BUTTONS)
+}
+BUTTON_BY_IDX: dict[int, str] = {i: button.name for button, i in IDX_BY_BUTTON.items()}
