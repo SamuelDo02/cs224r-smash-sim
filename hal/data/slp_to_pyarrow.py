@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 from typing import Any
 from typing import Dict
+from typing import Optional
 from typing import Tuple
 
 import attr
@@ -19,10 +20,12 @@ from hal.data.constants import IDX_BY_CHARACTER
 from hal.data.constants import IDX_BY_STAGE
 from hal.data.primitives import SCHEMA
 
+ControllerData = Dict[str, Any]
 FrameData = Dict[str, Any]
 
 
-def extract_frame_data(gamestate: melee.GameState, replay_uuid: int) -> FrameData:
+def extract_single_frame(gamestate: melee.GameState, replay_uuid: int) -> Tuple[FrameData, ControllerData]:
+    """Extracts gamestate and controller data from 1 frame of replay."""
     players = sorted(gamestate.players.items())
     if len(players) != 2:
         raise ValueError(f"Expected 2 players, got {len(players)}")
@@ -30,9 +33,15 @@ def extract_frame_data(gamestate: melee.GameState, replay_uuid: int) -> FrameDat
     p1_port, p1 = players[0]
     p2_port, p2 = players[1]
 
-    return dict(
+    # Skip pre-game frames
+    if gamestate.frame < 0:
+        return {}, {}
+
+    gamestate_frame = dict(
+        # Metadata
         replay_uuid=replay_uuid,
         frame=gamestate.frame,
+        # Stage
         stage=IDX_BY_STAGE[gamestate.stage],
         # Player 1 state
         p1_port=p1_port,
@@ -96,6 +105,46 @@ def extract_frame_data(gamestate: melee.GameState, replay_uuid: int) -> FrameDat
         p2_ecb_right_y=p2.ecb_right[1],
     )
 
+    p1_controller = p1.controller_state
+    p2_controller = p2.controller_state
+
+    controller_frame = dict(
+        # Player 1
+        p1_button_a=p1_controller.button[melee.Button.BUTTON_A],
+        p1_button_b=p1_controller.button[melee.Button.BUTTON_B],
+        p1_button_x=p1_controller.button[melee.Button.BUTTON_X],
+        p1_button_y=p1_controller.button[melee.Button.BUTTON_Y],
+        p1_button_z=p1_controller.button[melee.Button.BUTTON_Z],
+        p1_button_start=p1_controller.button[melee.Button.BUTTON_START],
+        p1_button_d_up=p1_controller.button[melee.Button.BUTTON_D_UP],
+        p1_button_l=p1_controller.button[melee.Button.BUTTON_L],
+        p1_button_r=p1_controller.button[melee.Button.BUTTON_R],
+        p1_main_stick_x=p1_controller.main_stick[0],
+        p1_main_stick_y=p1_controller.main_stick[1],
+        p1_c_stick_x=p1_controller.c_stick[0],
+        p1_c_stick_y=p1_controller.c_stick[1],
+        p1_l_shoulder=p1_controller.l_shoulder,
+        p1_r_shoulder=p1_controller.r_shoulder,
+        # Player 2
+        p2_button_a=p2_controller.button[melee.Button.BUTTON_A],
+        p2_button_b=p2_controller.button[melee.Button.BUTTON_B],
+        p2_button_x=p2_controller.button[melee.Button.BUTTON_X],
+        p2_button_y=p2_controller.button[melee.Button.BUTTON_Y],
+        p2_button_z=p2_controller.button[melee.Button.BUTTON_Z],
+        p2_button_start=p2_controller.button[melee.Button.BUTTON_START],
+        p2_button_d_up=p2_controller.button[melee.Button.BUTTON_D_UP],
+        p2_button_l=p2_controller.button[melee.Button.BUTTON_L],
+        p2_button_r=p2_controller.button[melee.Button.BUTTON_R],
+        p2_main_stick_x=p2_controller.main_stick[0],
+        p2_main_stick_y=p2_controller.main_stick[1],
+        p2_c_stick_x=p2_controller.c_stick[0],
+        p2_c_stick_y=p2_controller.c_stick[1],
+        p2_l_shoulder=p2_controller.l_shoulder,
+        p2_r_shoulder=p2_controller.r_shoulder,
+    )
+
+    return gamestate_frame, controller_frame
+
 
 def process_replay(replay_path: str) -> Tuple[FrameData, ...]:
     logger.trace(f"Processing replay {replay_path}")
@@ -107,6 +156,7 @@ def process_replay(replay_path: str) -> Tuple[FrameData, ...]:
         return tuple()
 
     frame_data = []
+    prev_gamestate_frame: Optional[FrameData] = None
     replay_uuid = hash(replay_path)
 
     try:
@@ -114,9 +164,17 @@ def process_replay(replay_path: str) -> Tuple[FrameData, ...]:
             gamestate = console.step()
             if gamestate is None:
                 break
-            frame_data.append(extract_frame_data(gamestate, replay_uuid))
+            gamestate_frame, controller_frame = extract_single_frame(gamestate, replay_uuid)
+            if not gamestate_frame or not controller_frame:
+                continue
+            # Controller state is stored with resultant gamestate
+            # We need to offset by 1 to pair correct input/output for sequential modeling, i.e. what buttons to press next *given the current frame*
+            if prev_gamestate_frame is not None:
+                prev_gamestate_frame.update(controller_frame)
+                frame_data.append(prev_gamestate_frame)
+            prev_gamestate_frame = gamestate_frame
     except Exception as e:
-        logger.error(f"Error processing replay {replay_path}: {e}")
+        logger.debug(f"Error processing replay {replay_path}: {e}")
     finally:
         console.stop()
 
