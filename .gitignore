@@ -1,7 +1,9 @@
 # Generated data
 /data/
+/Data/
 /runs/
 /logs/
+/Logs/
 /wandb/
 
 # Secrets
