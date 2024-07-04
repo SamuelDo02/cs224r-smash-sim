@@ -163,18 +163,21 @@ def split_train_val_test(
 
 
 def process_replays(replay_dir: str, output_dir: str, seed: int, batch_size: int) -> None:
-    replay_paths = list(str(Path(replay_dir).rglob("*.slp")))
+    replay_paths = list(str(path) for path in Path(replay_dir).rglob("*.slp"))
     random.seed(seed)
     random.shuffle(replay_paths)
     splits = split_train_val_test(input_paths=tuple(replay_paths))
 
-    for split, split_paths in splits.items():
-        split_dir = Path(output_dir) / split
-        split_dir.mkdir(parents=True, exist_ok=True)
-        write_dataset_incrementally(replay_paths=split_paths, output_path=str(split_dir), batch_size=batch_size)
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+
+    for split, split_replay_paths in splits.items():
+        split_output_path = Path(output_dir) / f"{split}.parquet"
+        write_dataset_incrementally(
+            replay_paths=split_replay_paths, output_path=str(split_output_path), batch_size=batch_size
+        )
 
 
-def validate_input(replay_dir: str, output_dir: str, batch_size: int) -> None:
+def validate_input(replay_dir: str, batch_size: int) -> None:
     if not Path(replay_dir).exists():
         raise ValueError(f"Replay directory does not exist: {replay_dir}")
 
@@ -185,15 +188,13 @@ def validate_input(replay_dir: str, output_dir: str, batch_size: int) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process Melee replay files and store frame data in parquet.")
     parser.add_argument("--replay_dir", required=True, help="Input directory containing .slp replay files")
-    parser.add_argument("--output-dir", required=True, help="Output directory for processed data")
+    parser.add_argument("--output_dir", required=True, help="Output directory for processed data")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility")
-    parser.add_argument("--batch-size", type=int, default=100, help="Number of replay files to process in each batch")
+    parser.add_argument("--batch", type=int, default=100, help="Number of replay files to process in each batch")
     args = parser.parse_args()
 
     try:
-        validate_input(replay_dir=args.replay_dir, output_dir=args.output_dir, batch_size=args.batch_size)
-        process_replays(
-            replay_dir=args.replay_dir, output_dir=args.output_dir, seed=args.seed, batch_size=args.batch_size
-        )
+        validate_input(replay_dir=args.replay_dir, batch_size=args.batch)
+        process_replays(replay_dir=args.replay_dir, output_dir=args.output_dir, seed=args.seed, batch_size=args.batch)
     except Exception as e:
         logger.error(f"Error processing replays: {e}")
