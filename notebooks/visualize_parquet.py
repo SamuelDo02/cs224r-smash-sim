@@ -254,6 +254,7 @@ for uuid in np.unique(table["replay_uuid"].to_numpy()):
     # print(uuid, replay["p1_button_a"].to_numpy())
 
 # %%
-action_frames = replay["p1_action_frame"].to_numpy()
+action_frames = table["p1_action"].to_numpy()
 action_frames = [ACTION_BY_IDX[action] for action in action_frames]
 # %%
+action_frames
