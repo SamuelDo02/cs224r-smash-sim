@@ -179,7 +179,7 @@ def split_train_val_test(
     }
 
 
-def process_replays(replay_dir: str, output_dir: str, seed: int, batch_size: int, max_replays: int = -1) -> None:
+def process_replays(replay_dir: str, output_dir: str, seed: int, max_replays: int = -1) -> None:
     replay_paths = list(Path(replay_dir).rglob("*.slp"))
     if max_replays > 0:
         replay_paths = replay_paths[:max_replays]
@@ -194,12 +194,9 @@ def process_replays(replay_dir: str, output_dir: str, seed: int, batch_size: int
         write_dataset_incrementally(replay_paths=split_replay_paths, output_path=str(split_output_path))
 
 
-def validate_input(replay_dir: str, batch_size: int) -> None:
+def validate_input(replay_dir: str) -> None:
     if not Path(replay_dir).exists():
         raise ValueError(f"Replay directory does not exist: {replay_dir}")
-
-    if batch_size <= 0:
-        raise ValueError(f"Batch size must be a positive integer, got: {batch_size}")
 
 
 if __name__ == "__main__":
@@ -207,7 +204,6 @@ if __name__ == "__main__":
     parser.add_argument("--replay_dir", required=True, help="Input directory containing .slp replay files")
     parser.add_argument("--output_dir", required=True, help="Output directory for processed data")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility")
-    parser.add_argument("--batch", type=int, default=4, help="Number of replay files to process in each batch")
     parser.add_argument("--max_replays", type=int, default=-1, help="Maximum number of replays to process")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode")
     args = parser.parse_args()
@@ -216,11 +212,10 @@ if __name__ == "__main__":
         logger.remove()
         logger.add(sys.stderr, level="TRACE")
 
-    validate_input(replay_dir=args.replay_dir, batch_size=args.batch)
+    validate_input(replay_dir=args.replay_dir)
     process_replays(
         replay_dir=args.replay_dir,
         output_dir=args.output_dir,
         seed=args.seed,
-        batch_size=args.batch,
         max_replays=args.max_replays,
     )
