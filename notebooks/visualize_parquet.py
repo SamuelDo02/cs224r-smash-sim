@@ -192,14 +192,34 @@ plt.show()
 # Visualize button presses over replay
 buttons = ["A", "B", "X", "Y", "Z", "START", "L", "R", "D_UP"]
 for button in buttons:
-    print(replay[f"p1_button_{button.lower()}"])
-    # plt.figure(figsize=(8, 6))
-    # plt.plot(replay[f"p1_button_{button.lower()}"], label=button)
-    # plt.xlabel("Time")
-    # plt.ylabel("Button Press")
-    # plt.title(f"Button {button} Presses Over Time")
-    # plt.legend()
-    # plt.show()
+    plt.figure(figsize=(8, 6))
+    plt.plot(replay[f"p1_button_{button.lower()}"].to_numpy(), label=button)
+    plt.xlabel("Frame")
+    plt.ylabel("Button Press")
+    plt.title(f"Button {button} Presses Over Time")
+    plt.legend()
+    plt.show()
 
 # %%
-table["p1_button_a"]
+# Visualize analog values over time
+analogs = ["main_stick_x", "main_stick_y", "c_stick_x", "c_stick_y", "l_shoulder", "r_shoulder"]
+for analog in analogs:
+    plt.figure(figsize=(8, 6))
+    plt.plot(replay[f"p1_{analog}"].to_numpy(), label=analog)
+    plt.xlabel("Frame")
+    plt.ylabel(f"{analog} Value")
+    plt.title(f"{analog} Values Over Time")
+    plt.legend()
+    plt.show()
+
+# %%
+table["p1_button_a"].to_numpy()
+# %%
+# get unique values
+for uuid in np.unique(table["replay_uuid"].to_numpy()):
+    uuid_filter = pc.field("replay_uuid") == uuid
+    replay = table.filter(uuid_filter)
+    print(len(replay))
+    # print(uuid, replay["p1_button_a"].to_numpy())
+
+# %%
