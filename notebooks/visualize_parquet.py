@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pyarrow as pa
 import seaborn as sns
+from pyarrow import compute as pc
 from pyarrow import parquet as pq
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
@@ -14,21 +15,22 @@ from hal.data.constants import MAIN_STICK_XY_CLUSTER_CENTERS_V0
 np.set_printoptions(threshold=np.inf)
 
 # %%
-table: pa.Table = pq.read_table("/opt/projects/hal2/data/dev/train.parquet")
+table: pa.Table = pq.read_table("/opt/projects/hal2/data/dev/val.parquet")
 # randomly sample rows
-# table = table.take(np.random.choice(len(table), 10000000, replace=False))
+# table = table.take(np.random.choice(len(table), 10000, replace=False))
 
 # %%
 table.column_names
 
 # %%
+table["replay_uuid"]
 
 # %%
 table["p1_position_y"]
 
 # %%
-# uuid_filter = pc.field("replay_uuid") == 5393121284994579877
-# replay = table.filter(uuid_filter)
+uuid_filter = pc.field("replay_uuid") == 1528572062257279617
+replay = table.filter(uuid_filter)
 
 # p1_l_shoulder = replay["p1_l_shoulder"].to_pylist()
 # p1_button_l = replay["p1_button_l"].to_pylist()
@@ -47,6 +49,9 @@ table["p1_position_y"]
 
 # %%
 len(table)
+
+# %%
+replay.schema
 
 
 # %%
@@ -92,7 +97,7 @@ plt.show()
 # %%
 visualize_position_heatmap(table, "p1_position_x", "p1_position_y", "Player 1 Position Heatmap")
 
-# # %%
+# %%
 visualize_position_heatmap(table, "p1_main_stick_x", "p1_main_stick_y", "Player 1 Main Stick Heatmap")
 
 # %%
@@ -184,3 +189,17 @@ plt.title("Cluster Locations")
 plt.show()
 
 # %%
+# Visualize button presses over replay
+buttons = ["A", "B", "X", "Y", "Z", "START", "L", "R", "D_UP"]
+for button in buttons:
+    print(replay[f"p1_button_{button.lower()}"])
+    # plt.figure(figsize=(8, 6))
+    # plt.plot(replay[f"p1_button_{button.lower()}"], label=button)
+    # plt.xlabel("Time")
+    # plt.ylabel("Button Press")
+    # plt.title(f"Button {button} Presses Over Time")
+    # plt.legend()
+    # plt.show()
+
+# %%
+table["p1_button_a"]

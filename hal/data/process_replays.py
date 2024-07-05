@@ -132,6 +132,9 @@ def process_replay(replay_path: str, min_frames: int = 1500) -> FrameData:
     finally:
         console.stop()
 
+    # Assert lists aren't empty
+    for key, value in frame_data.items():
+        assert len(value) > 0, f"List for key {key} is empty"
     # Skip replays with less than `min_frames` frames because they are likely incomplete/low-quality
     if any(len(v) < min_frames for v in frame_data.values()):
         logger.trace(f"Replay {replay_path} was less than {min_frames} frames, skipping.")
