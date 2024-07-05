@@ -1,3 +1,4 @@
+import numpy as np
 from melee import Action
 from melee import Button
 from melee import Character
@@ -34,3 +35,29 @@ IDX_BY_BUTTON: dict[Button, int] = {
     button: i for i, button in enumerate(button for button in Button if button.name not in EXCLUDED_BUTTONS)
 }
 BUTTON_BY_IDX: dict[int, str] = {i: button.name for button, i in IDX_BY_BUTTON.items()}
+
+MAIN_STICK_XY_CLUSTER_CENTERS_V0: np.ndarray = np.array(
+    [
+        [0.5, 0.5],
+        [1.0, 0.5],
+        [0.0, 0.5],
+        [0.50, 0.0],
+        [0.50, 1.0],
+        [0.50, 0.25],
+        [0.50, 0.75],
+        [0.75, 0.5],
+        [0.25, 0.5],
+        [0.15, 0.15],
+        [0.85, 0.15],
+        [0.85, 0.85],
+        [0.15, 0.85],
+        [0.28, 0.93],
+        [0.28, 0.07],
+        [0.72, 0.07],
+        [0.72, 0.93],
+        [0.07, 0.28],
+        [0.07, 0.72],
+        [0.93, 0.72],
+        [0.93, 0.28],
+    ]
+)
