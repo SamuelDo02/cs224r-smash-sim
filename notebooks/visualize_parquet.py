@@ -24,7 +24,7 @@ table.column_names
 # %%
 
 # %%
-table["p1_position_y"].to_numpy().max()
+table["p1_position_y"]
 
 # %%
 # uuid_filter = pc.field("replay_uuid") == 5393121284994579877
