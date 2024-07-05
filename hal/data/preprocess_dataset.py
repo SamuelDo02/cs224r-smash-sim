@@ -3,6 +3,7 @@ import itertools
 import multiprocessing as mp
 import random
 import sys
+import time
 from pathlib import Path
 from typing import Any
 from typing import Dict
@@ -143,6 +144,7 @@ def write_dataset_incrementally(replay_paths: Tuple[str, ...], output_path: str,
     logger.info(f"Processing {len(replay_paths)} replays and writing to {Path(output_path).resolve()}")
     frames_processed = 0
 
+    t0 = time.perf_counter()
     with mp.Pool() as pool:
         data_generator = pool.imap(process_replay, replay_paths)
         with pq.ParquetWriter(output_path, schema=SCHEMA) as writer:
@@ -154,8 +156,11 @@ def write_dataset_incrementally(replay_paths: Tuple[str, ...], output_path: str,
                     table = pa.Table.from_pylist(frames, schema=SCHEMA)
                     writer.write_table(table)
                     frames_processed += len(frames)
+    t1 = time.perf_counter()
 
-    logger.info(f"Finished processing. Total frames: {frames_processed}")
+    logger.info(
+        f"Finished processing {len(replay_paths)} replays with {frames_processed} frames in {t1 - t0:.2f} seconds."
+    )
 
 
 def split_train_val_test(
