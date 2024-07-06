@@ -133,46 +133,63 @@ def convert_target_to_one_hot_3d(array: np.ndarray) -> np.ndarray:
     Convert 3D array to one-hot, cleaning up overlapping button presses by keeping the latest one and adding a column for "no press."
 
     Args:
-        array: (B, T, D) array of button presses, where D = (# number of buttons).
+        array: (N, T, D) array of button presses, where N is the batch size, T is the time steps, and D is the number of buttons.
 
     Returns:
-        One hot encoded array: (B, T, D + 1).
+        One hot encoded array: (N, T, D + 1).
     """
-    B, T, D = array.shape
-    one_hot = np.zeros((B, T, D + 1))
+    N, T, D = array.shape
+    one_hot = np.zeros((N, T, D + 1))
 
-    # Step 1: Identify positions where button presses occur
+    # Find all button presses
     button_presses = np.argwhere(array == 1)
 
-    # Step 2: Identify unique (batch, time) combinations and their indices
-    unique_times, inverse_indices = np.unique(button_presses[..., 0], axis=0, return_inverse=True)
+    # Create a unique identifier for each batch and time step
+    batch_time_id = button_presses[:, 0] * T + button_presses[:, 1]
 
-    # Step 3: Count button presses for each (batch, time) combination
-    press_counts = np.bincount(inverse_indices)
+    # Group button presses by batch and time step
+    unique_batch_times, inverse_indices, press_counts = np.unique(
+        batch_time_id, return_inverse=True, return_counts=True
+    )
 
-    # Step 4: Create a mask for no press cases
-    no_press_mask = np.ones((B, T), dtype=bool)
-    no_press_mask[unique_times[:, 0], unique_times[:, 1]] = False
-    one_hot[no_press_mask, -1] = 1
+    # Handle cases with no button presses
+    all_batch_times = np.arange(N * T)
+    no_press_mask = ~np.isin(all_batch_times, unique_batch_times)
+    one_hot.reshape(N * T, -1)[no_press_mask, -1] = 1
 
-    # Step 5: Handle single button presses
+    # Handle cases with single button press
     single_press_mask = press_counts == 1
-    single_press_times = unique_times[single_press_mask]
-    single_press_indices = button_presses[np.isin(inverse_indices, np.where(single_press_mask)[0])]
-    one_hot[single_press_times[:, 0], single_press_times[:, 1], single_press_indices[:, 2]] = 1
+    single_press_batch_times = unique_batch_times[single_press_mask]
+    single_press_buttons = button_presses[np.isin(batch_time_id, single_press_batch_times), 2]
+    one_hot.reshape(N * T, -1)[single_press_batch_times, single_press_buttons] = 1
 
-    # Step 6: Handle multiple button presses
+    # Handle cases with multiple button presses
     multi_press_mask = press_counts > 1
-    multi_press_times = unique_times[multi_press_mask]
-    if len(multi_press_times) > 0:
-        held_buttons = np.zeros((B, D), dtype=bool)
-        for (b, t), buttons in zip(
-            multi_press_times, [button_presses[inverse_indices == idx][:, 2] for idx in np.where(multi_press_mask)[0]]
-        ):
-            new_buttons = buttons[~held_buttons[b, buttons]]
-            if len(new_buttons) > 0:
-                one_hot[b, t, new_buttons[0]] = 1
-            held_buttons[b, buttons] = True
+    if np.any(multi_press_mask):
+        multi_press_batch_times = unique_batch_times[multi_press_mask]
+        multi_press_indices = np.where(np.isin(batch_time_id, multi_press_batch_times))[0]
+        multi_press_buttons = button_presses[multi_press_indices, 2]
+
+        # Reshape to (num_multi_presses, max_buttons_per_press)
+        max_buttons = press_counts[multi_press_mask].max()
+        button_matrix = np.full((len(multi_press_batch_times), max_buttons), -1)
+        np.put(
+            button_matrix,
+            np.arange(len(multi_press_buttons))
+            + np.repeat(np.arange(len(multi_press_batch_times)), press_counts[multi_press_mask]) * max_buttons,
+            multi_press_buttons,
+        )
+
+        # Find the first new button press for each multi-press time step
+        cumulative_mask = np.zeros((len(multi_press_batch_times), D), dtype=bool)
+        for i in range(max_buttons):
+            valid_buttons = (button_matrix[:, i] != -1) & ~cumulative_mask[
+                np.arange(len(multi_press_batch_times)), button_matrix[:, i]
+            ]
+            if np.any(valid_buttons):
+                one_hot.reshape(N * T, -1)[multi_press_batch_times[valid_buttons], button_matrix[valid_buttons, i]] = 1
+                break
+            cumulative_mask[np.arange(len(multi_press_batch_times)), button_matrix[:, i]] = True
 
     return one_hot
 
@@ -224,7 +241,7 @@ def preprocess_features_v0(sample: Dict[str, np.ndarray], stats: Dict[str, Featu
         stacked_buttons = np.stack((button_a, button_b, button_z, jump, shoulder), axis=1)[np.newaxis, ...]
         if player == "p1":
             print(stacked_buttons[0, START:END])
-        preprocessed[f"{player}_buttons"] = convert_target_button_to_one_hot(stacked_buttons)
+        preprocessed[f"{player}_buttons"] = convert_target_to_one_hot_3d(stacked_buttons)
 
     # for feature_list, preprocessing_func in feature_processors.items():
     #     for feature in feature_list:
@@ -233,16 +250,16 @@ def preprocess_features_v0(sample: Dict[str, np.ndarray], stats: Dict[str, Featu
     return preprocessed
 
 
-# input_path = "/opt/projects/hal2/data/dev/val.parquet"
-# stats_path = "/opt/projects/hal2/data/dev/stats.json"
+input_path = "/opt/projects/hal2/data/dev/val.parquet"
+stats_path = "/opt/projects/hal2/data/dev/stats.json"
 
-# table: pa.Table = pq.read_table(input_path, memory_map=True)
-# stats = load_dataset_stats(stats_path)
+table: pa.Table = pq.read_table(input_path, memory_map=True)
+stats = load_dataset_stats(stats_path)
 
-# table_slice = table
+table_slice = table
 
-# t0 = time.perf_counter()
-# preprocessed = preprocess_features_v0(pyarrow_table_to_np_dict(table_slice), stats)
-# t1 = time.perf_counter()
-# print(f"Time to preprocess features: {t1 - t0} seconds")
-# preprocessed["p1_buttons"][0, START:END]
+t0 = time.perf_counter()
+preprocessed = preprocess_features_v0(pyarrow_table_to_np_dict(table_slice), stats)
+t1 = time.perf_counter()
+print(f"Time to preprocess features: {t1 - t0} seconds")
+preprocessed["p1_buttons"][0, START:END]
