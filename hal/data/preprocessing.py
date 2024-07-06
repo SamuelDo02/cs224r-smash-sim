@@ -83,10 +83,6 @@ def one_hot_3d(arr):
     # Step 3: Apply the mask to keep only the newest streak
     result = np.where(mask, arr, 0)
 
-    # Step 4: Handle rows with no 1s
-    no_ones = result.sum(axis=2) == 0
-    result[no_ones] = arr[no_ones]
-
     return result
 
 
