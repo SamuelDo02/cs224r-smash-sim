@@ -55,14 +55,37 @@ def union(array_1: np.ndarray, array_2: np.ndarray) -> np.ndarray:
     return array_1 | array_2
 
 
-def one_hot_3d(arr: np.ndarray) -> np.ndarray:
-    """One hot encode 3d array."""
-    # Identify the start of each streak
-    streak = np.diff(arr, axis=-1, prepend=0) > 0
-    result = streak * arr
+# def one_hot_3d(arr: np.ndarray) -> np.ndarray:
+#     """One hot encode 3d array."""
+#     # Identify the start of each streak
+#     streak = np.diff(arr, axis=-1, prepend=0) > 0
+#     result = streak * arr
 
-    # Set last column to 1 if row is empty
-    result[..., -1] = ~np.any(arr, axis=-1)
+#     # Set last column to 1 if row is empty
+#     result[..., -1] = ~np.any(arr, axis=-1)
+
+#     return result
+
+
+def one_hot_3d(arr):
+    B, T, D = arr.shape
+
+    # Step 1: Identify the newest streak
+    diff = np.diff(arr, axis=-2, prepend=0)
+    newest_streak = diff == 1
+
+    # Step 2: Create a mask for the newest streak in each row
+    row_has_newest = newest_streak.any(axis=-1)
+    newest_index = np.where(row_has_newest, newest_streak.argmax(axis=2), -1)
+    mask = np.zeros_like(arr, dtype=bool)
+    mask[np.arange(B)[:, None], np.arange(T), newest_index] = True
+
+    # Step 3: Apply the mask to keep only the newest streak
+    result = np.where(mask, arr, 0)
+
+    # Step 4: Handle rows with no 1s
+    no_ones = result.sum(axis=2) == 0
+    result[no_ones] = arr[no_ones]
 
     return result
 
@@ -75,7 +98,7 @@ feature_processors = {
 }
 
 
-START, END = 880, 900
+START, END = 885, 900
 
 
 def preprocess_features_v0(sample: Dict[str, np.ndarray], stats: Dict[str, FeatureStats]) -> Dict[str, np.ndarray]:
@@ -118,12 +141,44 @@ jump = union(table_slice[f"{player}_button_x"], table_slice[f"{player}_button_y"
 shoulder = union(table_slice[f"{player}_button_l"], table_slice[f"{player}_button_r"])
 no_button = np.zeros_like(button_a)
 
-stacked_buttons = np.stack((button_a, button_b, button_z, jump, shoulder, no_button), axis=1)[np.newaxis, ...]
 
-print(stacked_buttons[0, START:END])
+arr1 = np.array(
+    [
+        [
+            [0, 0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 1, 0],
+            [0, 0, 1, 0, 1, 0],
+            [0, 0, 1, 0, 1, 0],
+            [0, 0, 1, 0, 1, 0],
+            [0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0],
+        ]
+    ],
+    dtype=np.int8,
+)
+print(arr1)
+print(one_hot_3d(arr1))
+
+# %%
+
+stacked_buttons = np.stack((button_a, button_b, button_z, jump, shoulder, no_button), axis=1)[np.newaxis, ...]
+print(stacked_buttons.shape)
+print(stacked_buttons[:, START:END])
 
 t0 = time.perf_counter()
 preprocessed = one_hot_3d(stacked_buttons)
 t1 = time.perf_counter()
-print(f"Time to preprocess features: {t1 - t0} seconds")
-preprocessed[0, START:END]
+# print(f"Time to preprocess features: {t1 - t0} seconds")
+print(preprocessed.shape)
+print(preprocessed[:, START:END])
+
+# %%
+print(arr1)
+print(stacked_buttons[:, START:END])
