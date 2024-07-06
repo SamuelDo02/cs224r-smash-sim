@@ -54,27 +54,37 @@ def union(array_1: np.ndarray, array_2: np.ndarray) -> np.ndarray:
     return array_1 | array_2
 
 
-def encode_stacked_array_to_one_hot(array: np.ndarray) -> np.ndarray:
-    """Convert stacked features to one hot encoding."""
-    non_zero_mask = array > 0
-    row_sum = np.sum(non_zero_mask, axis=1)
+def one_hot(array: np.ndarray) -> np.ndarray:
+    rows, cols = array.shape
+    result = np.zeros_like(array)
 
-    one_hot = np.zeros_like(array)
+    # Find all positions of 1s
+    one_positions = np.argwhere(array == 1)
 
-    # Handle rows with single non-zero element
-    single_non_zero = row_sum == 1
-    one_hot[single_non_zero] = non_zero_mask[single_non_zero]
+    # Group by row
+    unique_rows, row_indices = np.unique(one_positions[:, 0], return_index=True)
 
-    # Handle rows with multiple non-zero elements
-    multi_non_zero = row_sum > 1
-    if np.any(multi_non_zero):
-        # Find the index of the last non-zero element in each row
-        last_non_zero_indices = np.where(non_zero_mask[multi_non_zero])[1].reshape(
-            -1, row_sum[multi_non_zero][:, None]
-        )[:, -1]
-        one_hot[multi_non_zero, last_non_zero_indices] = 1
+    # Handle single 1 per row
+    single_ones = np.diff(np.append(row_indices, len(one_positions))) == 1
+    result[one_positions[row_indices[single_ones], 0], one_positions[row_indices[single_ones], 1]] = 1
 
-    return one_hot
+    # Handle multiple 1s per row
+    multi_ones = ~single_ones
+    multi_one_rows = unique_rows[multi_ones]
+
+    if len(multi_one_rows) > 0:
+        prev_selections = np.zeros(cols, dtype=int)
+        for row in multi_one_rows:
+            one_cols = one_positions[one_positions[:, 0] == row, 1]
+            if row == 0:
+                selected_col = one_cols[0]
+            else:
+                available_cols = one_cols[one_cols != prev_selections[row - 1]]
+                selected_col = available_cols[0] if len(available_cols) > 0 else one_cols[0]
+            result[row, selected_col] = 1
+            prev_selections[row] = selected_col
+
+    return result
 
 
 feature_processors = {
@@ -124,6 +134,8 @@ shield[:10000]
 # %%
 table_slice = table
 preprocessed = preprocess_features_v0(pyarrow_table_to_np_dict(table_slice), stats)
+# %%
+preprocessed
 # %%
 a = preprocessed["p1_buttons"]
 b = table_slice["p1_button_x"].to_numpy() | table_slice["p1_button_y"].to_numpy()
