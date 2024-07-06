@@ -55,7 +55,7 @@ def union(array_1: np.ndarray, array_2: np.ndarray) -> np.ndarray:
     return array_1 | array_2
 
 
-def vectorized_custom_one_hot(arr):
+def one_hot(arr):
     rows, cols = arr.shape
 
     # Create a matrix of column indices
@@ -107,7 +107,7 @@ def preprocess_features_v0(sample: Dict[str, np.ndarray], stats: Dict[str, Featu
         no_button = np.zeros_like(sample[f"{player}_button_a"])
 
         stacked_buttons = np.stack((button_a, button_b, button_z, jump, shoulder, no_button), axis=1)
-        preprocessed[f"{player}_buttons"] = vectorized_custom_one_hot(stacked_buttons)
+        preprocessed[f"{player}_buttons"] = one_hot(stacked_buttons)
 
     # for feature_list, preprocessing_func in feature_processors.items():
     #     for feature in feature_list:
