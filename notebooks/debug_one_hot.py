@@ -177,16 +177,16 @@ streak_starts = np.diff(np.vstack([np.zeros(cols), arr]), axis=0) == 1
 def f(arr):
     # Create a boolean mask for non-zero elements
     mask = arr != 0
-    
+
     # Use cumsum to count consecutive non-zero elements
     cumsum = mask.cumsum(axis=0)
-    
+
     # Create a mask that resets to True after each zero
     reset_mask = np.maximum.accumulate((~mask).cumsum(axis=0), axis=0)
-    
+
     # Apply the reset mask to the cumsum
     streaks = cumsum * (reset_mask == reset_mask.min(axis=0))
-    
+
     # Multiply by the original mask to keep zeros in place
     return streaks * mask
 
@@ -289,4 +289,63 @@ buttons[886:900]
 a = preprocessed["p1_buttons"]
 b = table_slice["p1_button_x"].to_numpy() | table_slice["p1_button_y"].to_numpy()
 a[:, 3] == b
+# %%
+
+
+# %%
+def zero_out_streaks(arr):
+    rows, cols = arr.shape
+
+    # Step 1: Create an array to mark the start of streaks
+    starts = (arr == 1) & (np.pad(arr[:-1], ((1, 0), (0, 0)), constant_values=0) == 0)
+
+    # Step 2: Create an array to mark the end of streaks
+    ends = (arr == 1) & (np.pad(arr[1:], ((0, 1), (0, 0)), constant_values=0) == 0)
+
+    # Step 3: Create a cumulative sum array to help identify streaks
+    streaks = np.cumsum(arr, axis=0) * arr
+    streaks -= np.cumsum(np.where(ends, streaks, 0), axis=0)
+
+    # Step 4: Identify starting points of streaks
+    streaks_start = np.zeros_like(arr)
+    streaks_start[starts] = np.arange(1, starts.sum() + 1)
+
+    # Step 5: Propagate starting points to identify entire streaks
+    streaks_start = np.maximum.accumulate(streaks_start, axis=0)
+
+    # Step 6: Find the first streak in each row
+    first_streaks = np.zeros_like(arr)
+    row_first_streaks = np.argmax(streaks_start, axis=1)
+    for r in range(rows):
+        c = row_first_streaks[r]
+        if streaks_start[r, c] > 0:
+            first_streaks[r, c] = 1
+
+    # Step 7: Convert first_streaks to cumulative form
+    first_streaks = np.cumsum(first_streaks, axis=0) * arr
+    first_streaks -= np.cumsum(np.where(ends, first_streaks, 0), axis=0)
+
+    # Step 8: Identify and zero out non-first streaks
+    result = arr.copy()
+    result[first_streaks == 0] = 0
+
+    return result
+
+
+input_path = "/opt/projects/hal2/data/dev/val.parquet"
+stats_path = "/opt/projects/hal2/data/dev/stats.json"
+
+table: pa.Table = pq.read_table(input_path, memory_map=True)
+
+player = "p1"
+sample = pyarrow_table_to_np_dict(table)
+button_a = (sample[f"{player}_button_a"]).astype(np.bool_)
+button_b = (sample[f"{player}_button_b"]).astype(np.bool_)
+button_z = sample[f"{player}_button_z"]
+jump = union(sample[f"{player}_button_x"], sample[f"{player}_button_y"])
+shoulder = union(sample[f"{player}_button_l"], sample[f"{player}_button_r"])
+# no_button = np.zeros_like(sample[f"{player}_button_a"])
+
+arr = np.stack((button_a, button_b, button_z, jump, shoulder), axis=1)[880:900]
+zero_out_streaks(arr)
 # %%

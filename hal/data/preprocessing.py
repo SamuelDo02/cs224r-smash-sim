@@ -1,9 +1,9 @@
 # %%
+import time
 from typing import Dict
 
 import numpy as np
 import pyarrow as pa
-from data.constants import ACTION_BY_IDX
 from pyarrow import parquet as pq
 
 from hal.data.stats import FeatureStats
@@ -55,66 +55,69 @@ def union(array_1: np.ndarray, array_2: np.ndarray) -> np.ndarray:
     return array_1 | array_2
 
 
-# def one_hot(arr):
-#     rows, cols = arr.shape
+def convert_target_button_to_one_hot(array: np.ndarray) -> np.ndarray:
+    """
+    Vectorized version to clean up overlapping button presses by keeping the latest one.
+    """
+    T, D = array.shape
+    one_hot = np.zeros((T, D + 1))
 
-#     # Create a matrix of column indices
-#     col_indices = np.arange(cols).reshape(1, -1).repeat(rows, axis=0)
+    # Find all button presses
+    button_presses = np.argwhere(array == 1)
 
-#     # Create a mask for valid positions (where arr == 1)
-#     valid_mask = arr == 1
+    # Group button presses by time step
+    unique_times, inverse_indices = np.unique(button_presses[:, 0], return_inverse=True)
 
-#     # Handle rows with no 1s
-#     rows_without_ones = ~np.any(valid_mask, axis=1)
-#     valid_mask[rows_without_ones, -1] = True
+    # Count number of button presses at each time step
+    press_counts = np.bincount(inverse_indices)
 
-#     # Find the rightmost valid position for each row
-#     rightmost_valid = np.where(valid_mask, col_indices, -1).max(axis=1)
+    # Handle cases with no button presses
+    no_press_mask = np.ones(T, dtype=bool)
+    no_press_mask[unique_times] = False
+    one_hot[no_press_mask, -1] = 1
 
-#     # Create a matrix of cumulative max of rightmost valid positions
-#     cummax_rightmost = np.maximum.accumulate(rightmost_valid)
+    # Handle cases with single button press
+    single_press_mask = press_counts == 1
+    single_press_times = unique_times[single_press_mask]
+    single_press_buttons = button_presses[np.isin(button_presses[:, 0], single_press_times), 1]
+    one_hot[single_press_times, single_press_buttons] = 1
 
-#     # Create the final selection mask
-#     valid_and_in_range = (col_indices <= cummax_rightmost.reshape(-1, 1)) & valid_mask
-#     rightmost_valid_in_range = np.where(valid_and_in_range, col_indices, -1).max(axis=1)
-#     selection_mask = col_indices == rightmost_valid_in_range.reshape(-1, 1)
+    # Handle cases with multiple button presses
+    multi_press_mask = press_counts > 1
+    multi_press_times = unique_times[multi_press_mask]
 
-#     # Convert the mask to the final result
-#     result = selection_mask.astype(int)
+    if len(multi_press_times) > 0:
+        # Find the first new button press for each multi-press time step
+        multi_press_buttons = [button_presses[button_presses[:, 0] == t, 1] for t in multi_press_times]
+        held_buttons = np.zeros(D, dtype=bool)
+        for t, buttons in zip(multi_press_times, multi_press_buttons):
+            new_buttons = buttons[~held_buttons[buttons]]
+            if len(new_buttons) > 0:
+                one_hot[t, new_buttons[0]] = 1
+            held_buttons[buttons] = True
 
-#     return result
+    return one_hot
 
 
-def one_hot(arr):
-    rows, cols = arr.shape
+def sparse_one_hot(array: np.ndarray) -> np.ndarray:
+    """One hot encode array, but only return first frame for each button press.
 
-    # Find the start of each streak
-    streak_starts = np.diff(np.vstack([np.zeros(cols), arr]), axis=0) == 1
+    Args:
+        array: (T, D) array of button presses, where D = (# number of buttons + 1).
 
-    # Assign a unique ID to each streak, with more recent streaks having higher IDs
-    streak_ids = np.cumsum(streak_starts, axis=0)
+    Returns:
+        One hot encoded array.
+    """
+    # Use cumsum to count consecutive non-zero elements
+    rows, cols = array.shape
+    streak_starts = np.diff(np.vstack([np.zeros(cols), array]), axis=0) == 1
 
-    # For each row, find the column with the highest streak ID
-    max_streak_ids = np.max(streak_ids, axis=1, keepdims=True)
+    # Default to last column if no 1s
+    rows_without_ones = ~np.any(streak_starts, axis=1)
+    streak_starts[rows_without_ones, -1] = 1
 
-    # Create a mask for the columns with the highest streak ID in each row
-    highest_streak_mask = (streak_ids == max_streak_ids) & (streak_ids > 0)
-
-    # For tie-breaks, choose the left-most column
-    one_hot_cols = np.argmax(highest_streak_mask, axis=1)
-
-    # Create the one-hot encoded array
-    result = np.zeros((rows, cols), dtype=int)
-    result[np.arange(rows), one_hot_cols] = 1
-
-    # Add back the last column (all zeros)
-    result = np.hstack([result, np.zeros((rows, 1), dtype=int)])
-
-    import pdb
-
-    pdb.set_trace()
-
-    return result
+    # Multiply by the original mask to keep zeros in place
+    return array * streak_starts
 
 
 feature_processors = {
@@ -123,6 +126,9 @@ feature_processors = {
     INPUT_FEATURES_TO_INVERT_AND_NORMALIZE: invert_and_normalize,
     INPUT_FEATURES_TO_STANDARDIZE: standardize,
 }
+
+
+START, END = 2000, 2100
 
 
 def preprocess_features_v0(sample: Dict[str, np.ndarray], stats: Dict[str, FeatureStats]) -> Dict[str, np.ndarray]:
@@ -136,10 +142,11 @@ def preprocess_features_v0(sample: Dict[str, np.ndarray], stats: Dict[str, Featu
         button_z = sample[f"{player}_button_z"]
         jump = union(sample[f"{player}_button_x"], sample[f"{player}_button_y"])
         shoulder = union(sample[f"{player}_button_l"], sample[f"{player}_button_r"])
-        # no_button = np.zeros_like(sample[f"{player}_button_a"])
 
         stacked_buttons = np.stack((button_a, button_b, button_z, jump, shoulder), axis=1)
-        preprocessed[f"{player}_buttons"] = one_hot(stacked_buttons)
+        if player == "p1":
+            print(stacked_buttons[START:END])
+        preprocessed[f"{player}_buttons"] = vectorized_convert_target_button_to_one_hot(stacked_buttons)
 
     # for feature_list, preprocessing_func in feature_processors.items():
     #     for feature in feature_list:
@@ -148,145 +155,16 @@ def preprocess_features_v0(sample: Dict[str, np.ndarray], stats: Dict[str, Featu
     return preprocessed
 
 
-# %%
-input_path = "/opt/projects/hal2/data/dev/val.parquet"
-stats_path = "/opt/projects/hal2/data/dev/stats.json"
-
-table: pa.Table = pq.read_table(input_path, memory_map=True)
-
-player = "p1"
-sample = pyarrow_table_to_np_dict(table)
-button_a = (sample[f"{player}_button_a"]).astype(np.bool_)
-button_b = (sample[f"{player}_button_b"]).astype(np.bool_)
-button_z = sample[f"{player}_button_z"]
-jump = union(sample[f"{player}_button_x"], sample[f"{player}_button_y"])
-shoulder = union(sample[f"{player}_button_l"], sample[f"{player}_button_r"])
-# no_button = np.zeros_like(sample[f"{player}_button_a"])
-
-arr = np.stack((button_a, button_b, button_z, jump, shoulder), axis=1)[880:900]
-
-rows, cols = arr.shape
-
-# Find the start of each streak and reset streak whenever a new one starts
-streak_starts = np.diff(np.vstack([np.zeros(cols), arr]), axis=0) == 1
-
-# Set all other values in same row as streak to 0
-
-
-# %%
-def f(arr):
-    # Create a boolean mask for non-zero elements
-    mask = arr != 0
-
-    # Use cumsum to count consecutive non-zero elements
-    cumsum = mask.cumsum(axis=0)
-
-    # Create a mask that resets to True after each zero
-    reset_mask = np.maximum.accumulate((~mask).cumsum(axis=0), axis=0)
-
-    # Apply the reset mask to the cumsum
-    streaks = cumsum * (reset_mask == reset_mask.min(axis=0))
-
-    # Multiply by the original mask to keep zeros in place
-    return streaks * mask
-
-
-print(arr)
-f(arr)
-
-# %%
-
-
-# Assign a unique ID to each streak, with more recent streaks having higher IDs
-streak_ids = np.cumsum(streak_starts, axis=0)
-
-# For each row, find the column with the highest streak ID
-min_streak_ids = np.min(streak_ids, axis=1, keepdims=True)
-
-# Create a mask for the columns with the highest streak ID in each row
-highest_streak_mask = (streak_ids == min_streak_ids) & (streak_ids > 0)
-
-# For tie-breaks, choose the left-most column
-one_hot_cols = np.argmax(highest_streak_mask, axis=1)
-
-# Create the one-hot encoded array
-result = np.zeros((rows, cols), dtype=int)
-result[np.arange(rows), one_hot_cols] = 1
-
-result
-
-# %%
-streak_starts
-
-# %%
-buttons = np.stack(
-    [
-        table["p1_button_a"].to_numpy(),
-        table["p1_button_b"].to_numpy(),
-        table["p1_button_x"].to_numpy(),
-        table["p1_button_y"].to_numpy(),
-        table["p1_button_z"].to_numpy(),
-        table["p1_button_l"].to_numpy(),
-        table["p1_button_r"].to_numpy(),
-    ],
-    axis=1,
-)
-buttons[880:900]
-
-
-# %%
-# load dataset, load stats and apply them to the dataset
 input_path = "/opt/projects/hal2/data/dev/val.parquet"
 stats_path = "/opt/projects/hal2/data/dev/stats.json"
 
 table: pa.Table = pq.read_table(input_path, memory_map=True)
 stats = load_dataset_stats(stats_path)
 
-# %%
-shield = table["p1_shield_strength"].to_numpy()
-shield = invert_and_normalize(shield, stats["p1_shield_strength"])
-shield[:10000]
-
-# %%
 table_slice = table
+
+t0 = time.perf_counter()
 preprocessed = preprocess_features_v0(pyarrow_table_to_np_dict(table_slice), stats)
-# %%
-print(preprocessed["p1_buttons"][886:900])
-
-# %%
-# find rows where multiple buttons are pressed
-buttons = np.stack(
-    [
-        table["p1_button_a"].to_numpy(),
-        table["p1_button_b"].to_numpy(),
-        table["p1_button_x"].to_numpy(),
-        table["p1_button_y"].to_numpy(),
-        table["p1_button_z"].to_numpy(),
-        table["p1_button_l"].to_numpy(),
-        table["p1_button_r"].to_numpy(),
-    ],
-    axis=1,
-)
-
-multiple_buttons_pressed = np.sum(buttons, axis=1) >= 2
-indices = np.where(multiple_buttons_pressed)[0]
-for index in indices:
-    print(f"Index: {index}, Buttons: {buttons[index]}")
-
-# %%
-[ACTION_BY_IDX[i] for i in table[886:900]["p1_action"].to_pylist()]
-
-# %%
-buttons[886:900]
-# %%
-
-# print(table[multiple_buttons_pressed])
-# start, end = 205, 215
-# for button in ("a", "b", "z", "x", "y", "l", "r"):
-#     print(table_slice[f"p1_button_{button}"].to_numpy()[start:end])
-
-# %%
-a = preprocessed["p1_buttons"]
-b = table_slice["p1_button_x"].to_numpy() | table_slice["p1_button_y"].to_numpy()
-a[:, 3] == b
-# %%
+t1 = time.perf_counter()
+print(f"Time to preprocess features: {t1 - t0} seconds")
+preprocessed["p1_buttons"][START:END]
