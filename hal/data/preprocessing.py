@@ -1,4 +1,7 @@
 # %%
+from typing import Callable
+from typing import Dict
+
 import numpy as np
 import pyarrow as pa
 from pyarrow import parquet as pq
@@ -12,7 +15,16 @@ INPUT_FEATURES_TO_INVERT_AND_NORMALIZE = ("shield_strength",)
 INPUT_FEATURES_TO_STANDARDIZE = (
     "position_x",
     "position_y",
+    "hitlag_left",
+    "hitstun_left",
+    "speed_air_x_self",
+    "speed_y_self",
+    "speed_x_attack",
+    "speed_y_attack",
+    "speed_ground_x_self",
 )
+
+TARGET_FEATURES_TO_ONE_HOT_ENCODE = ("button_a", "button_b", "button_x", "button_z", "button_l")
 
 
 def normalize(array: np.ndarray, stats: FeatureStats) -> np.ndarray:
@@ -35,12 +47,40 @@ def union(array_1: np.ndarray, array_2: np.ndarray) -> np.ndarray:
     return array_1 | array_2
 
 
-def preprocess_features(table: pa.Table, stats: Dict[str, FeatureStats]) -> pa.Table:
+def convert_stacked_array_to_one_hot(array: np.ndarray) -> np.ndarray:
+    """Convert stacked features to one hot encoding."""
+    # Argmax tiebreaks by returning the first element
+    first_one_indices = np.argmax(array, axis=1)
+    one_hot = np.zeros_like(array)
+    one_hot[np.arange(array.shape[0]), first_one_indices] = 1
+
+    return one_hot
+
+
+feature_processors = {
+    INPUT_FEATURES_TO_EMBED: lambda x: x,
+    INPUT_FEATURES_TO_NORMALIZE: normalize,
+    INPUT_FEATURES_TO_INVERT_AND_NORMALIZE: invert_and_normalize,
+    INPUT_FEATURES_TO_STANDARDIZE: standardize,
+}
+
+
+def process_feature(feature: str, preprocessing_func: Callable) -> None:
+    for player in ["p1", "p2"]:
+        key = f"{player}_{feature}"
+        preprocessed[key] = preprocessing_func(sample[key], stats[key])
+
+
+def preprocess_features_v0(sample: Dict[str, np.ndarray], stats: Dict[str, FeatureStats]) -> Dict[str, np.ndarray]:
     """Preprocess features."""
-    for feature in SCHEMA:
-        if feature in table.column_names:
-            table = table.drop(feature)
-    return table
+
+    preprocessed = {}
+
+    for feature_list, preprocessing_func in feature_processors.items():
+        for feature in feature_list:
+            process_feature(feature, preprocessing_func)
+
+    return preprocessed
 
 
 # %%
