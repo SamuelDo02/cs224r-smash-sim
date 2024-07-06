@@ -57,27 +57,12 @@ def union(array_1: np.ndarray, array_2: np.ndarray) -> np.ndarray:
 
 def one_hot_3d(arr: np.ndarray) -> np.ndarray:
     """One hot encode 3d array."""
-    # Get the dimensions of the array
-    B, T, D = arr.shape
+    # Identify the start of each streak
+    streak = np.diff(arr, axis=-1, prepend=0) > 0
+    result = streak * arr
 
-    # Create a mask of the last 1 in each row
-    last_one_mask = arr * np.arange(1, D + 1)
-    last_one_index = np.argmax(last_one_mask, axis=2)
-
-    # Create a boolean mask for the rows with at least one 1
-    rows_with_ones = np.any(arr, axis=2)
-
-    # Create the output array, initially all zeros
-    result = np.zeros_like(arr)
-
-    # Use advanced indexing to set 1s in the result array
-    result[np.arange(B)[:, None], np.arange(T), last_one_index] = rows_with_ones
-
-    # Find the start of each streak
-    streak_starts = np.diff(result, axis=1, prepend=0) > 0
-
-    # # Propagate the 1s within each streak
-    # result = np.cumsum(streak_starts, axis=1) * result
+    # Set last column to 1 if row is empty
+    result[..., -1] = ~np.any(arr, axis=-1)
 
     return result
 
