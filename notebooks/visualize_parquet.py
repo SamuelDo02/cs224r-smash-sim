@@ -270,3 +270,24 @@ for i, (d, a) in enumerate(zip(digital, analog)):
         print(f"{i=}, {d=}, {a=}")
 
 # %%
+
+# %%
+# print surrounding 1 rows in pyarrow table where multiple buttons are pressed
+multiple_buttons_expression = (
+    pc.field("p1_button_a")
+    + pc.field("p1_button_b")
+    + pc.field("p1_button_x")
+    + pc.field("p1_button_y")
+    + pc.field("p1_button_z")
+) >= 2
+
+multiple_buttons_pressed = table.filter(multiple_buttons_expression)
+
+
+# %%
+table[828:832].to_pydict()
+# %%
+for i in range(len(multiple_buttons_pressed)):
+    start = max(0, i - 1)
+    end = min(len(multiple_buttons_pressed), i + 2)
+    print(multiple_buttons_pressed.slice(start, end).to_pandas())

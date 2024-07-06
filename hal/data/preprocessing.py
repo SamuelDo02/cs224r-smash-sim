@@ -54,35 +54,30 @@ def union(array_1: np.ndarray, array_2: np.ndarray) -> np.ndarray:
     return array_1 | array_2
 
 
-def one_hot(array: np.ndarray) -> np.ndarray:
-    rows, cols = array.shape
-    result = np.zeros_like(array)
+def one_hot(arr):
+    rows, cols = arr.shape
 
-    # Find all positions of 1s
-    one_positions = np.argwhere(array == 1)
+    # Create a matrix of column indices
+    col_indices = np.arange(cols).reshape(1, -1).repeat(rows, axis=0)
 
-    # Group by row
-    unique_rows, row_indices = np.unique(one_positions[:, 0], return_index=True)
+    # Create a mask for valid positions (where arr == 1)
+    valid_mask = arr == 1
 
-    # Handle single 1 per row
-    single_ones = np.diff(np.append(row_indices, len(one_positions))) == 1
-    result[one_positions[row_indices[single_ones], 0], one_positions[row_indices[single_ones], 1]] = 1
+    # Handle rows with no 1s
+    rows_without_ones = ~np.any(valid_mask, axis=1)
+    valid_mask[rows_without_ones, -1] = True
 
-    # Handle multiple 1s per row
-    multi_ones = ~single_ones
-    multi_one_rows = unique_rows[multi_ones]
+    # Find the rightmost valid position for each row
+    rightmost_valid = np.where(valid_mask, col_indices, -1).max(axis=1)
 
-    if len(multi_one_rows) > 0:
-        prev_selections = np.zeros(cols, dtype=int)
-        for row in multi_one_rows:
-            one_cols = one_positions[one_positions[:, 0] == row, 1]
-            if row == 0:
-                selected_col = one_cols[0]
-            else:
-                available_cols = one_cols[one_cols != prev_selections[row - 1]]
-                selected_col = available_cols[0] if len(available_cols) > 0 else one_cols[0]
-            result[row, selected_col] = 1
-            prev_selections[row] = selected_col
+    # Create a matrix of cumulative max of rightmost valid positions
+    cummax_rightmost = np.maximum.accumulate(rightmost_valid)
+
+    # Create the final selection mask
+    selection_mask = (col_indices == cummax_rightmost.reshape(-1, 1)) & valid_mask
+
+    # Convert the mask to the final result
+    result = selection_mask.astype(int)
 
     return result
 
@@ -106,10 +101,10 @@ def preprocess_features_v0(sample: Dict[str, np.ndarray], stats: Dict[str, Featu
         button_z = sample[f"{player}_button_z"]
         jump = union(sample[f"{player}_button_x"], sample[f"{player}_button_y"])
         shoulder = union(sample[f"{player}_button_l"], sample[f"{player}_button_r"])
-        no_button = np.ones_like(sample[f"{player}_button_a"])
+        no_button = np.zeros_like(sample[f"{player}_button_a"])
 
         stacked_buttons = np.stack((button_a, button_b, button_z, jump, shoulder, no_button), axis=1)
-        preprocessed[f"{player}_buttons"] = encode_stacked_array_to_one_hot(stacked_buttons)
+        preprocessed[f"{player}_buttons"] = one_hot(stacked_buttons)
 
     # for feature_list, preprocessing_func in feature_processors.items():
     #     for feature in feature_list:
