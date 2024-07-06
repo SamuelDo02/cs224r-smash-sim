@@ -8,6 +8,9 @@ from pyarrow import parquet as pq
 from hal.data.stats import FeatureStats
 from hal.data.stats import load_dataset_stats
 
+np.set_printoptions(threshold=np.inf)
+
+
 INPUT_FEATURES_TO_EMBED = ("stage", "character", "action")
 INPUT_FEATURES_TO_NORMALIZE = ("percent", "stock", "facing", "action_frame", "invulnerable", "jumps_left", "on_ground")
 INPUT_FEATURES_TO_INVERT_AND_NORMALIZE = ("shield_strength",)
@@ -53,10 +56,23 @@ def union(array_1: np.ndarray, array_2: np.ndarray) -> np.ndarray:
 
 def encode_stacked_array_to_one_hot(array: np.ndarray) -> np.ndarray:
     """Convert stacked features to one hot encoding."""
-    # Argmax tiebreaks by returning the first element
-    first_one_indices = np.argmax(array, axis=1)
+    non_zero_mask = array > 0
+    row_sum = np.sum(non_zero_mask, axis=1)
+
     one_hot = np.zeros_like(array)
-    one_hot[np.arange(array.shape[0]), first_one_indices] = 1
+
+    # Handle rows with single non-zero element
+    single_non_zero = row_sum == 1
+    one_hot[single_non_zero] = non_zero_mask[single_non_zero]
+
+    # Handle rows with multiple non-zero elements
+    multi_non_zero = row_sum > 1
+    if np.any(multi_non_zero):
+        # Find the index of the last non-zero element in each row
+        last_non_zero_indices = np.where(non_zero_mask[multi_non_zero])[1].reshape(
+            -1, row_sum[multi_non_zero][:, None]
+        )[:, -1]
+        one_hot[multi_non_zero, last_non_zero_indices] = 1
 
     return one_hot
 
@@ -106,6 +122,10 @@ shield = invert_and_normalize(shield, stats["p1_shield_strength"])
 shield[:10000]
 
 # %%
-table_slice = table[500:1000]
-preprocess_features_v0(pyarrow_table_to_np_dict(table_slice), stats)
+table_slice = table
+preprocessed = preprocess_features_v0(pyarrow_table_to_np_dict(table_slice), stats)
+# %%
+a = preprocessed["p1_buttons"]
+b = table_slice["p1_button_x"].to_numpy() | table_slice["p1_button_y"].to_numpy()
+a[:, 3] == b
 # %%
