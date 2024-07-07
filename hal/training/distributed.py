@@ -9,9 +9,8 @@ from typing import Union
 import torch
 import torch.distributed
 import tqdm as tqdm_module
+from config import TrainerConfig
 from tqdm import tqdm
-
-from hal.later_use.config import TrainerConfig
 
 
 def barrier() -> None:
