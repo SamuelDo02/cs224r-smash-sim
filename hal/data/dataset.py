@@ -1,6 +1,5 @@
 from pathlib import Path
 from typing import Dict
-from typing import Final
 from typing import Optional
 from typing import Tuple
 
@@ -40,6 +39,7 @@ class MmappedParquetDataset(Dataset):
         target_len: int,
         truncate_replay_end: bool = False,
         replay_filter: Optional[ReplayFilter] = None,
+        include_both_players: bool = True,  # New parameter
     ) -> None:
         """
         Initialize the dataset.
@@ -50,6 +50,7 @@ class MmappedParquetDataset(Dataset):
             target_len (int): Length of the target sequence.
             truncate_replay_end (bool): Whether to truncate sequences at replay boundaries.
             replay_filter (Optional[ReplayFilter]): Filter for replays.
+            include_both_players (bool): Whether to include both player 1 and player 2 perspectives.
 
         Raises:
             ValueError: If input parameters are invalid.
@@ -65,13 +66,13 @@ class MmappedParquetDataset(Dataset):
         self.target_len = target_len
         self.trajectory_len = input_len + target_len
         self.mask_multi_uuid = truncate_replay_end
+        self.include_both_players = include_both_players
+        self.player_perspectives = ["p1", "p2"] if include_both_players else ["p1"]
 
         self.parquet_table = pq.read_table(self.input_path, schema=SCHEMA, memory_map=True)
 
         self.replay_filter = replay_filter
         self.filtered_indices = self._apply_filter()
-
-        self.player: Final[str] = "p1"
 
     def _apply_filter(self) -> np.ndarray:
         if self.replay_filter is None:
@@ -106,11 +107,14 @@ class MmappedParquetDataset(Dataset):
             return np.arange(len(self.parquet_table) - self.trajectory_len)
 
     def __len__(self) -> int:
-        return len(self.filtered_indices)
+        return len(self.filtered_indices) * len(self.player_perspectives)
 
     def __getitem__(self, index: int) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray]]:
-        actual_index = self.filtered_indices[index]
-        chunked_table = self.parquet_table[actual_index : actual_index + self.trajectory_len]
+        player_index = index % len(self.player_perspectives)
+        actual_index = self.filtered_indices[index // len(self.player_perspectives)]
+        start_index = actual_index
+        end_index = actual_index + self.trajectory_len
+        chunked_table = self.parquet_table[start_index:end_index]
 
         # Truncate to the first replay
         if self.mask_multi_uuid:
@@ -119,6 +123,7 @@ class MmappedParquetDataset(Dataset):
             chunked_table = chunked_table.filter(mask)
 
         feature_array_by_name = pyarrow_table_to_np_dict(chunked_table)
-        inputs = preprocess_inputs_v0(feature_array_by_name, player=self.player)
-        targets = preprocess_targets_v0(feature_array_by_name, player=self.player)
+        player = self.player_perspectives[player_index]
+        inputs = preprocess_inputs_v0(feature_array_by_name, player=player)
+        targets = preprocess_targets_v0(feature_array_by_name, player=player)
         return inputs, targets
