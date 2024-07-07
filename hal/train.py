@@ -12,12 +12,8 @@ dataloader = torch.utils.data.DataLoader(dataset, batch_size=4, shuffle=True)
 dataloader_iter = iter(dataloader)
 inputs, targets = next(dataloader_iter)
 
-num = inputs["numeric"]
-cat = inputs["categorical"]
+inputs
 
 # %%
-num
-# %%
-cat
-# %%
-targets
+gamestate = inputs["gamestate"]
+gamestate[0, :20]
