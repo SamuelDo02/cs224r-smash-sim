@@ -3,8 +3,8 @@ from typing import Dict
 
 import numpy as np
 import pyarrow as pa
-from data.constants import STICK_XY_CLUSTER_CENTERS_V0
 
+from hal.data.constants import STICK_XY_CLUSTER_CENTERS_V0
 from hal.data.stats import FeatureStats
 
 ###################
@@ -177,27 +177,3 @@ def preprocess_target_v0(sample: Dict[str, np.ndarray], player: str) -> Dict[str
     target["buttons"] = one_hot_3d_fast_bugged(stacked_buttons)
 
     return target
-
-
-# %%
-import pyarrow as pa
-from pyarrow import parquet as pq
-
-input_path = "/opt/projects/hal2/data/dev/val.parquet"
-stats_path = "/opt/projects/hal2/data/dev/stats.json"
-
-table: pa.Table = pq.read_table(input_path, memory_map=True)
-
-replay = table[:1000]
-player = "p1"
-sample = pyarrow_table_to_np_dict(replay)
-# batch_size = 4
-# x_batches = np.stack(np.array_split(sample["p1_main_stick_x"], batch_size, axis=0))
-# y_batches = np.stack(np.array_split(sample["p1_main_stick_y"], batch_size, axis=0))
-x = sample["p1_main_stick_x"]
-y = sample["p1_main_stick_y"]
-clusters = get_closest_stick_xy_cluster_v0(x, y)
-# %%
-x, y
-# %%
-clusters
