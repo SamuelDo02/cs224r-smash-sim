@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from numpy.testing import assert_array_equal
 
-from hal.data.preprocessing import one_hot_3d
+from hal.data.preprocessing import one_hot_3d_fast_bugged
 
 
 @pytest.mark.parametrize(
@@ -146,5 +146,5 @@ from hal.data.preprocessing import one_hot_3d
     ],
 )
 def test_convert_target_to_one_hot_3d(input_array, expected_output) -> None:
-    result = one_hot_3d(input_array)
+    result = one_hot_3d_fast_bugged(input_array)
     assert_array_equal(result, expected_output, err_msg=f"{result}\n{expected_output}")

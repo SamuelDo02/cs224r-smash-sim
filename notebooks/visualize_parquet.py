@@ -18,7 +18,7 @@ np.set_printoptions(threshold=np.inf)
 # %%
 table: pa.Table = pq.read_table("/opt/projects/hal2/data/dev/val.parquet")
 # randomly sample rows
-# table = table.take(np.random.choice(len(table), 10000, replace=False))
+replay = table.take(np.random.choice(len(table), 10000, replace=False))
 
 # %%
 table.column_names
@@ -200,6 +200,10 @@ for button in buttons:
     plt.title(f"Button {button} Presses Over Time")
     plt.legend()
     plt.show()
+
+# %%
+for button in buttons:
+    print(f"{button=}, {replay[f'p1_button_{button.lower()}'].to_numpy().sum()=}")
 
 # %%
 # Visualize analog values over time
