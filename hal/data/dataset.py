@@ -7,6 +7,7 @@ import attr
 import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
+from data.stats import load_dataset_stats
 from torch.utils.data import Dataset
 
 from hal.data.constants import IDX_BY_CHARACTER_STR
@@ -35,6 +36,7 @@ class MmappedParquetDataset(Dataset):
     def __init__(
         self,
         input_path: str,
+        stats_path: str,
         input_len: int,
         target_len: int,
         truncate_replay_end: bool = False,
@@ -62,6 +64,7 @@ class MmappedParquetDataset(Dataset):
             raise FileNotFoundError(f"Input file not found: {input_path}")
 
         self.input_path = input_path
+        self.stats_by_feature_name = load_dataset_stats(stats_path)
         self.input_len = input_len
         self.target_len = target_len
         self.trajectory_len = input_len + target_len
@@ -125,6 +128,6 @@ class MmappedParquetDataset(Dataset):
         input_features_by_name = pyarrow_table_to_np_dict(input_table_chunk)
         target_features_by_name = pyarrow_table_to_np_dict(target_table_chunk)
         player = self.player_perspectives[player_index]
-        inputs = preprocess_inputs_v0(input_features_by_name, player=player)
+        inputs = preprocess_inputs_v0(input_features_by_name, player=player, stats=self.stats_by_feature_name)
         targets = preprocess_targets_v0(target_features_by_name, player=player)
         return inputs, targets

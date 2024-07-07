@@ -215,22 +215,33 @@ def preprocess_inputs_v0(
     """Preprocess basic player state."""
     assert player in VALID_PLAYERS
     other_player = "p2" if player == "p1" else "p1"
-    player_features = (
-        PLAYER_INPUT_FEATURES_TO_EMBED
-        + PLAYER_INPUT_FEATURES_TO_NORMALIZE
-        + PLAYER_INPUT_FEATURES_TO_INVERT_AND_NORMALIZE
-        + PLAYER_POSITION
-    )
-    inputs = []
-    for feature in player_features:
+
+    embed_features = INPUT_FEATURES_TO_EMBED
+    categorical_inputs = [sample[feature] for feature in embed_features]
+    categorical_player_features = PLAYER_INPUT_FEATURES_TO_EMBED
+    for feature in categorical_player_features:
         preprocess_fn = PREPROCESS_FN_BY_FEATURE[feature]
         feature_name = f"{player}_{feature}"
         feature_stats = stats[feature_name]
-        inputs.append(preprocess_fn(sample[feature_name], feature_stats))
+        categorical_inputs.append(preprocess_fn(sample[feature_name], feature_stats))
         other_feature_name = f"{other_player}_{feature}"
         other_feature_stats = stats[other_feature_name]
-        inputs.append(preprocess_fn(sample[other_feature_name], other_feature_stats))
-    return {"inputs": np.stack(inputs, axis=-1)}
+        categorical_inputs.append(preprocess_fn(sample[other_feature_name], other_feature_stats))
+
+    numeric_player_features = (
+        PLAYER_INPUT_FEATURES_TO_NORMALIZE + PLAYER_INPUT_FEATURES_TO_INVERT_AND_NORMALIZE + PLAYER_POSITION
+    )
+    numeric_inputs = []
+
+    for feature in numeric_player_features:
+        preprocess_fn = PREPROCESS_FN_BY_FEATURE[feature]
+        feature_name = f"{player}_{feature}"
+        feature_stats = stats[feature_name]
+        numeric_inputs.append(preprocess_fn(sample[feature_name], feature_stats))
+        other_feature_name = f"{other_player}_{feature}"
+        other_feature_stats = stats[other_feature_name]
+        numeric_inputs.append(preprocess_fn(sample[other_feature_name], other_feature_stats))
+    return {"numeric": np.stack(numeric_inputs, axis=-1), "categorical": np.stack(categorical_inputs, axis=-1)}
 
 
 def preprocess_targets_v0(sample: Dict[str, np.ndarray], player: str) -> Dict[str, np.ndarray]:
