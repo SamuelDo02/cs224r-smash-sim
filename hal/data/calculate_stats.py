@@ -16,23 +16,13 @@ def calculate_statistics_for_features(input_path: str, output_path: str) -> None
         column = table[field.name]
         numpy_array = column.to_numpy()
 
-        if np.issubdtype(numpy_array.dtype, np.number):
-            stats = {
-                "mean": float(np.mean(numpy_array)),
-                "std": float(np.std(numpy_array)),
-                "min": float(np.min(numpy_array)),
-                "max": float(np.max(numpy_array)),
-                "median": float(np.median(numpy_array)),
-            }
-        elif np.issubdtype(numpy_array.dtype, np.object_):
-            unique_values, counts = np.unique(numpy_array, return_counts=True)
-            stats = {
-                "unique_count": len(unique_values),
-                "top_5_values": [str(val) for val in unique_values[:5]],
-                "top_5_counts": [int(count) for count in counts[:5]],
-            }
-        else:
-            stats = {"type": str(numpy_array.dtype)}
+        stats = {
+            "mean": float(np.mean(numpy_array)),
+            "std": float(np.std(numpy_array)),
+            "min": float(np.min(numpy_array)),
+            "max": float(np.max(numpy_array)),
+            "median": float(np.median(numpy_array)),
+        }
 
         statistics[field.name] = stats
 
