@@ -1,13 +1,10 @@
 # %%
-import time
 from typing import Dict
 
 import numpy as np
 import pyarrow as pa
-from pyarrow import parquet as pq
 
 from hal.data.stats import FeatureStats
-from hal.data.stats import load_dataset_stats
 
 np.set_printoptions(threshold=np.inf)
 
@@ -55,63 +52,25 @@ def union(array_1: np.ndarray, array_2: np.ndarray) -> np.ndarray:
     return array_1 | array_2
 
 
-# def one_hot_3d(arr: np.ndarray) -> np.ndarray:
-#     """One hot encode 3d array."""
-#     # Identify the start of each streak
-#     streak = np.diff(arr, axis=-1, prepend=0) > 0
-#     result = streak * arr
+def one_hot_3d(arr: np.ndarray) -> np.ndarray:
+    # Find where 1s start in each row
+    start_mask = np.concatenate([arr[:, :, 0:1], arr[:, :, 1:] > arr[:, :, :-1]], axis=2)
+    print(f"{start_mask=}")
+    # Compute cumulative sum to identify streaks
+    cumsum = np.cumsum(start_mask, axis=2)
+    streak_ids = cumsum * arr
+    # Find the maximum streak ID for each row
+    max_streak_ids = np.max(streak_ids, axis=2, keepdims=True)
+    # Create a mask for the old streak in each row
+    old_streak_mask = (streak_ids == max_streak_ids) & (streak_ids > 1) & (arr == 1)
+    processed = arr * ~old_streak_mask
 
-#     # Set last column to 1 if row is empty
-#     result[..., -1] = ~np.any(arr, axis=-1)
+    # Handle rows with no 1s
+    no_ones_mask = ~np.any(arr, axis=2)
+    print(no_ones_mask.shape)
+    processed[no_ones_mask, -1] = 1
 
-#     return result
-
-
-# def one_hot_3d(arr):
-#     B, T, D = arr.shape
-
-#     # Step 1: Identify the newest streak
-#     diff = np.diff(arr, axis=-2, prepend=0)
-#     newest_streak = diff == 1
-
-#     # Step 2: Create a mask for the newest streak in each row
-#     row_has_newest = newest_streak.any(axis=-1)
-#     newest_index = np.where(row_has_newest, newest_streak.argmax(axis=2), -1)
-#     mask = np.zeros_like(arr, dtype=bool)
-#     mask[np.arange(B)[:, None], np.arange(T), newest_index] = True
-
-#     # Step 3: Apply the mask to keep only the newest streak
-#     result = np.where(mask, arr, 0)
-
-#     # Step 4: Zero mask, set last column to 1
-#     result[..., -1] = ~np.any(arr, axis=-1)
-
-#     return result
-
-
-def one_hot_3d(arr):
-    B, T, D = arr.shape
-
-    # Step 1: Identify the newest streak
-    diff = np.diff(arr, axis=-2, prepend=0)
-    newest_streak = diff == 1
-    print(f"{newest_streak=}")
-
-    # Step 2: Create a cumulative sum to propagate the newest streak
-    cumsum = np.cumsum(newest_streak, axis=-2)
-    print(f"{cumsum=}")
-
-    # Step 3: Create a mask for the newest streak in each row
-    row_max = np.maximum.accumulate(cumsum, axis=-1)
-    print(f"{row_max=}")
-    mask = (cumsum == row_max) & (arr == 1)
-    print(f"{mask=}")
-
-    # Step 4: Apply the mask to keep only the newest streak
-    result = np.where(mask, arr, 0)
-    print(f"{result=}")
-
-    return result
+    return processed
 
 
 feature_processors = {
@@ -149,60 +108,60 @@ def preprocess_features_v0(sample: Dict[str, np.ndarray], stats: Dict[str, Featu
     return preprocessed
 
 
-input_path = "/opt/projects/hal2/data/dev/val.parquet"
-stats_path = "/opt/projects/hal2/data/dev/stats.json"
+# input_path = "/opt/projects/hal2/data/dev/val.parquet"
+# stats_path = "/opt/projects/hal2/data/dev/stats.json"
 
-table: pa.Table = pq.read_table(input_path, memory_map=True)
-stats = load_dataset_stats(stats_path)
+# table: pa.Table = pq.read_table(input_path, memory_map=True)
+# stats = load_dataset_stats(stats_path)
 
-table_slice = pyarrow_table_to_np_dict(table)
-player = "p1"
+# table_slice = pyarrow_table_to_np_dict(table)
+# player = "p1"
 
-button_a = (table_slice[f"{player}_button_a"]).astype(np.bool_)
-button_b = (table_slice[f"{player}_button_b"]).astype(np.bool_)
-button_z = table_slice[f"{player}_button_z"]
-jump = union(table_slice[f"{player}_button_x"], table_slice[f"{player}_button_y"])
-shoulder = union(table_slice[f"{player}_button_l"], table_slice[f"{player}_button_r"])
-no_button = np.zeros_like(button_a)
+# button_a = (table_slice[f"{player}_button_a"]).astype(np.bool_)
+# button_b = (table_slice[f"{player}_button_b"]).astype(np.bool_)
+# button_z = table_slice[f"{player}_button_z"]
+# jump = union(table_slice[f"{player}_button_x"], table_slice[f"{player}_button_y"])
+# shoulder = union(table_slice[f"{player}_button_l"], table_slice[f"{player}_button_r"])
+# no_button = np.zeros_like(button_a)
 
 
-arr1 = np.array(
-    [
-        [
-            [0, 0, 0, 0, 1, 0],
-            [0, 0, 0, 0, 1, 0],
-            [0, 0, 1, 0, 1, 0],
-            [0, 0, 1, 0, 1, 0],
-            [0, 0, 1, 0, 1, 0],
-            [0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 1, 0],
-            [0, 0, 0, 0, 1, 0],
-            [0, 0, 0, 0, 1, 0],
-            [0, 0, 0, 0, 1, 0],
-            [0, 0, 0, 0, 1, 0],
-            [0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0],
-        ]
-    ],
-    dtype=np.int8,
-)
-print(arr1)
-print(one_hot_3d(arr1))
+# arr1 = np.array(
+#     [
+#         [
+#             [0, 0, 0, 0, 1, 0],
+#             [0, 0, 0, 0, 1, 0],
+#             [0, 0, 1, 0, 1, 0],
+#             [0, 0, 1, 0, 1, 0],
+#             [0, 0, 1, 0, 1, 0],
+#             [0, 0, 0, 0, 0, 0],
+#             [0, 0, 0, 0, 0, 0],
+#             [0, 0, 0, 0, 1, 0],
+#             [0, 0, 0, 0, 1, 0],
+#             [0, 0, 0, 0, 1, 0],
+#             [0, 0, 0, 0, 1, 0],
+#             [0, 0, 0, 0, 1, 0],
+#             [0, 0, 0, 0, 0, 0],
+#             [0, 0, 0, 0, 0, 0],
+#         ]
+#     ],
+#     dtype=np.int8,
+# )
+# print(arr1)
+# print(one_hot_3d(arr1))
 
-# %%
+# # %%
 
-stacked_buttons = np.stack((button_a, button_b, button_z, jump, shoulder, no_button), axis=1)[np.newaxis, ...]
-print(stacked_buttons.shape)
-print(stacked_buttons[:, START:END])
+# stacked_buttons = np.stack((button_a, button_b, button_z, jump, shoulder, no_button), axis=1)[np.newaxis, ...]
+# print(stacked_buttons.shape)
+# print(stacked_buttons[:, START:END])
 
-t0 = time.perf_counter()
-preprocessed = one_hot_3d(stacked_buttons)
-t1 = time.perf_counter()
-# print(f"Time to preprocess features: {t1 - t0} seconds")
-print(preprocessed.shape)
-print(preprocessed[:, START:END])
+# t0 = time.perf_counter()
+# preprocessed = one_hot_3d(stacked_buttons)
+# t1 = time.perf_counter()
+# # print(f"Time to preprocess features: {t1 - t0} seconds")
+# print(preprocessed.shape)
+# print(preprocessed[:, START:END])
 
-# %%
-print(arr1)
-print(stacked_buttons[:, START:END])
+# # %%
+# print(arr1)
+# print(stacked_buttons[:, START:END])
