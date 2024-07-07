@@ -3,7 +3,6 @@ import argparse
 import pickle
 import random
 from collections import defaultdict
-from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
 from time import time
@@ -13,14 +12,14 @@ from typing import Iterable
 from typing import Tuple
 from typing import Union
 
+import attr
+import pyarrow.parquet as pq
 import torch
 import torch.nn.functional as F
 from torch import Tensor
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader
 
-from hal.data.constants import ACTION_BY_IDX
-from hal.data.dataset import MmappedParquetDataset
 from hal.training.distributed import auto_distribute
 from hal.training.distributed import get_device_id
 from hal.training.distributed import get_world_size
@@ -39,38 +38,10 @@ from hal.utils import repeater
 from hal.utils import report_module_weights
 from hal.utils import time_format
 
-dataset_path = "/opt/projects/hal2/data/dev/train.parquet"
-stats_path = "/opt/projects/hal2/data/dev/stats.json"
-dataset = MmappedParquetDataset(input_path=dataset_path, stats_path=stats_path, input_len=60, target_len=10)
-dataloader = torch.utils.data.DataLoader(dataset, batch_size=4, shuffle=False)
-
-# %%
-dataloader_iter = iter(dataloader)
-inputs, targets = next(dataloader_iter)
-
-inputs
-
-# %%
-gamestate = inputs["gamestate"]
-gamestate[2, :30]
-
-# %%
-action = inputs["action_other"]
-action[2, :30]
-# %%
-for idx in action[1, :30]:
-    print(ACTION_BY_IDX[idx])
-# %%
-
-
-import numpy as np
-import pyarrow.parquet as pq
-import torch
-
 LOSS_KEY = "loss/loss_total"
 
 
-@dataclass
+@attr.s(auto_attrib=True, frozen=True)
 class Config:
     arch: str = "lstm-v0-256-2"
     dataset: str = "data/ranked"
