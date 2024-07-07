@@ -2,15 +2,16 @@ from pathlib import Path
 from typing import Dict
 from typing import Final
 from typing import Optional
+from typing import Tuple
 
 import attr
 import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
-from data.constants import IDX_BY_CHARACTER_STR
-from data.constants import IDX_BY_STAGE_STR
 from torch.utils.data import Dataset
 
+from hal.data.constants import IDX_BY_CHARACTER_STR
+from hal.data.constants import IDX_BY_STAGE_STR
 from hal.data.preprocessing import preprocess_inputs_v0
 from hal.data.preprocessing import preprocess_targets_v0
 from hal.data.preprocessing import pyarrow_table_to_np_dict
@@ -107,7 +108,7 @@ class MmappedParquetDataset(Dataset):
     def __len__(self) -> int:
         return len(self.filtered_indices)
 
-    def __getitem__(self, index: int) -> Dict[str, np.ndarray]:
+    def __getitem__(self, index: int) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray]]:
         actual_index = self.filtered_indices[index]
         chunked_table = self.parquet_table[actual_index : actual_index + self.trajectory_len]
 
@@ -120,7 +121,4 @@ class MmappedParquetDataset(Dataset):
         feature_array_by_name = pyarrow_table_to_np_dict(chunked_table)
         inputs = preprocess_inputs_v0(feature_array_by_name, player=self.player)
         targets = preprocess_targets_v0(feature_array_by_name, player=self.player)
-        return {
-            "inputs": inputs,
-            "targets": targets,
-        }
+        return inputs, targets
