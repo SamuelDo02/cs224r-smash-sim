@@ -112,14 +112,13 @@ class Trainer(torch.nn.Module):
         batch_size = get_world_size() * local_batch_size
         train_loader = repeater(train_loader)
 
-        ckpt = Checkpoint(self, self.artifact_dir, keep_ckpts)
-        start = ckpt.restore()[0]
-
-        if start:
-            print(f"Resuming training at {start} ({start / (1 << 20):.2f}M samples)")
+        ckpt = Checkpoint(model=self, logdir=self.artifact_dir, keep_ckpts=keep_ckpts)
+        resume_idx = ckpt.restore()[0]
+        if resume_idx:
+            logger.info(f"Resuming training at {resume_idx} ({resume_idx / (1 << 20):.2f}M samples)")
 
         with Writer.create(wandb_config) as writer:
-            for i in range(start, n_samples, report_len):
+            for i in range(resume_idx, n_samples, report_len):
                 self.train()
                 range_iter = trange(
                     i,

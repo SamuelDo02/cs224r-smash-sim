@@ -15,6 +15,7 @@ import attr
 import torch
 import torch.nn
 import wandb
+from loguru import logger
 
 from hal.training.distributed import is_master
 from hal.utils import get_git_repo_root
@@ -86,7 +87,7 @@ class Checkpoint:
             except ValueError:
                 return 0, None
         ckpt = self.logdir / (self.FILE_FORMAT % idx)
-        print(f"Resuming from: {ckpt}")
+        logger.info(f"Resuming checkpoint from: {ckpt}")
         with ckpt.open("rb") as f:
             self.model.load_state_dict(torch.load(f, map_location=device))
         return idx, ckpt
