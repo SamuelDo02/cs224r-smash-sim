@@ -10,10 +10,8 @@ from typing import Callable
 from typing import Dict
 from typing import Iterable
 from typing import Tuple
-from typing import Union
 
 import attr
-import pyarrow.parquet as pq
 import torch
 from torch import Tensor
 from torch.optim.lr_scheduler import CosineAnnealingLR
@@ -30,22 +28,21 @@ from hal.training.io import Checkpoint
 from hal.training.io import WandbConfig
 from hal.training.io import Writer
 from hal.training.io import get_artifact_dir
-from hal.utils import get_exp_name
+from hal.training.io import get_exp_name
 from hal.utils import move_tensors_to_device
 from hal.utils import repeater
 from hal.utils import report_module_weights
 from hal.utils import time_format
-from hal.zoo.embed.registry import Embed
 
 
 @attr.s(auto_attrib=True, frozen=True)
 class Config:
     arch: str = "lstm-v0-256-2"
-    dataset: str = "data/ranked"
-    input_preprocessing_fn: str = Embed.EMBED
-    target_preprocessing_fn: str = "independent_axes"
-    input_len: int = 120
-    target_len: int = 1
+    dataset_path: str = "/opt/projects/hal2/data/full"
+    input_preprocessing_fn: str = ""
+    target_preprocessing_fn: str = ""
+    input_len: int = 60
+    target_len: int = 5
     loss_fn: str = "ce"
     local_batch_size: int = 1024
     num_data_workers: int = 4  # per gpu
@@ -53,7 +50,7 @@ class Config:
     n_samples: int = 2**27
     n_val_samples: int = 2**17
     keep_ckpts: int = 8
-    report_len: int = int(n_samples / keep_ckpts)
+    report_len: int = 2**24
     betas: Tuple[float, float] = (0.9, 0.999)
     eps: float = 1e-8
     wd: float = 1e-2
@@ -77,6 +74,7 @@ class Trainer(torch.nn.Module):
     def __init__(self, arch: str, config: Config) -> None:
         super().__init__()
         self.config = config
+
         model = Arch.get(
             arch, input_size=get_num_input_floats(), num_analog_values=config.num_analog_discretized_values
         )
@@ -292,7 +290,7 @@ def main(config: Config, in_memory_datasets: list[Tensor], seed: int = 894756923
         get_preprocessing_fn(config.preprocessing_fn),
         input_len=config.input_len,
         num_analog_discretized_values=config.num_analog_discretized_values,
-        dataset_path=config.dataset,
+        dataset_path=config.dataset_path,
     )
     train_loader, val_loader = make_data_loaders(
         train_ds, val_ds, preprocessing_fn, config.local_batch_size, config.num_data_workers
@@ -317,21 +315,9 @@ def parse_cli() -> Config:
     return config
 
 
-def load_datasets_to_memory(dataset_filepath: Union[str, Path]) -> list[Tensor]:
-    in_memory_datasets = []
-    for split in ["train", "val"]:
-        path = Path(dataset_filepath) / f"{split}.parquet"
-        print(f"Loading dataset {path} to memory")
-        tensor = torch.tensor(pq.read_table(path).to_pandas().to_numpy())
-        print(f"Moving to shared memory")
-        tensor.share_memory_()
-        in_memory_datasets.append(tensor)
-    return in_memory_datasets
-
-
 if __name__ == "__main__":
     exp_config = parse_cli()
-    datasets = load_datasets_to_memory(exp_config.dataset)
+    datasets = load_datasets_to_memory(exp_config.dataset_path)
     # download_dataset(exp_config.dataset)
     # automatically distribute on CUDA if available
     # pass positional args and call wrapped fn; (kwargs not accepted)

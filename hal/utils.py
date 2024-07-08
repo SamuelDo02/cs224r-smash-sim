@@ -10,11 +10,6 @@ import torch
 T = TypeVar("T")
 
 
-def get_project_root() -> Path:
-    """Returns project root folder."""
-    return Path(__file__).parent.parent
-
-
 def get_git_repo_root() -> Path:
     cmd = subprocess.check_output("git rev-parse --show-toplevel".split(" "))
     root_dir = Path(cmd.decode("utf-8").strip(" \n"))
@@ -32,24 +27,6 @@ def rgetattr(obj, attr, *args):
         return getattr(obj, attr, *args)
 
     return functools.reduce(_getattr, [obj] + attr.split("."))
-
-
-def get_exp_name(config) -> str:
-    return "_".join(
-        f"{k}@{v}"
-        for k, v in sorted(vars(config).items())
-        if k
-        in (
-            "arch",
-            "dataset",
-            "local_batch_size",
-            "n_samples",
-            "input_preprocessing_fn",
-            "target_preprocessing_fn",
-            "input_len",
-            "target_len",
-        )
-    )
 
 
 def report_module_weights(m: torch.nn.Module):

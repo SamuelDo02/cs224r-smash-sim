@@ -24,6 +24,24 @@ def get_path_friendly_datetime() -> str:
     return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 
+def get_exp_name(config) -> str:
+    return "_".join(
+        f"{k}@{v}"
+        for k, v in sorted(attr.asdict(config).items())
+        if k
+        in (
+            "arch",
+            "dataset",
+            "local_batch_size",
+            "n_samples",
+            "input_preprocessing_fn",
+            "target_preprocessing_fn",
+            "input_len",
+            "target_len",
+        )
+    )
+
+
 def get_artifact_dir(*args) -> Path:
     artifact_dir = get_git_repo_root().joinpath("runs", get_path_friendly_datetime(), *args)
     Path.mkdir(artifact_dir, parents=True, exist_ok=True)
