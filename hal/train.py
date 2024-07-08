@@ -15,7 +15,6 @@ from typing import Union
 import attr
 import pyarrow.parquet as pq
 import torch
-import torch.nn.functional as F
 from torch import Tensor
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader
@@ -31,24 +30,22 @@ from hal.training.io import Checkpoint
 from hal.training.io import WandbConfig
 from hal.training.io import Writer
 from hal.training.io import get_artifact_dir
-from hal.training.io import get_log_dir
 from hal.utils import get_exp_name
 from hal.utils import move_tensors_to_device
 from hal.utils import repeater
 from hal.utils import report_module_weights
 from hal.utils import time_format
-
-LOSS_KEY = "loss/loss_total"
+from hal.zoo.embed.registry import Embed
 
 
 @attr.s(auto_attrib=True, frozen=True)
 class Config:
     arch: str = "lstm-v0-256-2"
     dataset: str = "data/ranked"
-    preprocessing_fn: str = "independent_axes"
+    input_preprocessing_fn: str = Embed.EMBED
+    target_preprocessing_fn: str = "independent_axes"
     input_len: int = 120
     target_len: int = 1
-    num_analog_discretized_values: int = 17
     loss_fn: str = "ce"
     local_batch_size: int = 1024
     num_data_workers: int = 4  # per gpu
@@ -70,18 +67,12 @@ class Trainer(torch.nn.Module):
 
     @property
     def device(self) -> str:
-        for x in self.model.parameters():
-            return x.device
-
-    @property
-    def log_dir(self) -> Path:
-        params = get_exp_name(self.config)
-        return get_log_dir(f"{self.__class__.__name__}({self.config.arch})", self.config.dataset, params)
+        return str(next(self.model.parameters()).device)
 
     @property
     def artifact_dir(self) -> Path:
         params = get_exp_name(self.config)
-        return get_artifact_dir(f"{self.__class__.__name__}({self.config.arch})", self.config.dataset, params)
+        return get_artifact_dir(params)
 
     def __init__(self, arch: str, config: Config) -> None:
         super().__init__()
@@ -112,36 +103,8 @@ class Trainer(torch.nn.Module):
             )
         )
 
-    @staticmethod
-    def cross_entropy_loss(
-        pred: dict[str, Tensor], target: dict[str, Tensor], reduction: str = "mean"
-    ) -> dict[str, Tensor]:
-        losses = {f"loss/{k}": F.cross_entropy(pred[k], target[k], reduction=reduction) for k in target.keys()}
-        return losses
-
-    @staticmethod
-    def focal_loss(pred: dict[str, Tensor], target: dict[str, Tensor], gamma: float = 2.0) -> dict[str, Tensor]:
-        ce_losses = Trainer.cross_entropy_loss(pred, target, reduction="none")
-        focal_losses = {}
-        for k, loss in ce_losses.items():
-            pt = torch.exp(-loss)
-            focal_losses[f"loss/{k}"] = ((1 - pt) ** gamma * loss).mean()
-        return focal_losses
-
-    @staticmethod
-    def calculate_confusion_matrix(pred: dict[str, Tensor], targets: dict[str, Tensor]):
-        cm_dict = {}
-        for k, pred_action in pred.items():
-            pred_action_id = pred_action.argmax(dim=-1)
-            target_action_id = targets[k].argmax(dim=-1)
-            cm_dict[f"confusion_matrix/{k}"] = (pred_action_id, target_action_id)
-        return cm_dict
-
     def loss_fn(self, pred: dict[str, Tensor], target: dict[str, Tensor]) -> dict[str, Tensor]:
-        if self.config.loss_fn == "ce":
-            return self.cross_entropy_loss(pred, target)
-        elif self.config.loss_fn == "focal":
-            return self.focal_loss(pred, target)
+        raise NotImplementedError()
 
     def train_step(self, batch: tuple[dict[str, Tensor], dict[str, Tensor]], writer: Writer, step: int) -> None:
         batch = move_tensors_to_device(batch, self.device)
@@ -290,7 +253,7 @@ def make_data_loaders(
     num_data_workers: int = 1,
     **kwargs,
 ) -> tuple[DataLoader, DataLoader]:
-    train_loader = MaybeDistributedDataLoader(
+    train_loader = torch.utils.data.DataLoader(
         train,
         batch_size=batch_size,
         collate_fn=preprocessing_fn,

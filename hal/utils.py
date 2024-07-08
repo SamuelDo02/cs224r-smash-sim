@@ -39,18 +39,15 @@ def get_exp_name(config) -> str:
         f"{k}@{v}"
         for k, v in sorted(vars(config).items())
         if k
-        not in (
+        in (
             "arch",
-            "cloud",
             "dataset",
-            "num_data_workers",
-            "n_val_samples",
-            "keep_ckpts",
-            "report_len",
-            "betas",
-            "eps",
-            "wd",
-            "debug",
+            "local_batch_size",
+            "n_samples",
+            "input_preprocessing_fn",
+            "target_preprocessing_fn",
+            "input_len",
+            "target_len",
         )
     )
 

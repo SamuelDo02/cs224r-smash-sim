@@ -20,14 +20,18 @@ from hal.training.distributed import is_master
 from hal.utils import get_git_repo_root
 
 
+def get_path_friendly_datetime() -> str:
+    return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+
 def get_artifact_dir(*args) -> Path:
-    artifact_dir = get_git_repo_root().joinpath("runs", *args)
+    artifact_dir = get_git_repo_root().joinpath("runs", get_path_friendly_datetime(), *args)
     Path.mkdir(artifact_dir, parents=True, exist_ok=True)
     return artifact_dir
 
 
 def get_log_dir(*args) -> Path:
-    log_dir = get_git_repo_root().joinpath("logs", datetime.now().strftime("%Y-%m-%d_%H-%M-%S"), *args)
+    log_dir = get_git_repo_root().joinpath("logs", get_path_friendly_datetime(), *args)
     Path.mkdir(log_dir, parents=True, exist_ok=True)
     return log_dir
 
