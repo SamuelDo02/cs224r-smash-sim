@@ -3,6 +3,7 @@ from typing import List
 from typing import Optional
 from typing import Tuple
 
+import torch
 from torch.utils.data import DataLoader
 from torch.utils.data import DistributedSampler
 
@@ -31,10 +32,12 @@ def create_dataloaders(
             shuffle=True if split == "train" else False,
             sampler=sampler,
             num_workers=train_config.dataworker.data_workers_per_gpu,
+            pin_memory=torch.cuda.is_available(),
             # collate_fn=train_config.dataworker.collate_fn,  # TODO
             prefetch_factor=train_config.dataworker.prefetch_factor,
             # collate_fn=train_config.dataworker.collate_fn,  # TODO
+            persistent_workers=True,
         )
         dataloaders.append(dataloader)
 
-    return tuple(dataloaders)
+    return dataloaders[0], dataloaders[1]

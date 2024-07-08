@@ -1,9 +1,7 @@
-# %%
 import argparse
 import pickle
 import random
 from collections import defaultdict
-from functools import partial
 from pathlib import Path
 from time import time
 from typing import Callable
@@ -11,6 +9,7 @@ from typing import Dict
 from typing import Iterable
 from typing import Optional
 
+import numpy as np
 import torch
 from torch import Tensor
 from torch.optim.lr_scheduler import CosineAnnealingLR
@@ -21,7 +20,6 @@ from hal.training.config import create_parser_for_attrs_class
 from hal.training.config import parse_args_to_attrs_instance
 from hal.training.dataloader import create_dataloaders
 from hal.training.distributed import auto_distribute
-from hal.training.distributed import get_device_id
 from hal.training.distributed import get_world_size
 from hal.training.distributed import is_master
 from hal.training.distributed import print
@@ -53,9 +51,11 @@ class Trainer(torch.nn.Module):
         params = get_exp_name(self.config)
         return get_artifact_dir(params)
 
-    def __init__(self, config: TrainConfig) -> None:
+    def __init__(self, config: TrainConfig, train_loader: DataLoader, val_loader: DataLoader) -> None:
         super().__init__()
         self.config = config
+        self.train_loader = train_loader
+        self.val_loader = val_loader
 
         model = Arch.get(
             config.arch, input_size=get_num_input_floats(), num_analog_values=config.num_analog_discretized_values
@@ -219,47 +219,6 @@ class Trainer(torch.nn.Module):
         ckpt.save_file(self.model, "model.ckpt")
 
 
-def get_dataset(in_memory_datasets: list[Tensor], input_len: int, target_len: int) -> tuple[InMemoryDataset, ...]:
-    return tuple(
-        InMemoryDataset(tensor=tensor, input_len=input_len, target_len=target_len) for tensor in in_memory_datasets
-    )
-
-
-def make_data_loaders(
-    train: InMemoryDataset,
-    val: InMemoryDataset,
-    preprocessing_fn: Callable,
-    batch_size: int,
-    num_data_workers: int = 1,
-    **kwargs,
-) -> tuple[DataLoader, DataLoader]:
-    train_loader = torch.utils.data.DataLoader(
-        train,
-        batch_size=batch_size,
-        collate_fn=preprocessing_fn,
-        shuffle=True,
-        num_workers=num_data_workers,
-        world_size=get_world_size(),
-        rank=get_device_id(),
-        pin_memory=torch.cuda.is_available(),
-        prefetch_factor=2 if num_data_workers > 1 else None,
-        **kwargs,
-    )
-    val_loader = MaybeDistributedDataLoader(
-        val,
-        batch_size=batch_size,
-        collate_fn=preprocessing_fn,
-        shuffle=False,
-        num_workers=num_data_workers,
-        world_size=get_world_size(),
-        rank=get_device_id(),
-        pin_memory=torch.cuda.is_available(),
-        prefetch_factor=2 if num_data_workers > 1 else None,
-        **kwargs,
-    )
-    return train_loader, val_loader
-
-
 @auto_distribute
 def main(
     rank: Optional[int],
@@ -273,19 +232,8 @@ def main(
         np.random.seed(seed)
         torch.manual_seed(seed)
 
-    train_dataloader, val_dataloader = create_dataloaders(train_config, rank=rank, world_size=world_size)
-
-    train_ds, val_ds = get_dataset(in_memory_datasets, input_len=config.input_len, target_len=config.target_len)
-    preprocessing_fn = partial(
-        get_preprocessing_fn(config.preprocessing_fn),
-        input_len=config.input_len,
-        num_analog_discretized_values=config.num_analog_discretized_values,
-        dataset_path=config.dataset_path,
-    )
-    train_loader, val_loader = make_data_loaders(
-        train_ds, val_ds, preprocessing_fn, config.local_batch_size, config.num_data_workers
-    )
-    trainer = Trainer(config.arch, config=config)
+    train_loader, val_loader = create_dataloaders(train_config, rank=rank, world_size=world_size)
+    trainer = Trainer(config=config, train_loader=train_loader, val_loader=val_loader)
     trainer.train_loop(
         train_loader,
         val_loader,
