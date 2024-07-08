@@ -1,6 +1,6 @@
+from typing import Callable
 from typing import Dict
 from typing import Final
-from typing import Protocol
 from typing import Tuple
 
 import numpy as np
@@ -65,11 +65,6 @@ TARGET_FEATURES_TO_ONE_HOT_ENCODE: Tuple[str, ...] = (
 )
 
 
-class PreprocessFn(Protocol):
-    def __call__(self, array: np.ndarray, stats: FeatureStats) -> np.ndarray:
-        ...
-
-
 def identity(array: np.ndarray, stats: FeatureStats) -> np.ndarray:
     """Identity function."""
     return array
@@ -95,7 +90,7 @@ def union(array_1: np.ndarray, array_2: np.ndarray) -> np.ndarray:
     return array_1 | array_2
 
 
-PREPROCESS_FN_BY_FEATURE: Dict[str, PreprocessFn] = {
+PREPROCESS_FN_BY_FEATURE: Dict[str, Callable[[np.ndarray, FeatureStats], np.ndarray]] = {
     **dict.fromkeys(STAGE, identity),
     **dict.fromkeys(PLAYER_INPUT_FEATURES_TO_EMBED, identity),
     **dict.fromkeys(PLAYER_INPUT_FEATURES_TO_NORMALIZE, normalize),
