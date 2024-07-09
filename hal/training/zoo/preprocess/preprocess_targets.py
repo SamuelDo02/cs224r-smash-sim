@@ -5,7 +5,6 @@ import numpy as np
 from hal.data.normalize import VALID_PLAYERS
 from hal.data.normalize import union
 from hal.data.stats import FeatureStats
-from hal.training.types import ModelOutputs
 from hal.training.zoo.preprocess.encoding import get_closest_stick_xy_cluster_v0
 from hal.training.zoo.preprocess.encoding import one_hot_3d_fast_bugged
 from hal.training.zoo.preprocess.registry import TargetPreprocessRegistry
@@ -14,7 +13,7 @@ from hal.training.zoo.preprocess.registry import TargetPreprocessRegistry
 @TargetPreprocessRegistry.register("targets_v0")
 def preprocess_targets_v0(
     sample: Dict[str, np.ndarray], input_len: int, player: str, stats: Dict[str, FeatureStats]
-) -> ModelOutputs:
+) -> Dict[str, np.ndarray]:
     """
     Return only target features after the input trajectory length.
 
@@ -41,4 +40,4 @@ def preprocess_targets_v0(
     stacked_buttons = np.stack((button_a, button_b, jump, button_z, shoulder), axis=1)[np.newaxis, ...]
     buttons = one_hot_3d_fast_bugged(stacked_buttons)
 
-    return ModelOutputs(main_stick=main_stick_clusters, c_stick=c_stick_clusters, buttons=buttons)
+    return {"main_stick": main_stick_clusters, "c_stick": c_stick_clusters, "buttons": buttons}

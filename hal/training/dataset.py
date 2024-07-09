@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Dict
 from typing import Tuple
 
 import numpy as np
@@ -11,8 +12,6 @@ from hal.data.constants import IDX_BY_STAGE_STR
 from hal.data.schema import SCHEMA
 from hal.data.stats import load_dataset_stats
 from hal.training.config import DataConfig
-from hal.training.types import ModelInputs
-from hal.training.types import ModelOutputs
 from hal.training.utils import pyarrow_table_to_np_dict
 from hal.training.zoo.preprocess.registry import InputPreprocessRegistry
 from hal.training.zoo.preprocess.registry import TargetPreprocessRegistry
@@ -97,7 +96,7 @@ class MmappedParquetDataset(Dataset):
     def __len__(self) -> int:
         return len(self.filtered_indices) * len(self.player_perspectives)
 
-    def __getitem__(self, index: int) -> Tuple[ModelInputs, ModelOutputs]:
+    def __getitem__(self, index: int) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray]]:
         player_index = index % len(self.player_perspectives)
         actual_index = self.filtered_indices[index // len(self.player_perspectives)]
         table_chunk = self.parquet_table[actual_index : actual_index + self.trajectory_len]

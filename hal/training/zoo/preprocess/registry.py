@@ -1,7 +1,12 @@
+from typing import Callable
 from typing import Dict
 
-from hal.training.config import InputPreprocessFn
-from hal.training.config import TargetPreprocessFn
+import numpy as np
+
+from hal.data.stats import FeatureStats
+
+TargetPreprocessFn = Callable[[Dict[str, np.ndarray], int, str, Dict[str, FeatureStats]], Dict[str, np.ndarray]]
+InputPreprocessFn = Callable[[Dict[str, np.ndarray], int, str, Dict[str, FeatureStats]], Dict[str, np.ndarray]]
 
 
 class InputPreprocessRegistry:

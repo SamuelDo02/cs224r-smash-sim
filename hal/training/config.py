@@ -1,17 +1,11 @@
 import argparse
 from typing import Any
-from typing import Callable
 from typing import Dict
 from typing import Optional
 from typing import Tuple
 from typing import Type
 
 import attr
-import numpy as np
-
-from hal.data.stats import FeatureStats
-from hal.training.types import ModelInputs
-from hal.training.types import ModelOutputs
 
 
 @attr.s(auto_attribs=True, frozen=True)
@@ -116,9 +110,6 @@ def parse_args_to_attrs_instance(cls: Type[Any], args: argparse.Namespace, prefi
 
     return cls(**kwargs)
 
-
-TargetPreprocessFn = Callable[[Dict[str, np.ndarray], int, str, Dict[str, FeatureStats]], ModelOutputs]
-InputPreprocessFn = Callable[[Dict[str, np.ndarray], int, str, Dict[str, FeatureStats]], ModelInputs]
 
 # @attr.s(auto_attribs=True, frozen=True)
 # class ClosedLoopEvalConfig:
