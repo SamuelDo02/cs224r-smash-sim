@@ -9,6 +9,7 @@ from hal.data.preprocessing import union
 from hal.training.zoo.embed.registry import Embed
 
 
+@Embed.register("targets_v0")
 def preprocess_targets_v0(sample: Dict[str, np.ndarray], player: str) -> Dict[str, np.ndarray]:
     """One-hot encode buttons and discretize analog stick x, y values for a given player."""
     assert player in VALID_PLAYERS
@@ -34,6 +35,3 @@ def preprocess_targets_v0(sample: Dict[str, np.ndarray], player: str) -> Dict[st
     target["buttons"] = one_hot_3d_fast_bugged(stacked_buttons)
 
     return target
-
-
-Embed.register("targets_v0", preprocess_targets_v0)

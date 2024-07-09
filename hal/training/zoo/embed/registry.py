@@ -16,6 +16,9 @@ class Embed:
         raise NotImplementedError(f"Embedding fn {name} not found." f"Valid functions: {sorted(cls.EMBED.keys())}.")
 
     @classmethod
-    def register(cls, name: str, embed_fn: PreprocessFn):
-        cls.EMBED[name] = embed_fn
-        return embed_fn
+    def register(cls, name: str):
+        def decorator(embed_fn: PreprocessFn):
+            cls.EMBED[name] = embed_fn
+            return embed_fn
+
+        return decorator

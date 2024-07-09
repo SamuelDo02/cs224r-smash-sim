@@ -44,6 +44,7 @@ def _preprocess_categorical_features(
     return processed_features
 
 
+@Embed.register("inputs_v0")
 def preprocess_inputs_v0(
     sample: Dict[str, np.ndarray], player: str, stats: Dict[str, FeatureStats]
 ) -> Dict[str, np.ndarray]:
@@ -56,6 +57,3 @@ def preprocess_inputs_v0(
     inputs["gamestate"] = _preprocess_numeric_features(sample, player, other_player, stats)
 
     return inputs
-
-
-Embed.register("inputs_v0", preprocess_inputs_v0)
