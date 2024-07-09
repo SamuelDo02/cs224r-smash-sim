@@ -16,6 +16,10 @@ from torch import Tensor
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.types import Number
 from torch.utils.data import DataLoader
+from training.utils import move_tensors_to_device
+from training.utils import repeater
+from training.utils import report_module_weights
+from training.utils import time_format
 
 from hal.training.config import TrainConfig
 from hal.training.config import create_parser_for_attrs_class
@@ -36,10 +40,6 @@ from hal.training.io import get_exp_name
 from hal.training.types import ModelInputs
 from hal.training.types import ModelOutputs
 from hal.training.zoo.models.registry import Arch
-from hal.utils import move_tensors_to_device
-from hal.utils import repeater
-from hal.utils import report_module_weights
-from hal.utils import time_format
 
 
 class Trainer(torch.nn.Module):

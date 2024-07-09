@@ -15,9 +15,9 @@ import torch
 import torch.nn
 import wandb
 from loguru import logger
+from training.utils import get_git_repo_root
 
 from hal.training.distributed import is_master
-from hal.utils import get_git_repo_root
 
 
 def get_path_friendly_datetime() -> str:
