@@ -12,8 +12,8 @@ import numpy as np
 from hal.data.stats import FeatureStats
 from hal.training.types import ModelInputs
 from hal.training.types import ModelOutputs
-from hal.training.zoo.embed.registry import InputPreprocessRegistry
 from hal.training.zoo.models.registry import Arch
+from hal.training.zoo.preprocess.registry import InputPreprocessRegistry
 
 
 @attr.s(auto_attribs=True, frozen=True)

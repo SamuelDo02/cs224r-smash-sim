@@ -1,6 +1,7 @@
 {
   "python.defaultInterpreterPath": ".venv/bin/python",
   "python.analysis.extraPaths": [
+    "hal",
     "formatters/pyfixfmt"
   ],
   "jupyter.jupyterServerType": "remote",

@@ -7,12 +7,12 @@ import melee
 from melee import enums
 from melee.menuhelper import MenuHelper
 
-from hal.emulator_paths import LOCAL_CISO_PATH
-from hal.emulator_paths import LOCAL_DOLPHIN_HOME_PATH
-from hal.emulator_paths import LOCAL_GUI_EMULATOR_PATH
-from hal.emulator_paths import LOCAL_HEADLESS_EMULATOR_PATH
-from hal.emulator_paths import REMOTE_DOLPHIN_HOME_PATH
-from hal.emulator_paths import REMOTE_EMULATOR_PATH
+from hal.eval.emulator_paths import LOCAL_CISO_PATH
+from hal.eval.emulator_paths import LOCAL_DOLPHIN_HOME_PATH
+from hal.eval.emulator_paths import LOCAL_GUI_EMULATOR_PATH
+from hal.eval.emulator_paths import LOCAL_HEADLESS_EMULATOR_PATH
+from hal.eval.emulator_paths import REMOTE_DOLPHIN_HOME_PATH
+from hal.eval.emulator_paths import REMOTE_EMULATOR_PATH
 
 PLAYER_1_PORT = 1
 PLAYER_2_PORT = 4

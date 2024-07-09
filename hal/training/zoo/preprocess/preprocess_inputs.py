@@ -2,17 +2,17 @@ from typing import Dict
 
 import numpy as np
 
-from hal.data.preprocessing import NORMALIZATION_FN_BY_FEATURE
-from hal.data.preprocessing import NormalizationFn
-from hal.data.preprocessing import PLAYER_INPUT_FEATURES_TO_EMBED
-from hal.data.preprocessing import PLAYER_INPUT_FEATURES_TO_INVERT_AND_NORMALIZE
-from hal.data.preprocessing import PLAYER_INPUT_FEATURES_TO_NORMALIZE
-from hal.data.preprocessing import PLAYER_POSITION
-from hal.data.preprocessing import VALID_PLAYERS
+from hal.data.normalize import NORMALIZATION_FN_BY_FEATURE
+from hal.data.normalize import NormalizationFn
+from hal.data.normalize import PLAYER_INPUT_FEATURES_TO_EMBED
+from hal.data.normalize import PLAYER_INPUT_FEATURES_TO_INVERT_AND_NORMALIZE
+from hal.data.normalize import PLAYER_INPUT_FEATURES_TO_NORMALIZE
+from hal.data.normalize import PLAYER_POSITION
+from hal.data.normalize import VALID_PLAYERS
 from hal.data.stats import FeatureStats
 from hal.training.config import DataConfig
 from hal.training.types import ModelInputs
-from hal.training.zoo.embed.registry import InputPreprocessRegistry
+from hal.training.zoo.preprocess.registry import InputPreprocessRegistry
 
 
 def _preprocess_numeric_features(

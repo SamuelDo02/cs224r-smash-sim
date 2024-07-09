@@ -8,14 +8,14 @@ from torch.utils.data import Dataset
 
 from hal.data.constants import IDX_BY_CHARACTER_STR
 from hal.data.constants import IDX_BY_STAGE_STR
-from hal.data.preprocessing import pyarrow_table_to_np_dict
 from hal.data.schema import SCHEMA
 from hal.data.stats import load_dataset_stats
 from hal.training.config import DataConfig
 from hal.training.types import ModelInputs
 from hal.training.types import ModelOutputs
-from hal.training.zoo.embed.registry import InputPreprocessRegistry
-from hal.training.zoo.embed.registry import TargetPreprocessRegistry
+from hal.training.utils import pyarrow_table_to_np_dict
+from hal.training.zoo.preprocess.registry import InputPreprocessRegistry
+from hal.training.zoo.preprocess.registry import TargetPreprocessRegistry
 
 
 class MmappedParquetDataset(Dataset):

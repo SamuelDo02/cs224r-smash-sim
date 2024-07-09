@@ -2,14 +2,14 @@ from typing import Dict
 
 import numpy as np
 
-from hal.data.preprocessing import VALID_PLAYERS
-from hal.data.preprocessing import get_closest_stick_xy_cluster_v0
-from hal.data.preprocessing import one_hot_3d_fast_bugged
-from hal.data.preprocessing import union
+from hal.data.normalize import VALID_PLAYERS
+from hal.data.normalize import union
 from hal.data.stats import FeatureStats
 from hal.training.config import DataConfig
 from hal.training.types import ModelOutputs
-from hal.training.zoo.embed.registry import TargetPreprocessRegistry
+from hal.training.zoo.preprocess.encoding import get_closest_stick_xy_cluster_v0
+from hal.training.zoo.preprocess.encoding import one_hot_3d_fast_bugged
+from hal.training.zoo.preprocess.registry import TargetPreprocessRegistry
 
 
 @TargetPreprocessRegistry.register("targets_v0")
