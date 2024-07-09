@@ -8,7 +8,7 @@ from hal.data.preprocessing import one_hot_3d_fast_bugged
 from hal.data.preprocessing import union
 from hal.data.stats import FeatureStats
 from hal.training.config import DataConfig
-from hal.training.zoo.embed.registry import ModelOutputs
+from hal.training.types import ModelOutputs
 from hal.training.zoo.embed.registry import TargetPreprocessRegistry
 
 

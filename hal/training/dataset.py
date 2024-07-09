@@ -12,9 +12,9 @@ from hal.data.preprocessing import pyarrow_table_to_np_dict
 from hal.data.schema import SCHEMA
 from hal.data.stats import load_dataset_stats
 from hal.training.config import DataConfig
+from hal.training.types import ModelInputs
+from hal.training.types import ModelOutputs
 from hal.training.zoo.embed.registry import InputPreprocessRegistry
-from hal.training.zoo.embed.registry import ModelInputs
-from hal.training.zoo.embed.registry import ModelOutputs
 from hal.training.zoo.embed.registry import TargetPreprocessRegistry
 
 

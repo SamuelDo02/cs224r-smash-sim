@@ -11,8 +11,8 @@ from hal.data.preprocessing import PLAYER_POSITION
 from hal.data.preprocessing import VALID_PLAYERS
 from hal.data.stats import FeatureStats
 from hal.training.config import DataConfig
+from hal.training.types import ModelInputs
 from hal.training.zoo.embed.registry import InputPreprocessRegistry
-from hal.training.zoo.embed.registry import ModelInputs
 
 
 def _preprocess_numeric_features(

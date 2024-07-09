@@ -33,8 +33,8 @@ from hal.training.io import WandbConfig
 from hal.training.io import Writer
 from hal.training.io import get_artifact_dir
 from hal.training.io import get_exp_name
-from hal.training.zoo.embed.registry import ModelInputs
-from hal.training.zoo.embed.registry import ModelOutputs
+from hal.training.types import ModelInputs
+from hal.training.types import ModelOutputs
 from hal.training.zoo.models.registry import Arch
 from hal.utils import move_tensors_to_device
 from hal.utils import repeater

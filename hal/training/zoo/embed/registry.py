@@ -1,35 +1,7 @@
-from typing import Callable
 from typing import Dict
 
-import attr
-import numpy as np
-import numpy.typing as npt
-
-from hal.data.stats import FeatureStats
-from hal.training.config import DataConfig
-
-
-@attr.s(auto_attribs=True, frozen=True)
-class ModelInputs:
-    # v0
-    stage: npt.NDArray[np.int_]
-    ego_character: npt.NDArray[np.int_]
-    ego_action: npt.NDArray[np.int_]
-    opponent_character: npt.NDArray[np.int_]
-    opponent_action: npt.NDArray[np.int_]
-    gamestate: npt.NDArray[np.float32]
-
-
-@attr.s(auto_attribs=True, frozen=True)
-class ModelOutputs:
-    # v0
-    main_stick: npt.NDArray[np.int_]
-    c_stick: npt.NDArray[np.int_]
-    buttons: npt.NDArray[np.int_]
-
-
-InputPreprocessFn = Callable[[Dict[str, np.ndarray], DataConfig, str, Dict[str, FeatureStats]], ModelInputs]
-TargetPreprocessFn = Callable[[Dict[str, np.ndarray], DataConfig, str, Dict[str, FeatureStats]], ModelOutputs]
+from hal.training.config import InputPreprocessFn
+from hal.training.config import TargetPreprocessFn
 
 
 class InputPreprocessRegistry:
