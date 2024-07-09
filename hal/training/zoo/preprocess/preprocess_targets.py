@@ -6,7 +6,7 @@ from hal.data.normalize import VALID_PLAYERS
 from hal.data.normalize import union
 from hal.data.stats import FeatureStats
 from hal.training.zoo.preprocess.encoding import get_closest_stick_xy_cluster_v0
-from hal.training.zoo.preprocess.encoding import one_hot_3d_fast_bugged
+from hal.training.zoo.preprocess.encoding import one_hot_2d_fast
 from hal.training.zoo.preprocess.registry import TargetPreprocessRegistry
 
 
@@ -37,7 +37,8 @@ def preprocess_targets_v0(
     jump = union(target_sample[f"{player}_button_x"], target_sample[f"{player}_button_y"])
     button_z = target_sample[f"{player}_button_z"]
     shoulder = union(target_sample[f"{player}_button_l"], target_sample[f"{player}_button_r"])
-    stacked_buttons = np.stack((button_a, button_b, jump, button_z, shoulder), axis=1)[np.newaxis, ...]
-    buttons = one_hot_3d_fast_bugged(stacked_buttons)
+    no_button = np.zeros_like(button_a)
+    stacked_buttons = np.stack((button_a, button_b, jump, button_z, shoulder, no_button), axis=1)
+    buttons = one_hot_2d_fast(stacked_buttons)
 
     return {"main_stick": main_stick_clusters, "c_stick": c_stick_clusters, "buttons": buttons}
