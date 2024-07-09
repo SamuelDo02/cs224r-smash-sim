@@ -7,7 +7,7 @@ from typing import Type
 
 import attr
 
-from hal.zoo.models.registry import Arch
+from hal.training.zoo.models.registry import Arch
 
 
 @attr.s(auto_attribs=True, frozen=True)

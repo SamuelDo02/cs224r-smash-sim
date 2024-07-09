@@ -6,8 +6,8 @@ from typing import Tuple
 import torch
 from torch.utils.data import DataLoader
 from torch.utils.data import DistributedSampler
+from training.dataset import MmappedParquetDataset
 
-from hal.data.dataset import MmappedParquetDataset
 from hal.training.config import TrainConfig
 
 

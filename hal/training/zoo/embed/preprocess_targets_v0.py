@@ -6,7 +6,7 @@ from hal.data.preprocessing import VALID_PLAYERS
 from hal.data.preprocessing import get_closest_stick_xy_cluster_v0
 from hal.data.preprocessing import one_hot_3d_fast_bugged
 from hal.data.preprocessing import union
-from hal.zoo.embed.registry import Embed
+from hal.training.zoo.embed.registry import Embed
 
 
 def preprocess_targets_v0(sample: Dict[str, np.ndarray], player: str) -> Dict[str, np.ndarray]:

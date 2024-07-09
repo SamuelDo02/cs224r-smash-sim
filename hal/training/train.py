@@ -36,7 +36,7 @@ from hal.utils import move_tensors_to_device
 from hal.utils import repeater
 from hal.utils import report_module_weights
 from hal.utils import time_format
-from hal.zoo.models.registry import Arch
+from hal.training.zoo.models.registry import Arch
 
 
 class Trainer(torch.nn.Module):

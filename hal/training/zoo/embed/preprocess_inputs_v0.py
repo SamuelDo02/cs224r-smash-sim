@@ -10,7 +10,7 @@ from hal.data.preprocessing import PREPROCESS_FN_BY_FEATURE
 from hal.data.preprocessing import PreprocessFn
 from hal.data.preprocessing import VALID_PLAYERS
 from hal.data.stats import FeatureStats
-from hal.zoo.embed.registry import Embed
+from hal.training.zoo.embed.registry import Embed
 
 
 def _preprocess_numeric_features(
