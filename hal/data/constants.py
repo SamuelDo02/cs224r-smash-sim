@@ -1,6 +1,8 @@
+from typing import Dict
+from typing import Tuple
+
 import numpy as np
 from melee import Action
-from melee import Button
 from melee import Character
 from melee import Stage
 
@@ -8,14 +10,14 @@ from melee import Stage
 # Gamestate      #
 ###################
 
-EXCLUDED_STAGES: tuple[str, ...] = ("NO_STAGE", "RANDOM_STAGE")
-IDX_BY_STAGE: dict[Stage, int] = {
+EXCLUDED_STAGES: Tuple[str, ...] = ("NO_STAGE", "RANDOM_STAGE")
+IDX_BY_STAGE: Dict[Stage, int] = {
     stage: i for i, stage in enumerate(stage for stage in Stage if stage.name not in EXCLUDED_STAGES)
 }
-IDX_BY_STAGE_STR: dict[str, int] = {stage.name: i for stage, i in IDX_BY_STAGE.items()}
-STAGE_BY_IDX: dict[int, str] = {i: stage.name for stage, i in IDX_BY_STAGE.items()}
+IDX_BY_STAGE_STR: Dict[str, int] = {stage.name: i for stage, i in IDX_BY_STAGE.items()}
+STAGE_BY_IDX: Dict[int, str] = {i: stage.name for stage, i in IDX_BY_STAGE.items()}
 
-EXCLUDED_CHARACTERS: tuple[str, ...] = (
+EXCLUDED_CHARACTERS: Tuple[str, ...] = (
     "NANA",
     "WIREFRAME_MALE",
     "WIREFRAME_FEMALE",
@@ -23,25 +25,23 @@ EXCLUDED_CHARACTERS: tuple[str, ...] = (
     "SANDBAG",
     "UNKNOWN_CHARACTER",
 )
-IDX_BY_CHARACTER: dict[Character, int] = {
+IDX_BY_CHARACTER: Dict[Character, int] = {
     char: i for i, char in enumerate(char for char in Character if char.name not in EXCLUDED_CHARACTERS)
 }
-IDX_BY_CHARACTER_STR: dict[str, int] = {char.name: i for char, i in IDX_BY_CHARACTER.items()}
-CHARACTER_BY_IDX: dict[int, str] = {i: char.name for char, i in IDX_BY_CHARACTER.items()}
+IDX_BY_CHARACTER_STR: Dict[str, int] = {char.name: i for char, i in IDX_BY_CHARACTER.items()}
+CHARACTER_BY_IDX: Dict[int, str] = {i: char.name for char, i in IDX_BY_CHARACTER.items()}
 
-IDX_BY_ACTION: dict[Action, int] = {action: i for i, action in enumerate(Action)}
-ACTION_BY_IDX: dict[int, str] = {i: action.name for action, i in IDX_BY_ACTION.items()}
+IDX_BY_ACTION: Dict[Action, int] = {action: i for i, action in enumerate(Action)}
+ACTION_BY_IDX: Dict[int, str] = {i: action.name for action, i in IDX_BY_ACTION.items()}
 
-EXCLUDED_BUTTONS: tuple[str, ...] = (
-    "START",
-    "BUTTON_D_DOWN",
-    "BUTTON_D_LEFT",
-    "BUTTON_D_RIGHT",
+INCLUDED_BUTTONS: Tuple[str, ...] = (
+    "BUTTON_A",
+    "BUTTON_B",
+    "BUTTON_X",
+    "BUTTON_Z",
+    "BUTTON_L",
+    "NO_BUTTON",
 )
-IDX_BY_BUTTON: dict[Button, int] = {
-    button: i for i, button in enumerate(button for button in Button if button.name not in EXCLUDED_BUTTONS)
-}
-BUTTON_BY_IDX: dict[int, str] = {i: button.name for button, i in IDX_BY_BUTTON.items()}
 
 
 ###################

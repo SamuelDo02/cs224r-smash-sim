@@ -35,6 +35,7 @@ class RecurrentTrainer(Trainer):
 
         # Warmup trajectory without calculating loss
         warmup_len = self.config.data.input_len
+        target_len = self.config.data.target_len
         warmup_inputs = slice_tensor_dict(inputs, 0, warmup_len)
         warmup_pred_dict: Dict[str, Tensor] = self.model(warmup_inputs)
 
@@ -45,7 +46,9 @@ class RecurrentTrainer(Trainer):
             pred_dict = self.model(slice_tensor_dict(inputs, warmup_len + i, warmup_len + i + 1), hidden, cell)
             hidden, cell = pred_dict["hidden"], pred_dict["cell"]
             preds.append(pred_dict)
+
         preds = stack_tensor_dict(preds)
+        targets = slice_tensor_dict(targets, warmup_len, warmup_len + target_len)
 
         loss_by_head = self.loss_fn(preds, targets)
         loss_total = sum(loss_by_head.values())

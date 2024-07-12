@@ -5,7 +5,7 @@ from typing import Union
 import torch
 import torch.nn as nn
 
-from hal.data.constants import ACTION_BY_IDX
+from hal.data.constants import ACTION_BY_IDX, INCLUDED_BUTTONS
 from hal.data.constants import BUTTON_BY_IDX
 from hal.data.constants import CHARACTER_BY_IDX
 from hal.data.constants import STAGE_BY_IDX
@@ -24,12 +24,15 @@ class LSTM(nn.Module):
         self.action_embed = nn.Embedding(len(ACTION_BY_IDX), 20)
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
 
-        self.button_head = nn.Linear(hidden_size, len(BUTTON_BY_IDX))
+        self.button_head = nn.Linear(hidden_size, len(INCLUDED_BUTTONS))
         self.main_stick_head = nn.Linear(hidden_size, len(STICK_XY_CLUSTER_CENTERS_V0))
         self.c_stick_head = nn.Linear(hidden_size, len(STICK_XY_CLUSTER_CENTERS_V0))
 
     def forward(
-        self, inputs: Dict[str, torch.Tensor], hidden: Optional[torch.Tensor], cell: Optional[torch.Tensor]
+        self,
+        inputs: Dict[str, torch.Tensor],
+        hidden: Optional[torch.Tensor] = None,
+        cell: Optional[torch.Tensor] = None,
     ) -> Dict[str, Union[torch.Tensor, None]]:
         stage_embed = self.stage_embed(inputs["stage"]).squeeze(-2)
         ego_character_embed = self.character_embed(inputs["ego_character"]).squeeze(-2)
@@ -60,9 +63,11 @@ class LSTM(nn.Module):
         )
         x, (hidden, cell) = self.lstm(x, (hidden, cell))
 
-        button_logits = self.button_head(hidden)
-        main_stick_logits = self.main_stick_head(hidden)
-        c_stick_logits = self.c_stick_head(hidden)
+        assert hidden is not None
+        last_hidden = hidden[-1]
+        button_logits = self.button_head(last_hidden)
+        main_stick_logits = self.main_stick_head(last_hidden)
+        c_stick_logits = self.c_stick_head(last_hidden)
 
         return {
             "buttons": button_logits,
