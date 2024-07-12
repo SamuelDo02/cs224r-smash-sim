@@ -28,15 +28,27 @@ class LSTM(nn.Module):
 
     def forward(self, inputs: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         stage_embed = self.stage_embed(inputs["stage"])
-        character_embed = self.character_embed(inputs["character"])
-        action_embed = self.action_embed(inputs["action"])
+        ego_character_embed = self.character_embed(inputs["ego_character"])
+        opponent_character_embed = self.character_embed(inputs["opponent_character"])
+        ego_action_embed = self.action_embed(inputs["ego_action"])
+        opponent_action_embed = self.action_embed(inputs["opponent_action"])
         gamestate = inputs["gamestate"]
 
         hidden, cell = (
             torch.zeros(self.num_layers, 1, self.hidden_size),
             torch.zeros(self.num_layers, 1, self.hidden_size),
         )
-        x = torch.cat([stage_embed, character_embed, action_embed, gamestate], dim=1)
+        x = torch.cat(
+            [
+                stage_embed,
+                ego_character_embed,
+                opponent_character_embed,
+                ego_action_embed,
+                opponent_action_embed,
+                gamestate,
+            ],
+            dim=-1,
+        )
         x, (hidden, cell) = self.core(x, (hidden, cell))
 
         button_logits = self.button_head(hidden)
@@ -54,4 +66,4 @@ class LSTM(nn.Module):
         }
 
 
-Arch.register("lstm", make_net=LSTM, input_size=50, hidden_size=256, num_layers=2)
+Arch.register("lstm", make_net=LSTM, input_size=76, hidden_size=256, num_layers=2)
