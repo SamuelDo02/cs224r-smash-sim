@@ -21,7 +21,7 @@ class ReplayFilter:
 class DataConfig:
     """Training & eval dataset & preprocessing."""
 
-    data_dir: str
+    data_dir: str = "data/dev"
     input_preprocessing_fn: str = "inputs_v0"
     target_preprocessing_fn: str = "targets_v0"
     # Number of input and target frames in example/rollout
@@ -43,17 +43,17 @@ class DataworkerConfig:
 class BaseConfig:
     n_gpus: int
     # TODO(eric): store true by default
-    debug: bool
+    debug: bool = False
 
 
 @attr.s(auto_attribs=True, frozen=True)
 class TrainConfig(BaseConfig):
     # Model
-    arch: str
+    arch: str = "lstm"
 
     # Data
-    data: DataConfig
-    dataworker: DataworkerConfig
+    data: DataConfig = DataConfig()
+    dataworker: DataworkerConfig = DataworkerConfig()
     seed: int = 42
 
     # Hyperparams
@@ -83,14 +83,22 @@ def create_parser_for_attrs_class(
             create_parser_for_attrs_class(field.type, parser, f"{prefix}{field.name}.")
         else:
             # Otherwise, add it as a regular argument
-            parser.add_argument(
-                arg_name,
-                type=field.type,
-                help=field.metadata.get("help", ""),
-                default=field.default if field.default is not attr.NOTHING else None,
-                required=field.default is attr.NOTHING,
-                # action="store_true" if field.type == bool else "store",
-            )
+            if field.type == bool:
+                parser.add_argument(
+                    arg_name,
+                    action="store_true",
+                    help=field.metadata.get("help", ""),
+                    default=field.default if field.default is not attr.NOTHING else None,
+                    required=field.default is attr.NOTHING,
+                )
+            else:
+                parser.add_argument(
+                    arg_name,
+                    type=field.type,
+                    help=field.metadata.get("help", ""),
+                    default=field.default if field.default is not attr.NOTHING else None,
+                    required=field.default is attr.NOTHING,
+                )
 
     return parser
 
