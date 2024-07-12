@@ -6,6 +6,7 @@ from typing import Optional
 import numpy as np
 import torch
 from torch import Tensor
+from torch.nn import functional as F
 from torch.types import Number
 from training.trainer import Trainer
 
@@ -18,11 +19,11 @@ from hal.training.distributed import wrap_multiprocessing
 
 
 class RecurrentTrainer(Trainer):
-    def train_op(self, inputs: Dict[str, Tensor], targets: Dict[str, Tensor]) -> dict[str, Number]:
+    def train_op(self, inputs: Dict[str, Tensor], targets: Dict[str, Tensor]) -> Dict[str, Number]:
         self.opt.zero_grad(set_to_none=True)
         pred = self.model(inputs)
         loss_by_head = self.loss_fn(pred, targets)
-        loss_total: Tensor = sum(loss_by_head.values())
+        loss_total = sum(loss_by_head.values())
         loss_total.backward()
         self.opt.step()
         self.scheduler.step()
@@ -31,6 +32,12 @@ class RecurrentTrainer(Trainer):
         metrics_dict = {f"train/{k}": v.item() for k, v in loss_by_head.items()}
         metrics_dict["lr"] = self.scheduler.get_lr()
         return metrics_dict
+
+    def loss_fn(self, pred: Dict[str, Tensor], target: Dict[str, Tensor]) -> Dict[str, Tensor]:
+        button_loss = F.cross_entropy(pred["buttons"], target["buttons"])
+        main_stick_loss = F.cross_entropy(pred["main_stick"], target["main_stick"])
+        c_stick_loss = F.cross_entropy(pred["c_stick"], target["c_stick"])
+        return {"button_loss": button_loss, "main_stick_loss": main_stick_loss, "c_stick_loss": c_stick_loss}
 
 
 @auto_distribute

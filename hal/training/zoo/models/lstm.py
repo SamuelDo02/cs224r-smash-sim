@@ -26,14 +26,32 @@ class LSTM(nn.Module):
         self.main_stick_head = nn.Linear(hidden_size, len(STICK_XY_CLUSTER_CENTERS_V0))
         self.c_stick_head = nn.Linear(hidden_size, len(STICK_XY_CLUSTER_CENTERS_V0))
 
-    def forward(self, inputs: Dict[str, torch.Tensor]) -> torch.Tensor:
+    def forward(self, inputs: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         stage_embed = self.stage_embed(inputs["stage"])
         character_embed = self.character_embed(inputs["character"])
         action_embed = self.action_embed(inputs["action"])
         gamestate = inputs["gamestate"]
+
+        hidden, cell = (
+            torch.zeros(self.num_layers, 1, self.hidden_size),
+            torch.zeros(self.num_layers, 1, self.hidden_size),
+        )
         x = torch.cat([stage_embed, character_embed, action_embed, gamestate], dim=1)
-        x, _ = self.core(x)
-        return self.button_head(x)
+        x, (hidden, cell) = self.core(x, (hidden, cell))
+
+        button_logits = self.button_head(hidden)
+        main_stick_logits = self.main_stick_head(hidden)
+        c_stick_logits = self.c_stick_head(hidden)
+
+        button_pred = torch.argmax(button_logits, dim=2)
+        main_stick_pred = torch.argmax(main_stick_logits, dim=2)
+        c_stick_pred = torch.argmax(c_stick_logits, dim=2)
+
+        return {
+            "buttons": button_pred,
+            "main_stick": main_stick_pred,
+            "c_stick": c_stick_pred,
+        }
 
 
 Arch.register("lstm", make_net=LSTM, input_size=50, hidden_size=256, num_layers=2)
