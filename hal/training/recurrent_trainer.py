@@ -30,6 +30,12 @@ def stack_tensor_dict(tensor_dicts: List[Dict[str, Tensor]]) -> Dict[str, Tensor
 
 
 class RecurrentTrainer(Trainer):
+    def loss_fn(self, pred: Dict[str, Tensor], target: Dict[str, Tensor]) -> Dict[str, Tensor]:
+        button_loss = F.cross_entropy(pred["buttons"], target["buttons"])
+        main_stick_loss = F.cross_entropy(pred["main_stick"], target["main_stick"])
+        c_stick_loss = F.cross_entropy(pred["c_stick"], target["c_stick"])
+        return {"button_loss": button_loss, "main_stick_loss": main_stick_loss, "c_stick_loss": c_stick_loss}
+
     def train_op(self, inputs: Dict[str, Tensor], targets: Dict[str, Tensor]) -> Dict[str, Number]:
         self.opt.zero_grad(set_to_none=True)
 
@@ -61,11 +67,32 @@ class RecurrentTrainer(Trainer):
         metrics_dict["lr"] = self.scheduler.get_lr()
         return metrics_dict
 
-    def loss_fn(self, pred: Dict[str, Tensor], target: Dict[str, Tensor]) -> Dict[str, Tensor]:
-        button_loss = F.cross_entropy(pred["buttons"], target["buttons"])
-        main_stick_loss = F.cross_entropy(pred["main_stick"], target["main_stick"])
-        c_stick_loss = F.cross_entropy(pred["c_stick"], target["c_stick"])
-        return {"button_loss": button_loss, "main_stick_loss": main_stick_loss, "c_stick_loss": c_stick_loss}
+    def val_op(self, inputs: Dict[str, Tensor], targets: Dict[str, Tensor]) -> Dict[str, float]:
+        self.eval()
+        with torch.no_grad():
+            # Warmup trajectory
+            warmup_len = self.config.data.input_len
+            target_len = self.config.data.target_len
+            warmup_inputs = slice_tensor_dict(inputs, 0, warmup_len)
+            warmup_pred_dict = self.model(warmup_inputs)
+
+            # Teacher forcing
+            hidden, cell = warmup_pred_dict["hidden"], warmup_pred_dict["cell"]
+            preds = []
+            for i in range(target_len):
+                pred_dict = self.model(slice_tensor_dict(inputs, warmup_len + i, warmup_len + i + 1), hidden, cell)
+                hidden, cell = pred_dict["hidden"], pred_dict["cell"]
+                preds.append(pred_dict)
+
+            preds = stack_tensor_dict(preds)
+            targets = slice_tensor_dict(targets, warmup_len, warmup_len + target_len)
+
+            loss_by_head = self.loss_fn(preds, targets)
+            loss_total = sum(loss_by_head.values())
+
+        loss_by_head["val/loss_total"] = loss_total
+        metrics_dict = {f"val/{k}": v.item() for k, v in loss_by_head.items()}
+        return metrics_dict
 
 
 @auto_distribute

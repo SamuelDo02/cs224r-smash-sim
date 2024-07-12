@@ -7,6 +7,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Dict
 from typing import Iterable
+from typing import Iterator
 from typing import Optional
 from typing import Tuple
 from typing import Union
@@ -98,6 +99,10 @@ class Trainer(torch.nn.Module, abc.ABC):
     def train_op(self, inputs: Dict[str, Tensor], targets: Dict[str, Tensor]) -> dict[str, Tensor]:
         ...
 
+    @abc.abstractmethod
+    def val_op(self, inputs: Dict[str, Tensor], targets: Dict[str, Tensor]) -> Dict[str, float]:
+        ...
+
     def train_step(self, batch: Tuple[Dict[str, Tensor], Dict[str, Tensor]], writer: Writer, step: int) -> None:
         batch = move_tensors_to_device(batch, self.device)
         inputs, targets = batch
@@ -122,6 +127,7 @@ class Trainer(torch.nn.Module, abc.ABC):
         wandb_config = WandbConfig.create(self, self.config) if is_master() else None
         batch_size = get_world_size() * local_batch_size
         train_loader = repeater(train_loader)
+        val_loader = repeater(val_loader)
 
         ckpt = Checkpoint(model=self, logdir=self.artifact_dir, keep_ckpts=keep_ckpts)
         resume_idx = ckpt.restore()[0]
@@ -169,16 +175,6 @@ class Trainer(torch.nn.Module, abc.ABC):
 
         ckpt.save_file(self.model, "model.ckpt")
 
-    def val_op(self, inputs: Dict[str, Tensor], targets: Dict[str, Tensor]) -> Dict[str, float]:
-        self.eval()
-        with torch.no_grad():
-            pred, _ = self.model(inputs)
-            loss = self.loss_fn(pred, targets)
-            # conf_matrix = self.calculate_confusion_matrix(pred, targets)
-        # metrics_dict = {k: v.item() for k, v in loss.items()} | conf_matrix
-        metrics_dict = {k: v.item() for k, v in loss.items()}
-        return metrics_dict
-
     def save_batch_to_disk(self, batch: tuple[Dict[str, Tensor], ...], step: int) -> None:
         save_batch_path = self.artifact_dir / "training_samples" / f"{step}.pkl"
         Path.mkdir(save_batch_path.parent, exist_ok=True, parents=True)
@@ -186,8 +182,14 @@ class Trainer(torch.nn.Module, abc.ABC):
             pickle.dump(batch, f)
         print(f"Saved example to {save_batch_path}")
 
-    def validate(self, val_loader: Iterable, batch_size: int, n_val_samples: int, writer: Writer, step: int) -> None:
-        val_iter = iter(val_loader)
+    def validate(
+        self,
+        val_loader: Iterator[Tuple[Dict[str, Tensor], Dict[str, Tensor]]],
+        batch_size: int,
+        n_val_samples: int,
+        writer: Writer,
+        step: int,
+    ) -> None:
         device = self.device
         range_iter = trange(
             0,
@@ -201,7 +203,7 @@ class Trainer(torch.nn.Module, abc.ABC):
         concat_metrics = defaultdict(list)
 
         for i in range_iter:
-            batch = next(val_iter)
+            batch = next(val_loader)
             batch = move_tensors_to_device(batch, device)
             if i == 0 and self.config.debug:
                 self.save_batch_to_disk(batch, step=step)

@@ -60,10 +60,10 @@ class TrainConfig(BaseConfig):
     loss_fn: str = "ce"
     local_batch_size: int = 1024
     lr: float = 3e-4
-    n_samples: int = 2**27
-    n_val_samples: int = 2**17
+    n_samples: int = 2**24
+    n_val_samples: int = 2**16
     keep_ckpts: int = 8
-    report_len: int = 2**20
+    report_len: int = 2**19
     betas: Tuple[float, float] = (0.9, 0.999)
     eps: float = 1e-8
     wd: float = 1e-2
