@@ -38,6 +38,19 @@ class LSTM(nn.Module):
             torch.zeros(self.num_layers, 1, self.hidden_size),
             torch.zeros(self.num_layers, 1, self.hidden_size),
         )
+
+        for tensor in (
+            stage_embed,
+            ego_character_embed,
+            opponent_character_embed,
+            ego_action_embed,
+            opponent_action_embed,
+            gamestate,
+        ):
+            print(tensor.shape)
+        import pdb
+
+        pdb.set_trace()
         x = torch.cat(
             [
                 stage_embed,

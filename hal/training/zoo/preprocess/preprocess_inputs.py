@@ -37,11 +37,14 @@ def _preprocess_categorical_features(
     for feature in PLAYER_INPUT_FEATURES_TO_EMBED:
         preprocess_fn: NormalizationFn = NORMALIZATION_FN_BY_FEATURE[feature]
         for p, prefix in [(player, "ego"), (opponent, "opponent")]:
-            feature_name = f"{p}_{feature}"
-            # e.g. "ego_character"
-            processed_features[f"{prefix}_{feature}"] = preprocess_fn(  # pylint: disable=E1102
-                sample[feature_name], stats[feature_name]
-            )
+            raw_feature_name = f"{p}_{feature}"
+            processed_feature_name = f"{prefix}_{feature}"  # e.g. "ego_character"
+            processed_feature: np.ndarray = preprocess_fn(  # pylint: disable=E1102
+                sample[raw_feature_name], stats[raw_feature_name]
+            )[
+                ..., np.newaxis
+            ]  # Add dim to match the numeric features
+            processed_features[processed_feature_name] = processed_feature
     return processed_features
 
 
