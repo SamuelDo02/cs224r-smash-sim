@@ -1,6 +1,7 @@
 import argparse
 import random
 from typing import Dict
+from typing import List
 from typing import Optional
 
 import numpy as np
@@ -18,12 +19,35 @@ from hal.training.distributed import auto_distribute
 from hal.training.distributed import wrap_multiprocessing
 
 
+def slice_tensor_dict(tensor_dict: Dict[str, Tensor], start: int, end: int) -> Dict[str, Tensor]:
+    return {k: v[:, start:end] for k, v in tensor_dict.items()}
+
+
+def stack_tensor_dict(tensor_dicts: List[Dict[str, Tensor]]) -> Dict[str, Tensor]:
+    if not tensor_dicts:
+        return {}
+    return {k: torch.stack([d[k] for d in tensor_dicts], dim=-2) for k in tensor_dicts[0].keys()}
+
+
 class RecurrentTrainer(Trainer):
     def train_op(self, inputs: Dict[str, Tensor], targets: Dict[str, Tensor]) -> Dict[str, Number]:
         self.opt.zero_grad(set_to_none=True)
-        pred = self.model(inputs)
-        # unroll over target len
-        loss_by_head = self.loss_fn(pred, targets)
+
+        # Warmup trajectory without calculating loss
+        warmup_len = self.config.data.input_len
+        warmup_inputs = slice_tensor_dict(inputs, 0, warmup_len)
+        warmup_pred_dict: Dict[str, Tensor] = self.model(warmup_inputs)
+
+        # Teacher forcing
+        hidden, cell = warmup_pred_dict["hidden"], warmup_pred_dict["cell"]
+        preds = []
+        for i in range(self.config.data.target_len):
+            pred_dict = self.model(slice_tensor_dict(inputs, warmup_len + i, warmup_len + i + 1), hidden, cell)
+            hidden, cell = pred_dict["hidden"], pred_dict["cell"]
+            preds.append(pred_dict)
+        preds = stack_tensor_dict(preds)
+
+        loss_by_head = self.loss_fn(preds, targets)
         loss_total = sum(loss_by_head.values())
         loss_total.backward()
         self.opt.step()

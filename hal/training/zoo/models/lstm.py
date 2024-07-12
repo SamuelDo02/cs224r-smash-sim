@@ -1,4 +1,6 @@
 from typing import Dict
+from typing import Optional
+from typing import Union
 
 import torch
 import torch.nn as nn
@@ -26,7 +28,9 @@ class LSTM(nn.Module):
         self.main_stick_head = nn.Linear(hidden_size, len(STICK_XY_CLUSTER_CENTERS_V0))
         self.c_stick_head = nn.Linear(hidden_size, len(STICK_XY_CLUSTER_CENTERS_V0))
 
-    def forward(self, inputs: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def forward(
+        self, inputs: Dict[str, torch.Tensor], hidden: Optional[torch.Tensor], cell: Optional[torch.Tensor]
+    ) -> Dict[str, Union[torch.Tensor, None]]:
         stage_embed = self.stage_embed(inputs["stage"]).squeeze(-2)
         ego_character_embed = self.character_embed(inputs["ego_character"]).squeeze(-2)
         opponent_character_embed = self.character_embed(inputs["opponent_character"]).squeeze(-2)
@@ -37,10 +41,11 @@ class LSTM(nn.Module):
         batch_size = stage_embed.shape[0]
 
         device = next(self.lstm.parameters()).device
-        hidden, cell = (
-            torch.zeros(self.num_layers, batch_size, self.hidden_size, device=device),
-            torch.zeros(self.num_layers, batch_size, self.hidden_size, device=device),
-        )
+        if hidden is None or cell is None:
+            hidden, cell = (
+                torch.zeros(self.num_layers, batch_size, self.hidden_size, device=device),
+                torch.zeros(self.num_layers, batch_size, self.hidden_size, device=device),
+            )
 
         x = torch.cat(
             [
@@ -63,6 +68,8 @@ class LSTM(nn.Module):
             "buttons": button_logits,
             "main_stick": main_stick_logits,
             "c_stick": c_stick_logits,
+            "hidden": hidden,
+            "cell": cell,
         }
 
 

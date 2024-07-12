@@ -7,7 +7,7 @@ import numpy as np
 from hal.data.stats import FeatureStats
 
 Player = Literal["p1", "p2"]
-TargetPreprocessFn = Callable[[Dict[str, np.ndarray], int, Player, Dict[str, FeatureStats]], Dict[str, np.ndarray]]
+TargetPreprocessFn = Callable[[Dict[str, np.ndarray], Player], Dict[str, np.ndarray]]
 InputPreprocessFn = Callable[[Dict[str, np.ndarray], int, Player, Dict[str, FeatureStats]], Dict[str, np.ndarray]]
 
 

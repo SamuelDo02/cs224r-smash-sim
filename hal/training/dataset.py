@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Dict
+from typing import List
 from typing import Tuple
 
 import numpy as np
@@ -14,6 +15,7 @@ from hal.data.stats import load_dataset_stats
 from hal.training.config import DataConfig
 from hal.training.utils import pyarrow_table_to_np_dict
 from hal.training.zoo.preprocess.registry import InputPreprocessRegistry
+from hal.training.zoo.preprocess.registry import Player
 from hal.training.zoo.preprocess.registry import TargetPreprocessRegistry
 
 
@@ -54,7 +56,7 @@ class MmappedParquetDataset(Dataset):
         self.trajectory_len = self.config.input_len + self.config.target_len
         self.truncate_rollouts_to_replay_end = self.config.truncate_rollouts_to_replay_end
         self.include_both_players = self.config.include_both_players
-        self.player_perspectives = ["p1", "p2"] if self.include_both_players else ["p1"]
+        self.player_perspectives: List[Player] = ["p1", "p2"] if self.include_both_players else ["p1"]
         self.replay_filter = self.config.replay_filter
 
         self.input_preprocessing_fn = InputPreprocessRegistry.get(self.config.input_preprocessing_fn)
@@ -109,10 +111,6 @@ class MmappedParquetDataset(Dataset):
 
         features_by_name = pyarrow_table_to_np_dict(table_chunk)
         player = self.player_perspectives[player_index]
-        inputs = self.input_preprocessing_fn(
-            features_by_name, self.config.input_len, player, self.stats_by_feature_name
-        )
-        targets = self.target_preprocessing_fn(
-            features_by_name, self.config.input_len, player, self.stats_by_feature_name
-        )
+        inputs = self.input_preprocessing_fn(features_by_name, self.trajectory_len, player, self.stats_by_feature_name)
+        targets = self.target_preprocessing_fn(features_by_name, player)
         return inputs, targets
