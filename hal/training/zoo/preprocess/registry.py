@@ -1,12 +1,14 @@
 from typing import Callable
 from typing import Dict
+from typing import Literal
 
 import numpy as np
 
 from hal.data.stats import FeatureStats
 
-TargetPreprocessFn = Callable[[Dict[str, np.ndarray], int, str, Dict[str, FeatureStats]], Dict[str, np.ndarray]]
-InputPreprocessFn = Callable[[Dict[str, np.ndarray], int, str, Dict[str, FeatureStats]], Dict[str, np.ndarray]]
+Player = Literal["p1", "p2"]
+TargetPreprocessFn = Callable[[Dict[str, np.ndarray], int, Player, Dict[str, FeatureStats]], Dict[str, np.ndarray]]
+InputPreprocessFn = Callable[[Dict[str, np.ndarray], int, Player, Dict[str, FeatureStats]], Dict[str, np.ndarray]]
 
 
 class InputPreprocessRegistry:

@@ -11,6 +11,7 @@ from hal.data.normalize import PLAYER_POSITION
 from hal.data.normalize import VALID_PLAYERS
 from hal.data.stats import FeatureStats
 from hal.training.zoo.preprocess.registry import InputPreprocessRegistry
+from hal.training.zoo.preprocess.registry import Player
 
 
 def _preprocess_numeric_features(
@@ -30,27 +31,27 @@ def _preprocess_numeric_features(
 
 
 def _preprocess_categorical_features(
-    sample: Dict[str, np.ndarray], player: str, opponent: str, stats: Dict[str, FeatureStats]
+    sample: Dict[str, np.ndarray], player: Player, opponent: Player, stats: Dict[str, FeatureStats]
 ) -> Dict[str, np.ndarray]:
     """Preprocess categorical features for both players."""
     processed_features = {}
+
+    def process_feature(feature_name: str, column_name: str) -> np.ndarray:
+        preprocess_fn: NormalizationFn = NORMALIZATION_FN_BY_FEATURE[feature_name]
+        return preprocess_fn(sample[column_name], stats[column_name])[..., np.newaxis]
+
     for feature in PLAYER_INPUT_FEATURES_TO_EMBED:
-        preprocess_fn: NormalizationFn = NORMALIZATION_FN_BY_FEATURE[feature]
         for p, prefix in [(player, "ego"), (opponent, "opponent")]:
-            raw_feature_name = f"{p}_{feature}"
+            col_name = f"{p}_{feature}"  # e.g. "p1_character"
             processed_feature_name = f"{prefix}_{feature}"  # e.g. "ego_character"
-            processed_feature: np.ndarray = preprocess_fn(  # pylint: disable=E1102
-                sample[raw_feature_name], stats[raw_feature_name]
-            )[
-                ..., np.newaxis
-            ]  # Add dim to match the numeric features
-            processed_features[processed_feature_name] = processed_feature
+            processed_features[processed_feature_name] = process_feature(feature, col_name)
+    processed_features["stage"] = process_feature("stage", column_name="stage")
     return processed_features
 
 
 @InputPreprocessRegistry.register("inputs_v0")
 def preprocess_inputs_v0(
-    sample: Dict[str, np.ndarray], input_len: int, player: str, stats: Dict[str, FeatureStats]
+    sample: Dict[str, np.ndarray], input_len: int, player: Player, stats: Dict[str, FeatureStats]
 ) -> Dict[str, np.ndarray]:
     """Slice input sample to the input length."""
     assert player in VALID_PLAYERS
