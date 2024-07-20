@@ -6,9 +6,21 @@ from typing import Tuple
 import torch
 from torch.utils.data import DataLoader
 from torch.utils.data import DistributedSampler
+from torch.utils.data import Sampler
 
 from hal.training.config import TrainConfig
 from hal.training.dataset import MmappedParquetDataset
+from hal.training.dataset import SizedDataset
+
+
+class RepeatFirstBatchSampler(Sampler):
+    def __init__(self, dataset: SizedDataset, batch: int, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.batch_indices = torch.randint(0, len(dataset), (batch,)).tolist()
+
+    def __iter__(self):
+        while True:
+            yield from iter(self.batch_indices)
 
 
 def create_dataloaders(
@@ -21,26 +33,34 @@ def create_dataloaders(
     dataloaders: List[DataLoader] = []
     for split in ("train", "val"):
         is_train = split == "train"
+        # Dataset
         dataset = MmappedParquetDataset(
             input_path=data_dir / f"{split}.parquet",
             stats_path=stats_path,
             data_config=train_config.data,
         )
-        sampler = (
-            DistributedSampler(dataset, num_replicas=world_size, rank=rank, seed=train_config.seed, drop_last=is_train)
-            if is_distributed
-            else None
-        )
+        # Sampler
+        debug_repeat_batch = train_config.data.debug_repeat_batch
+        shuffle = is_train and not (is_distributed or debug_repeat_batch)
+        if debug_repeat_batch:
+            sampler = RepeatFirstBatchSampler(dataset, batch=train_config.local_batch_size)
+        else:
+            sampler = (
+                DistributedSampler(
+                    dataset, num_replicas=world_size, rank=rank, seed=train_config.seed, drop_last=is_train
+                )
+                if is_distributed
+                else None
+            )
+        # Dataloader
         dataloader: DataLoader[MmappedParquetDataset] = DataLoader(
             dataset,
             batch_size=train_config.local_batch_size,
-            shuffle=is_train and not is_distributed,
+            shuffle=shuffle,
             sampler=sampler,
             num_workers=train_config.dataworker.data_workers_per_gpu,
             pin_memory=torch.cuda.is_available(),
-            # collate_fn=train_config.dataworker.collate_fn,  # TODO
             prefetch_factor=train_config.dataworker.prefetch_factor,
-            # collate_fn=train_config.dataworker.collate_fn,  # TODO
             persistent_workers=True,
         )
         dataloaders.append(dataloader)

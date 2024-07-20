@@ -1,3 +1,4 @@
+import abc
 from pathlib import Path
 from typing import Dict
 from typing import List
@@ -19,7 +20,13 @@ from hal.training.zoo.preprocess.registry import Player
 from hal.training.zoo.preprocess.registry import TargetPreprocessRegistry
 
 
-class MmappedParquetDataset(Dataset):
+class SizedDataset(Dataset, abc.ABC):
+    @abc.abstractmethod
+    def __len__(self) -> int:
+        raise NotImplementedError
+
+
+class MmappedParquetDataset(SizedDataset):
     """Memory mapped parquet dataset for DDP training.
 
     If sequence spans multiple replays, `truncate_replay_end` will truncate to the first replay.
@@ -58,6 +65,7 @@ class MmappedParquetDataset(Dataset):
         self.include_both_players = self.config.include_both_players
         self.player_perspectives: List[Player] = ["p1", "p2"] if self.include_both_players else ["p1"]
         self.replay_filter = self.config.replay_filter
+        self.debug_repeat_batch = self.config.debug_repeat_batch
 
         self.input_preprocessing_fn = InputPreprocessRegistry.get(self.config.input_preprocessing_fn)
         self.target_preprocessing_fn = TargetPreprocessRegistry.get(self.config.target_preprocessing_fn)

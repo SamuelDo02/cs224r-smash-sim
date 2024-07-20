@@ -30,6 +30,7 @@ class DataConfig:
     replay_filter: ReplayFilter = ReplayFilter()
     include_both_players: bool = True
     truncate_rollouts_to_replay_end: bool = False
+    debug_repeat_batch: bool = False
 
 
 @attr.s(auto_attribs=True, frozen=True)
