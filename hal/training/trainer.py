@@ -1,18 +1,14 @@
 import abc
-import argparse
 import pickle
-import random
 import time
 from collections import defaultdict
 from pathlib import Path
 from typing import Dict
 from typing import Iterable
 from typing import Iterator
-from typing import Optional
 from typing import Tuple
 from typing import Union
 
-import numpy as np
 import torch
 from loguru import logger
 from torch import Tensor
@@ -20,16 +16,11 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader
 
 from hal.training.config import TrainConfig
-from hal.training.config import create_parser_for_attrs_class
-from hal.training.config import parse_args_to_attrs_instance
-from hal.training.dataloader import create_dataloaders
-from hal.training.distributed import auto_distribute
 from hal.training.distributed import get_world_size
 from hal.training.distributed import is_master
 from hal.training.distributed import maybe_wrap_model_distributed
 from hal.training.distributed import print
 from hal.training.distributed import trange
-from hal.training.distributed import wrap_multiprocessing
 from hal.training.io import Checkpoint
 from hal.training.io import WandbConfig
 from hal.training.io import Writer
@@ -234,40 +225,3 @@ class Trainer(torch.nn.Module, abc.ABC):
         #             preds=pred_action_ids, y_true=target_action_ids, class_names=class_names, title=k
         #         )
         # writer.log(conf_matrix_dict, step=step, commit=False)
-
-
-@auto_distribute
-def main(
-    rank: Optional[int],
-    world_size: Optional[int],
-    train_config: TrainConfig,
-) -> None:
-    seed = train_config.seed
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-
-    train_loader, val_loader = create_dataloaders(train_config, rank=rank, world_size=world_size)
-    trainer = Trainer(config=train_config, train_loader=train_loader, val_loader=val_loader)
-    trainer.train_loop(
-        train_loader,
-        val_loader,
-        local_batch_size=train_config.local_batch_size,
-        n_samples=train_config.n_samples,
-        n_val_samples=train_config.n_val_samples,
-        report_len=train_config.report_len,
-        keep_ckpts=train_config.keep_ckpts,
-    )
-
-
-def parse_cli() -> TrainConfig:
-    parser = argparse.ArgumentParser()
-    parser = create_parser_for_attrs_class(TrainConfig, parser)
-    args = parser.parse_args()
-    return parse_args_to_attrs_instance(TrainConfig, args)
-
-
-if __name__ == "__main__":
-    train_config = parse_cli()
-    # pass positional args and call wrapped fn; (kwargs not accepted)
-    wrap_multiprocessing(main, train_config)()

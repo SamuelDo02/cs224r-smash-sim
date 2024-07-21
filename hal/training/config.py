@@ -21,7 +21,7 @@ class ReplayFilter:
 class DataConfig:
     """Training & eval dataset & preprocessing."""
 
-    data_dir: str = "data/partial"
+    data_dir: str = "data/dev"
     input_preprocessing_fn: str = "inputs_v0"
     target_preprocessing_fn: str = "targets_v0"
     # Number of input and target frames in example/rollout
