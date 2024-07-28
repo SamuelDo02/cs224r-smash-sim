@@ -1,8 +1,14 @@
+from typing import Iterable
 from typing import Optional
 from typing import Tuple
 
+import attr
 import torch
 import torch.nn as nn
+from data.constants import ACTION_BY_IDX
+from data.constants import CHARACTER_BY_IDX
+from data.constants import STAGE_BY_IDX
+from tensordict import TensorDict
 
 
 class LSTMDropout(nn.Module):
@@ -48,3 +54,70 @@ class RecurrentResidualBlock(nn.Module):
         x, hidden_out = self.lstm(self.ln_1(x), hidden_in)
         x = x + self.mlp(self.ln_2(x))
         return x, hidden_out
+
+
+@attr.s(auto_attribs=True, frozen=True)
+class LSTMv1Config:
+    stage_embedding_dim: int
+    character_embedding_dim: int
+    action_embedding_dim: int
+    gamestate_dim: int
+
+    stick_embedding_dim: int
+    button_embedding_dim: int
+
+    hidden_dim: int
+    num_blocks: int
+
+    num_stages: int = len(STAGE_BY_IDX)
+    num_characters: int = len(CHARACTER_BY_IDX)
+    num_actions: int = len(ACTION_BY_IDX)
+
+
+class LSTMv1(nn.Module):
+    def __init__(self, config: LSTMv1Config) -> None:
+        super().__init__()
+        self.config = config
+
+        self.input_dim = (
+            config.stage_embedding_dim
+            + (2 * config.character_embedding_dim)
+            + (2 * config.action_embedding_dim)
+            + config.gamestate_dim
+        )
+
+        self.lstm = nn.ModuleDict(
+            dict(
+                stage=nn.Embedding(config.num_stages, config.stage_embedding_dim),
+                character=nn.Embedding(config.num_characters, config.character_embedding_dim),
+                action=nn.Embedding(config.num_actions, config.action_embedding_dim),
+                h=nn.ModuleList(
+                    [
+                        RecurrentResidualBlock(input_dim=self.input_dim, hidden_dim=config.hidden_dim)
+                        for _ in range(config.num_blocks)
+                    ]
+                ),
+            )
+        )
+
+    def forward(
+        self, inputs: TensorDict, hidden_in: Iterable[Tuple[torch.Tensor, torch.Tensor]] = None
+    ) -> Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+        stage_emb = self.lstm.stage(inputs["stage"])
+        ego_character_emb = self.lstm.character(inputs["ego_character"])
+        opponent_character_emb = self.lstm.character(inputs["opponent_character"])
+        ego_action_emb = self.lstm.action(inputs["ego_action"])
+        opponent_action_emb = self.lstm.action(inputs["opponent_action"])
+        gamestate = inputs["gamestate"]
+        x = torch.cat(
+            [stage_emb, ego_character_emb, opponent_character_emb, ego_action_emb, opponent_action_emb, gamestate],
+            dim=1,
+        )
+
+        if hidden_in is None:
+            hidden_in = [None] * len(self.lstm.h)
+
+        new_hidden_in = []
+        for block, hidden in zip(self.lstm.h, hidden_in):
+            x, new_hidden = block(x, hidden)
+            new_hidden_in.append(new_hidden)
