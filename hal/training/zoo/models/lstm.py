@@ -1,3 +1,4 @@
+from typing import Dict
 from typing import Iterable
 from typing import Optional
 from typing import Sequence
@@ -5,11 +6,10 @@ from typing import Tuple
 
 import torch
 import torch.nn as nn
-from tensordict import TensorDict
-from training.zoo.models.registry import Arch
 
 from hal.training.config import EmbeddingConfig
 from hal.training.utils import get_nembd_from_config
+from hal.training.zoo.models.registry import Arch
 
 
 class MLP(nn.Module):
@@ -76,17 +76,21 @@ class LSTMv1(nn.Module):
         )
 
     def forward(
-        self, inputs: TensorDict, hidden_in: Optional[Iterable[Optional[Tuple[torch.Tensor, torch.Tensor]]]] = None
+        self,
+        inputs: Dict[str, torch.Tensor],
+        hidden_in: Optional[Iterable[Optional[Tuple[torch.Tensor, torch.Tensor]]]] = None,
     ) -> Tuple[torch.Tensor, Optional[Sequence[Tuple[torch.Tensor, torch.Tensor]]]]:
-        B, T = inputs.shape
+        # TODO migrate to tensordict
+        B, T, D = inputs["gamestate"].shape
         assert T > 0
 
-        stage_emb = self.modules_by_name.stage(inputs["stage"])
-        ego_character_emb = self.modules_by_name.character(inputs["ego_character"])
-        opponent_character_emb = self.modules_by_name.character(inputs["opponent_character"])
-        ego_action_emb = self.modules_by_name.action(inputs["ego_action"])
-        opponent_action_emb = self.modules_by_name.action(inputs["opponent_action"])
+        stage_emb = self.modules_by_name.stage(inputs["stage"]).squeeze(-2)
+        ego_character_emb = self.modules_by_name.character(inputs["ego_character"]).squeeze(-2)
+        opponent_character_emb = self.modules_by_name.character(inputs["opponent_character"]).squeeze(-2)
+        ego_action_emb = self.modules_by_name.action(inputs["ego_action"]).squeeze(-2)
+        opponent_action_emb = self.modules_by_name.action(inputs["opponent_action"]).squeeze(-2)
         gamestate = inputs["gamestate"]
+
         concat_inputs = torch.cat(
             [stage_emb, ego_character_emb, opponent_character_emb, ego_action_emb, opponent_action_emb, gamestate],
             dim=-1,
