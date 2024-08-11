@@ -56,21 +56,20 @@ class RecurrentTrainer(Trainer):
         return loss_dict
 
     def train_op(self, inputs: Dict[str, Tensor], targets: Dict[str, Tensor]) -> Dict[str, Number]:
+        # TODO migrate to tensordict
         self.opt.zero_grad(set_to_none=True)
 
         # Warmup trajectory without calculating loss
         warmup_len = self.config.data.input_len
         target_len = self.config.data.target_len
         warmup_inputs = slice_tensor_dict(inputs, 0, warmup_len)
-        warmup_pred_dict: Dict[str, Tensor] = self.model(warmup_inputs)
+        _, hidden = self.model(warmup_inputs)
 
         # Teacher forcing
-        hidden, cell = warmup_pred_dict["hidden"], warmup_pred_dict["cell"]
         preds = []
         for i in range(self.config.data.target_len):
-            pred_dict = self.model(slice_tensor_dict(inputs, warmup_len + i, warmup_len + i + 1), hidden, cell)
-            hidden, cell = pred_dict["hidden"], pred_dict["cell"]
-            preds.append(pred_dict)
+            pred, hidden = self.model(slice_tensor_dict(inputs, warmup_len + i, warmup_len + i + 1), hidden)
+            preds.append(pred)
 
         preds = stack_tensor_dict(preds)
         targets = slice_tensor_dict(targets, warmup_len, warmup_len + target_len)

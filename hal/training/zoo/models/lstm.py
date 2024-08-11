@@ -109,6 +109,8 @@ class LSTMv1(nn.Module):
             hidden_in = new_hidden_in
             new_hidden_in = []
 
+        # TODO add output heads for separate button and stick
+
         # TODO fix typing
         return x, hidden_in
 
