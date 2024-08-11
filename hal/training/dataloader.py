@@ -38,6 +38,7 @@ def create_dataloaders(
             input_path=data_dir / f"{split}.parquet",
             stats_path=stats_path,
             data_config=train_config.data,
+            embed_config=train_config.embedding,
         )
         # Sampler
         debug_repeat_batch = train_config.data.debug_repeat_batch

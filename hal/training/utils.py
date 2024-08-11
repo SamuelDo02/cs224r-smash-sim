@@ -10,6 +10,7 @@ import numpy as np
 import pyarrow as pa
 import torch
 
+from hal.training.config import EmbeddingConfig
 from hal.training.zoo.preprocess.registry import InputPreprocessRegistry
 
 T = TypeVar("T")

@@ -14,6 +14,7 @@ from hal.data.constants import IDX_BY_STAGE_STR
 from hal.data.schema import SCHEMA
 from hal.data.stats import load_dataset_stats
 from hal.training.config import DataConfig
+from hal.training.config import EmbeddingConfig
 from hal.training.utils import pyarrow_table_to_np_dict
 from hal.training.zoo.preprocess.registry import InputPreprocessRegistry
 from hal.training.zoo.preprocess.registry import Player
@@ -37,6 +38,7 @@ class MmappedParquetDataset(SizedDataset):
         input_path: Path,
         stats_path: Path,
         data_config: DataConfig,
+        embed_config: EmbeddingConfig,
     ) -> None:
         """
         Initialize the dataset.
@@ -51,6 +53,7 @@ class MmappedParquetDataset(SizedDataset):
             FileNotFoundError: If the input file doesn't exist.
         """
         self.config = data_config
+        self.embed_config = embed_config
         if self.config.input_len <= 0 or self.config.target_len <= 0:
             raise ValueError("input_len and target_len must be positive integers")
         if not Path(input_path).exists():
@@ -67,8 +70,8 @@ class MmappedParquetDataset(SizedDataset):
         self.replay_filter = self.config.replay_filter
         self.debug_repeat_batch = self.config.debug_repeat_batch
 
-        self.input_preprocessing_fn = InputPreprocessRegistry.get(self.config.input_preprocessing_fn)
-        self.target_preprocessing_fn = TargetPreprocessRegistry.get(self.config.target_preprocessing_fn)
+        self.input_preprocessing_fn = InputPreprocessRegistry.get(self.embed_config.input_preprocessing_fn)
+        self.target_preprocessing_fn = TargetPreprocessRegistry.get(self.embed_config.target_preprocessing_fn)
 
         self.parquet_table = pq.read_table(self.input_path, schema=SCHEMA, memory_map=True)
         self.filtered_indices = self._apply_filter()
