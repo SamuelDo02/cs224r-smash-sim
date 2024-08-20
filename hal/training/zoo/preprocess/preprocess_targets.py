@@ -46,3 +46,12 @@ def preprocess_targets_v0(sample: Dict[str, np.ndarray], player: Player) -> Dict
         "c_stick": one_hot_c_stick.astype(np.float32),
         "buttons": one_hot_buttons.astype(np.float32),
     }
+
+
+TARGETS_EMBEDDING_SIZES = {
+    "targets_v0": {
+        "main_stick": len(STICK_XY_CLUSTER_CENTERS_V0),
+        "c_stick": len(STICK_XY_CLUSTER_CENTERS_V0),
+        "buttons": 6,  # Number of button categories (a, b, jump, z, shoulder, no_button)
+    }
+}

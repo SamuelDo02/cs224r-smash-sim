@@ -1,7 +1,6 @@
 from typing import Dict
 from typing import Iterable
 from typing import Optional
-from typing import Sequence
 from typing import Tuple
 
 import torch
@@ -74,12 +73,15 @@ class LSTMv1(nn.Module):
                 ),
             )
         )
+        self.button_head = nn.Linear(self.n_embd, embed_config.num_buttons)
+        self.main_stick_head = nn.Linear(self.n_embd, embed_config.num_main_stick_clusters)
+        self.c_stick_head = nn.Linear(self.n_embd, embed_config.num_c_stick_clusters)
 
     def forward(
         self,
         inputs: Dict[str, torch.Tensor],
         hidden_in: Optional[Iterable[Optional[Tuple[torch.Tensor, torch.Tensor]]]] = None,
-    ) -> Tuple[torch.Tensor, Optional[Sequence[Tuple[torch.Tensor, torch.Tensor]]]]:
+    ) -> Tuple[Dict[str, torch.Tensor], Iterable[Optional[Tuple[torch.Tensor, torch.Tensor]]]]:
         # TODO migrate to tensordict
         B, T, D = inputs["gamestate"].shape
         assert T > 0
@@ -97,7 +99,7 @@ class LSTMv1(nn.Module):
         )
 
         if hidden_in is None:
-            hidden_in = [None] * len(self.modules_by_name.h)
+            hidden_in = []
 
         new_hidden_in = []
         for i in range(T):
@@ -109,10 +111,11 @@ class LSTMv1(nn.Module):
             hidden_in = new_hidden_in
             new_hidden_in = []
 
-        # TODO add output heads for separate button and stick
+        button_output = self.button_head(x)
+        main_stick_output = self.main_stick_head(x)
+        c_stick_output = self.c_stick_head(x)
 
-        # TODO fix typing
-        return x, hidden_in
+        return {"buttons": button_output, "main_stick": main_stick_output, "c_stick": c_stick_output}, hidden_in
 
 
 Arch.register("LSTMv1-2", make_net=LSTMv1, embed_config=EmbeddingConfig(), n_blocks=2)
