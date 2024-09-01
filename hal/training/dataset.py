@@ -22,20 +22,21 @@ from hal.training.zoo.preprocess.registry import Player
 from hal.training.zoo.preprocess.registry import TargetPreprocessRegistry
 
 
-def _create_filters_from_replay_filter(data_config: DataConfig) -> List[Tuple[Any]]:
-    filter_config = data_config.replay_filter
+def _create_filters_from_replay_filter(data_config: DataConfig) -> List[Tuple[str, str, Any]]:
     filters = []
-    if filter_config.replay_uuid is not None:
+    filter_config = data_config.replay_filter
+
+    if filter_config.replay_uuid:
         filters.append(("replay_uuid", "=", filter_config.replay_uuid))
-    if filter_config.stage is not None:
-        stage_idx = IDX_BY_STAGE_STR[filter_config.stage]
-        filters.append(("stage", "=", stage_idx))
-    if filter_config.ego_character is not None:
-        character_idx = IDX_BY_CHARACTER_STR[filter_config.ego_character]
-        filters.append([("p1_character", "=", character_idx), ("p2_character", "=", character_idx)])
-    if filter_config.opponent_character is not None:
-        character_idx = IDX_BY_CHARACTER_STR[filter_config.opponent_character]
-        filters.append([("p1_character", "=", character_idx), ("p2_character", "=", character_idx)])
+
+    if filter_config.stage:
+        filters.append(("stage", "=", IDX_BY_STAGE_STR[filter_config.stage]))
+
+    for player in ["ego", "opponent"]:
+        character = getattr(filter_config, f"{player}_character")
+        if character:
+            character_idx = IDX_BY_CHARACTER_STR[character]
+            filters.extend([(f"p1_character", "=", character_idx), (f"p2_character", "=", character_idx)])
 
     return filters
 
