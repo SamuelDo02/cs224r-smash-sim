@@ -10,6 +10,8 @@ import attr
 from hal.data.constants import IDX_BY_ACTION
 from hal.data.constants import IDX_BY_CHARACTER
 from hal.data.constants import IDX_BY_STAGE
+from hal.data.constants import INCLUDED_CHARACTERS
+from hal.data.constants import INCLUDED_STAGES
 
 
 @attr.s(auto_attribs=True, frozen=True)
@@ -17,8 +19,15 @@ class ReplayFilter:
     """Filter for replay."""
 
     replay_uuid: Optional[str] = None
-    stage: Optional[str] = None
-    character: Optional[str] = None
+    stage: Optional[str] = attr.ib(
+        default=None, validator=attr.validators.optional(attr.validators.in_(INCLUDED_STAGES))
+    )
+    ego_character: Optional[str] = attr.ib(
+        default=None, validator=attr.validators.optional(attr.validators.in_(INCLUDED_CHARACTERS))
+    )
+    opponent_character: Optional[str] = attr.ib(
+        default=None, validator=attr.validators.optional(attr.validators.in_(INCLUDED_CHARACTERS))
+    )
 
 
 @attr.s(auto_attribs=True, frozen=True)
@@ -104,8 +113,7 @@ class TrainConfig(BaseConfig):
 def create_parser_for_attrs_class(
     cls: Type[Any], parser: argparse.ArgumentParser, prefix: str = ""
 ) -> argparse.ArgumentParser:
-    if parser is None:
-        parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser()
 
     for field in attr.fields(cls):
         arg_name = f"--{prefix}{field.name}"
