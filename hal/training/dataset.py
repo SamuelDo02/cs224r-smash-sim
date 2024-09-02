@@ -3,11 +3,13 @@ from pathlib import Path
 from typing import Any
 from typing import Dict
 from typing import List
+from typing import Optional
 from typing import Tuple
 
 import numpy as np
 import pyarrow.parquet as pq
 import torch
+from tensordict import TensorDict
 from torch.utils.data import Dataset
 
 from hal.data.constants import IDX_BY_CHARACTER_STR
@@ -22,23 +24,55 @@ from hal.training.zoo.preprocess.registry import Player
 from hal.training.zoo.preprocess.registry import TargetPreprocessRegistry
 
 
-def _create_filters_from_replay_filter(data_config: DataConfig) -> List[Tuple[str, str, Any]]:
-    filters = []
+def _create_filters_from_replay_filter(data_config: DataConfig) -> Optional[List[List[Tuple[str, str, Any]]]]:
     filter_config = data_config.replay_filter
 
+    # Handle replay_uuid filter separately as it's the most specific
     if filter_config.replay_uuid:
-        filters.append(("replay_uuid", "=", filter_config.replay_uuid))
+        return [[("replay_uuid", "=", filter_config.replay_uuid)]]
 
+    filters = []
+
+    # Add stage filter if present
     if filter_config.stage:
-        filters.append(("stage", "=", IDX_BY_STAGE_STR[filter_config.stage]))
+        stage_filter = ("stage", "=", IDX_BY_STAGE_STR[filter_config.stage])
+        filters.append(stage_filter)
 
+    # Create character filters
+    character_filters = []
     for player in ["ego", "opponent"]:
         character = getattr(filter_config, f"{player}_character")
         if character:
             character_idx = IDX_BY_CHARACTER_STR[character]
-            filters.extend([(f"p1_character", "=", character_idx), (f"p2_character", "=", character_idx)])
+            character_filters.extend([("p1_character", "=", character_idx), ("p2_character", "=", character_idx)])
 
-    return filters
+    # Combine filters based on what's present
+    if filters and character_filters:
+        # Both stage and character filters: AND stage with each character filter
+        return [filters + [cf] for cf in character_filters]
+    elif character_filters:
+        # Only character filters: each in its own list
+        return [[cf] for cf in character_filters]
+    elif filters:
+        # Only stage filter
+        return [filters]
+    else:
+        # No filters
+        return None
+
+
+def load_filtered_parquet_as_tensordict(
+    input_path: Path,
+    data_config: DataConfig,
+) -> TensorDict:
+    filters = _create_filters_from_replay_filter(data_config) or None
+    print(f"{filters=}")
+    table = pq.read_table(input_path, schema=SCHEMA, filters=filters)
+    np_dict = pyarrow_table_to_np_dict(table)
+    torch_dict = {k: torch.from_numpy(v) for k, v in np_dict.items()}
+    tensordict = TensorDict(torch_dict)
+
+    return tensordict
 
 
 class InMemoryDataset(Dataset):
