@@ -1,11 +1,11 @@
 import argparse
 import random
-from typing import Dict
 
 import numpy as np
 import torch
 from tensordict import TensorDict
 from torch.nn import functional as F
+from training.trainer import MetricsDict
 from training.trainer import Trainer
 
 from hal.training.config import TrainConfig
@@ -24,28 +24,20 @@ class RecurrentTrainer(Trainer):
     Trainer for deep models with recurrent blocks.
     """
 
-    def loss_fn(self, pred: TensorDict, target: TensorDict) -> TensorDict:
+    def loss(self, pred: TensorDict, target: TensorDict) -> TensorDict:
         loss_dict: TensorDict = TensorDict({})
+        loss_fns = {"buttons": F.cross_entropy, "main_stick": F.cross_entropy, "c_stick": F.cross_entropy}
 
-        # Calculate per-frame losses
-        button_loss = F.cross_entropy(pred["buttons"], target["buttons"], reduction="none")
-        main_stick_loss = F.cross_entropy(pred["main_stick"], target["main_stick"], reduction="none")
-        c_stick_loss = F.cross_entropy(pred["c_stick"], target["c_stick"], reduction="none")
+        # Calculate and log losses for each controller input
+        for control, loss_fn in loss_fns.items():
+            # Calculate per-frame losses
+            frame_losses = loss_fn(pred[control], target[control], reduction="none")
 
-        # Log per-frame losses
-        for t in range(button_loss.shape[1]):
-            loss_dict[f"_button_loss_frame_{t}"] = button_loss[:, t].mean()
-            loss_dict[f"_main_stick_loss_frame_{t}"] = main_stick_loss[:, t].mean()
-            loss_dict[f"_c_stick_loss_frame_{t}"] = c_stick_loss[:, t].mean()
+            for t in range(frame_losses.shape[1]):
+                loss_dict[f"_{control}_loss_frame_{t}"] = frame_losses[:, t].mean()
 
-        # Calculate mean losses across all frames
-        mean_button_loss = button_loss.mean()
-        mean_main_stick_loss = main_stick_loss.mean()
-        mean_c_stick_loss = c_stick_loss.mean()
-
-        loss_dict["loss_button"] = mean_button_loss
-        loss_dict["loss_main_stick"] = mean_main_stick_loss
-        loss_dict["loss_c_stick"] = mean_c_stick_loss
+            mean_loss = frame_losses.mean()
+            loss_dict[f"loss_{control}"] = mean_loss
 
         return loss_dict
 
@@ -68,11 +60,11 @@ class RecurrentTrainer(Trainer):
         preds_td: TensorDict = torch.stack(preds)  # type: ignore
         targets_td = targets[:, warmup_len : warmup_len + target_len]
 
-        loss_by_head = self.loss_fn(preds_td, targets_td)
+        loss_by_head = self.loss(preds_td, targets_td)
 
         return loss_by_head
 
-    def train_op(self, batch: TensorDict) -> Dict[str, float]:
+    def train_op(self, batch: TensorDict) -> MetricsDict:
         self.opt.zero_grad(set_to_none=True)
         loss_by_head = self._teacher_forcing_loop(batch)
         loss_total = torch.tensor(sum(v for k, v in loss_by_head.items() if k.startswith("loss")))
@@ -85,7 +77,7 @@ class RecurrentTrainer(Trainer):
         metrics_dict["lr"] = self.scheduler.get_lr()
         return metrics_dict
 
-    def val_op(self, batch: TensorDict) -> Dict[str, float]:
+    def val_op(self, batch: TensorDict) -> MetricsDict:
         self.eval()
         with torch.no_grad():
             loss_by_head = self._teacher_forcing_loop(batch)

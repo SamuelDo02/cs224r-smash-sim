@@ -1,11 +1,10 @@
 import abc
-import pickle
 import time
 from collections import defaultdict
 from pathlib import Path
+from typing import Dict
 from typing import Iterable
 from typing import Iterator
-from typing import Tuple
 from typing import Union
 
 import torch
@@ -18,7 +17,6 @@ from hal.training.config import TrainConfig
 from hal.training.distributed import get_world_size
 from hal.training.distributed import is_master
 from hal.training.distributed import maybe_wrap_model_distributed
-from hal.training.distributed import print
 from hal.training.distributed import trange
 from hal.training.io import Checkpoint
 from hal.training.io import WandbConfig
@@ -31,6 +29,8 @@ from hal.training.utils import repeater
 from hal.training.utils import report_module_weights
 from hal.training.utils import time_format
 from hal.training.zoo.models.registry import Arch
+
+MetricsDict = Dict[str, float]
 
 
 class Trainer(torch.nn.Module, abc.ABC):
@@ -82,27 +82,26 @@ class Trainer(torch.nn.Module, abc.ABC):
         )
 
     @abc.abstractmethod
-    def loss_fn(self, pred: TensorDict, target: TensorDict) -> TensorDict:
+    def loss(self, pred: TensorDict, target: TensorDict) -> TensorDict:
         ...
 
     @abc.abstractmethod
-    def train_op(self, inputs: TensorDict, targets: TensorDict) -> TensorDict:
+    def train_op(self, batch: TensorDict) -> MetricsDict:
         ...
 
     @abc.abstractmethod
-    def val_op(self, inputs: TensorDict, targets: TensorDict) -> TensorDict:
+    def val_op(self, batch: TensorDict) -> MetricsDict:
         ...
 
-    def train_step(self, batch: Tuple[TensorDict, TensorDict], writer: Writer, step: int) -> None:
-        batch = move_tensors_to_device(batch, self.device)
-        inputs, targets = batch
-        metrics = self.train_op(inputs, targets)
-        writer.log(metrics.to_dict(), step=step, commit=False)
+    def train_step(self, batch: TensorDict, writer: Writer, step: int) -> None:
+        batch.to(self.device)
+        metrics = self.train_op(batch)
+        writer.log(metrics, step=step, commit=False)
 
     def train_loop(
         self,
-        train_loader: Iterable[Tuple[TensorDict, TensorDict]],
-        val_loader: Iterable[Tuple[TensorDict, TensorDict]],
+        train_loader: Iterable[TensorDict],
+        val_loader: Iterable[TensorDict],
         local_batch_size: int,
         n_samples: int,
         n_val_samples: int,
@@ -165,16 +164,15 @@ class Trainer(torch.nn.Module, abc.ABC):
 
         ckpt.save_file(self.model, "model.ckpt")
 
-    def save_batch_to_disk(self, batch: tuple[TensorDict, ...], step: int) -> None:
-        save_batch_path = self.artifact_dir / "training_samples" / f"{step}.pkl"
-        Path.mkdir(save_batch_path.parent, exist_ok=True, parents=True)
-        with open(save_batch_path, "wb") as f:
-            pickle.dump(batch, f)
-        print(f"Saved example to {save_batch_path}")
+    def save_batch_to_disk(self, batch: TensorDict, step: int) -> None:
+        save_batch_dir = self.artifact_dir / "training_samples" / f"{step}"
+        Path.mkdir(save_batch_dir, exist_ok=True, parents=True)
+        batch.save(str(save_batch_dir))
+        logger.info(f"Saved example to {save_batch_dir}")
 
     def validate(
         self,
-        val_loader: Iterator[Tuple[TensorDict, TensorDict]],
+        val_loader: Iterator[TensorDict],
         batch_size: int,
         n_val_samples: int,
         writer: Writer,
@@ -194,10 +192,10 @@ class Trainer(torch.nn.Module, abc.ABC):
 
         for i in range_iter:
             batch = next(val_loader)
-            batch = move_tensors_to_device(batch, device)
+            batch.to(device)
             if i == 0 and self.config.debug:
                 self.save_batch_to_disk(batch, step=step)
-            metrics_dict = self.val_op(*batch)
+            metrics_dict = self.val_op(batch)
             metrics_dict = move_tensors_to_device(metrics_dict, "cpu", non_blocking=False)
             for k, v in metrics_dict.items():
                 concat_metrics[k].append(v)
