@@ -9,6 +9,7 @@ from typing import TypeVar
 import numpy as np
 import pyarrow as pa
 import torch
+from tensordict import TensorDict
 
 from hal.training.config import EmbeddingConfig
 from hal.training.zoo.preprocess.registry import InputPreprocessRegistry
@@ -75,6 +76,10 @@ def pyarrow_table_to_np_dict(table: pa.Table) -> Dict[str, np.ndarray]:
     Use copy=True to ensure that the numpy arrays are not views of the original data for safe downstream processing.
     """
     return {name: np.array(col.to_numpy(), copy=True) for name, col in zip(table.column_names, table.columns)}
+
+
+def pyarrow_table_to_tensordict(table: pa.Table) -> TensorDict:
+    return TensorDict({name: torch.from_numpy(col.to_numpy()) for name, col in zip(table.column_names, table.columns)})
 
 
 def get_nembd_from_config(config: EmbeddingConfig) -> int:

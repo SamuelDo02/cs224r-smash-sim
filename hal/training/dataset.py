@@ -8,7 +8,7 @@ from typing import Tuple
 
 import numpy as np
 import pyarrow.parquet as pq
-import torch
+from loguru import logger
 from tensordict import TensorDict
 from torch.utils.data import Dataset
 
@@ -19,6 +19,7 @@ from hal.data.stats import load_dataset_stats
 from hal.training.config import DataConfig
 from hal.training.config import EmbeddingConfig
 from hal.training.utils import pyarrow_table_to_np_dict
+from hal.training.utils import pyarrow_table_to_tensordict
 from hal.training.zoo.preprocess.registry import InputPreprocessRegistry
 from hal.training.zoo.preprocess.registry import Player
 from hal.training.zoo.preprocess.registry import TargetPreprocessRegistry
@@ -66,27 +67,19 @@ def load_filtered_parquet_as_tensordict(
     data_config: DataConfig,
 ) -> TensorDict:
     filters = _create_filters_from_replay_filter(data_config) or None
-    print(f"{filters=}")
+    logger.info(f"{filters=}")
     table = pq.read_table(input_path, schema=SCHEMA, filters=filters)
-    np_dict = pyarrow_table_to_np_dict(table)
-    torch_dict = {k: torch.from_numpy(v) for k, v in np_dict.items()}
-    tensordict = TensorDict(torch_dict)
-
-    return tensordict
+    return pyarrow_table_to_tensordict(table)
 
 
 class InMemoryDataset(Dataset):
     def __init__(
         self,
-        input_path: Path,
+        tensordict: TensorDict,
         stats_path: Path,
         data_config: DataConfig,
         embed_config: EmbeddingConfig,
     ) -> None:
-        filters = _create_filters_from_replay_filter(data_config) if data_config.replay_filter else []
-        table = pq.read_table(input_path, schema=SCHEMA, filters=filters)
-        self.table = torch.from_numpy(table.to_pandas().to_numpy())
-        assert self.table.dim() == 2, f"Expected parquet table dim==2, got {self.table.dim()}"
         self.stats_by_feature_name = load_dataset_stats(stats_path)
         self.data_config = data_config
         self.embed_config = embed_config
