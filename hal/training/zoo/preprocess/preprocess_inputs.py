@@ -90,12 +90,12 @@ def preprocess_inputs_v0(
 ) -> TensorDict:
     """Slice input sample to the input length."""
     assert ego in VALID_PLAYERS
-    input_len = data_config.input_len
+    trajectory_len = data_config.input_len + data_config.target_len
 
-    categorical_features = _preprocess_categorical_features(sample[:input_len], ego=ego, stats=stats)
+    categorical_features = _preprocess_categorical_features(sample[:trajectory_len], ego=ego, stats=stats)
     gamestate = _preprocess_numeric_features(
-        sample=sample[:input_len], features_to_process=NUMERIC_FEATURES_V0, ego=ego, stats=stats
+        sample=sample[:trajectory_len], features_to_process=NUMERIC_FEATURES_V0, ego=ego, stats=stats
     )
 
     categorical_features["gamestate"] = gamestate
-    return TensorDict(categorical_features, batch_size=(input_len,))
+    return TensorDict(categorical_features, batch_size=(trajectory_len,))

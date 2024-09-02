@@ -58,7 +58,9 @@ class RecurrentTrainer(Trainer):
         # Teacher forcing
         preds = []
         for i in range(target_len):
-            pred, hidden = self.model(inputs[:, warmup_len + i : warmup_len + i + 1], hidden)
+            # Select the i-th input after warmup for all samples in the batch
+            current_input = inputs[:, warmup_len + i].unsqueeze(1)
+            pred, hidden = self.model(current_input, hidden)
             preds.append(pred)
 
         preds_td: TensorDict = torch.stack(preds, dim=1)  # type: ignore
@@ -71,7 +73,7 @@ class RecurrentTrainer(Trainer):
     def train_op(self, batch: TensorDict) -> TensorDict:
         self.opt.zero_grad(set_to_none=True)
         loss_by_head = self._teacher_forcing_loop(batch)
-        loss_total = torch.tensor(sum(v for k, v in loss_by_head.items() if k.startswith("loss")))
+        loss_total = sum(v for k, v in loss_by_head.items() if k.startswith("loss"))  # type: ignore
         loss_total.backward()
         self.opt.step()
         self.scheduler.step()
