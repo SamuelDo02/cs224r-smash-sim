@@ -33,7 +33,9 @@ def create_tensordicts(data_config: DataConfig) -> Tuple[TensorDict, TensorDict]
     tds: List[TensorDict] = []
     for split in ("train", "val"):
         input_path = data_dir / f"{split}.parquet"
-        tds.append(load_filtered_parquet_as_tensordict(input_path, data_config))
+        td = load_filtered_parquet_as_tensordict(input_path, data_config)
+        td.share_memory_()
+        tds.append(td)
     return tds[0], tds[1]
 
 
