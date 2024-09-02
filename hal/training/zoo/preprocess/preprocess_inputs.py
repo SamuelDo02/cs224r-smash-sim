@@ -3,7 +3,6 @@ from typing import Tuple
 
 import numpy as np
 import torch
-from loguru import logger
 from tensordict import TensorDict
 
 from hal.data.constants import PLAYER_INPUT_FEATURES_TO_EMBED
@@ -53,7 +52,6 @@ def _preprocess_numeric_features(
     numeric_inputs = []
     for feature in features_to_process:
         preprocess_fn: NormalizationFn = NORMALIZATION_FN_BY_FEATURE_V0[feature]
-        logger.debug(f"Preprocess fn for {feature}: {preprocess_fn.__name__}")
         for player in [ego, opponent]:
             feature_name = f"{player}_{feature}"
             numeric_inputs.append(preprocess_fn(sample[feature_name], stats[feature_name]))

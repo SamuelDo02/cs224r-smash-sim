@@ -1,7 +1,6 @@
 import argparse
 import random
 from typing import Dict
-from typing import Optional
 
 import numpy as np
 import torch
@@ -16,6 +15,8 @@ from hal.training.config import parse_args_to_attrs_instance
 from hal.training.dataloader import create_dataloaders
 from hal.training.dataloader import create_tensordicts
 from hal.training.distributed import auto_distribute
+from hal.training.distributed import get_device_id
+from hal.training.distributed import get_world_size
 from hal.training.distributed import wrap_multiprocessing
 
 
@@ -106,19 +107,19 @@ class RecurrentTrainer(Trainer):
 
 @auto_distribute
 def main(
-    rank: Optional[int],
-    world_size: Optional[int],
+    train_config: TrainConfig,
     train_td: TensorDict,
     val_td: TensorDict,
-    train_config: TrainConfig,
 ) -> None:
-    rank = rank or 0
+    rank = get_device_id()
     seed = train_config.seed + rank
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    train_loader, val_loader = create_dataloaders(train_td, val_td, train_config, rank=rank, world_size=world_size)
+    train_loader, val_loader = create_dataloaders(
+        train_td, val_td, train_config, rank=rank, world_size=get_world_size()
+    )
     trainer = RecurrentTrainer(config=train_config, train_loader=train_loader, val_loader=val_loader)
     trainer.train_loop(
         train_loader,
@@ -142,4 +143,5 @@ if __name__ == "__main__":
     config = parse_cli()
     train_data, val_data = create_tensordicts(config.data)
     # pass positional args and call wrapped fn; (kwargs not accepted)
-    wrap_multiprocessing(main, config, train_data, val_data)
+    wrapped_train = wrap_multiprocessing(main, config, train_data, val_data)
+    wrapped_train()

@@ -10,6 +10,7 @@ from typing import Union
 import torch
 import torch.distributed
 import tqdm as tqdm_module
+from loguru import logger
 from tqdm import tqdm
 
 from hal.training.config import BaseConfig
@@ -78,14 +79,15 @@ def auto_distribute(f: Callable) -> Callable:
     @functools.wraps(f)
     def dist_wrapped(rank: Optional[int], world_size: Optional[int], *args):
         if rank is None or world_size is None:
-            return f(rank, world_size, *args)
+            return f(*args)
         os.environ["MASTER_ADDR"] = "localhost"
         os.environ["MASTER_PORT"] = "12355"
         torch.distributed.init_process_group("nccl", rank=rank, world_size=world_size)
         time.sleep(1)
         try:
-            return f(rank, world_size, *args)
+            return f(*args)
         finally:
+            logger.info("destroy_process_group")
             torch.distributed.destroy_process_group()
 
     return dist_wrapped
