@@ -15,11 +15,16 @@
                 "--n_gpus",
                 "1",
                 "--arch",
-                "lstm",
-                "--data.data_dir",
-                "data/dev",
+                "LSTMv1-2",
+                "--n_samples",
+                "524288",
+                "--n_val_samples",
+                "32768",
+                "--keep_ckpts",
+                "4",
+                "--report_len",
+                "65536",
                 "--debug",
-                "True"
             ]
         }
     ]
