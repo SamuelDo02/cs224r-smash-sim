@@ -8,7 +8,6 @@ import numpy as np
 import torch
 from tensordict import TensorDict
 from torch.nn import functional as F
-from training.trainer import Trainer
 
 from hal.training.config import TrainConfig
 from hal.training.config import create_parser_for_attrs_class
@@ -19,6 +18,8 @@ from hal.training.distributed import auto_distribute
 from hal.training.distributed import get_device_id
 from hal.training.distributed import get_world_size
 from hal.training.distributed import wrap_multiprocessing
+from hal.training.trainer import MetricsDict
+from hal.training.trainer import Trainer
 
 
 class RecurrentTrainer(Trainer):
@@ -70,7 +71,7 @@ class RecurrentTrainer(Trainer):
 
         return loss_by_head
 
-    def train_op(self, batch: TensorDict) -> TensorDict:
+    def train_op(self, batch: TensorDict) -> MetricsDict:
         self.opt.zero_grad(set_to_none=True)
         loss_by_head = self._teacher_forcing_loop(batch)
         loss_total = sum(v for k, v in loss_by_head.items() if k.startswith("loss"))
@@ -79,18 +80,18 @@ class RecurrentTrainer(Trainer):
         self.scheduler.step()
 
         loss_by_head["loss_total"] = loss_total  # type: ignore
-        metrics_dict = TensorDict({f"train/{k}": v.item() for k, v in loss_by_head.items()}, device="cpu")  # type: ignore
+        metrics_dict = {f"train/{k}": v.item() for k, v in loss_by_head.items()}
         metrics_dict["lr"] = self.scheduler.get_lr()  # type: ignore
         return metrics_dict
 
-    def val_op(self, batch: TensorDict) -> TensorDict:
+    def val_op(self, batch: TensorDict) -> MetricsDict:
         self.eval()
         with torch.no_grad():
             loss_by_head = self._teacher_forcing_loop(batch)
             loss_total = torch.tensor(sum(v for k, v in loss_by_head.items() if k.startswith("loss")))
 
         loss_by_head["loss_total"] = loss_total
-        metrics_dict = TensorDict({f"val/{k}": v.item() for k, v in loss_by_head.items()}, device="cpu")  # type: ignore
+        metrics_dict = {f"val/{k}": v.item() for k, v in loss_by_head.items()}  # type: ignore
         return metrics_dict
 
 

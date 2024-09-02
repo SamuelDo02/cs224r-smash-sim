@@ -85,15 +85,15 @@ class Trainer(torch.nn.Module, abc.ABC):
         ...
 
     @abc.abstractmethod
-    def train_op(self, batch: TensorDict) -> TensorDict:
+    def train_op(self, batch: TensorDict) -> MetricsDict:
         ...
 
     @abc.abstractmethod
-    def val_op(self, batch: TensorDict) -> TensorDict:
+    def val_op(self, batch: TensorDict) -> MetricsDict:
         ...
 
     def train_step(self, batch: TensorDict, writer: Writer, step: int) -> None:
-        batch = batch.to(self.device)
+        batch = batch.to(self.device, non_blocking=True)
         metrics = self.train_op(batch)
         writer.log(metrics, step=step, commit=False)
 
@@ -191,11 +191,10 @@ class Trainer(torch.nn.Module, abc.ABC):
 
         for i in range_iter:
             batch = next(val_loader)
-            batch = batch.to(device, non_blocking_pin=True)
+            batch = batch.to(device, non_blocking=True)
             if i == 0 and self.config.debug:
                 self.save_batch_to_disk(batch, step=step)
             metrics_dict = self.val_op(batch)
-            metrics_dict = metrics_dict.to("cpu")
             for k, v in metrics_dict.items():
                 concat_metrics[k].append(v)
 
