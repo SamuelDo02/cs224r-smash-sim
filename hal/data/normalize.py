@@ -1,32 +1,60 @@
 from typing import Callable
+from typing import TypeVar
 
 import numpy as np
+import torch
 
 from hal.data.stats import FeatureStats
 
-NormalizationFn = Callable[[np.ndarray, FeatureStats], np.ndarray]
+ArrayLike = TypeVar("ArrayLike", np.ndarray, torch.Tensor)
+NormalizationFn = Callable[[ArrayLike, FeatureStats], ArrayLike]
 
 
-def cast_int32(array: np.ndarray, stats: FeatureStats) -> np.ndarray:
+def cast_int32(array, stats: FeatureStats):
     """Cast to int32."""
-    return array.astype(np.int32)
+    if isinstance(array, np.ndarray):
+        return array.astype(np.int32)
+    elif isinstance(array, torch.Tensor):
+        return array.to(torch.int32)
+    else:
+        raise TypeError("Input should be a numpy array or a torch tensor")
 
 
-def normalize(array: np.ndarray, stats: FeatureStats) -> np.ndarray:
+def normalize(array, stats: FeatureStats):
     """Normalize feature [0, 1]."""
-    return ((array - stats.min) / (stats.max - stats.min)).astype(np.float32)
+    if isinstance(array, np.ndarray):
+        return ((array - stats.min) / (stats.max - stats.min)).astype(np.float32)
+    elif isinstance(array, torch.Tensor):
+        return ((array - stats.min) / (stats.max - stats.min)).to(torch.float32)
+    else:
+        raise TypeError("Input should be a numpy array or a torch tensor")
 
 
-def invert_and_normalize(array: np.ndarray, stats: FeatureStats) -> np.ndarray:
+def invert_and_normalize(array, stats: FeatureStats):
     """Invert and normalize feature to [0, 1]."""
-    return ((stats.max - array) / (stats.max - stats.min)).astype(np.float32)
+    if isinstance(array, np.ndarray):
+        return ((stats.max - array) / (stats.max - stats.min)).astype(np.float32)
+    elif isinstance(array, torch.Tensor):
+        return ((stats.max - array) / (stats.max - stats.min)).to(torch.float32)
+    else:
+        raise TypeError("Input should be a numpy array or a torch tensor")
 
 
-def standardize(array: np.ndarray, stats: FeatureStats) -> np.ndarray:
+def standardize(array, stats: FeatureStats):
     """Standardize feature to mean 0 and std 1."""
-    return ((array - stats.mean) / stats.std).astype(np.float32)
+    if isinstance(array, np.ndarray):
+        return ((array - stats.mean) / stats.std).astype(np.float32)
+    elif isinstance(array, torch.Tensor):
+        return ((array - stats.mean) / stats.std).to(torch.float32)
+    else:
+        raise TypeError("Input should be a numpy array or a torch tensor")
 
 
-def union(array_1: np.ndarray, array_2: np.ndarray) -> np.ndarray:
+def union(array_1, array_2):
     """Perform logical OR of two features."""
-    return array_1 | array_2
+    if isinstance(array_1, np.ndarray) and isinstance(array_2, np.ndarray):
+        return array_1 | array_2
+    elif isinstance(array_1, torch.Tensor) and isinstance(array_2, torch.Tensor):
+        return array_1 | array_2
+    else:
+        raise TypeError("Inputs should be both numpy arrays or both torch tensors")
