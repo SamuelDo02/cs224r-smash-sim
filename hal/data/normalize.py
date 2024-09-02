@@ -10,7 +10,7 @@ ArrayLike = TypeVar("ArrayLike", np.ndarray, torch.Tensor)
 NormalizationFn = Callable[[ArrayLike, FeatureStats], ArrayLike]
 
 
-def cast_int32(array, stats: FeatureStats):
+def cast_int32(array: ArrayLike, stats: FeatureStats):
     """Cast to int32."""
     if isinstance(array, np.ndarray):
         return array.astype(np.int32)
@@ -20,7 +20,7 @@ def cast_int32(array, stats: FeatureStats):
         raise TypeError("Input should be a numpy array or a torch tensor")
 
 
-def normalize(array, stats: FeatureStats):
+def normalize(array: ArrayLike, stats: FeatureStats):
     """Normalize feature [0, 1]."""
     if isinstance(array, np.ndarray):
         return ((array - stats.min) / (stats.max - stats.min)).astype(np.float32)
@@ -30,7 +30,7 @@ def normalize(array, stats: FeatureStats):
         raise TypeError("Input should be a numpy array or a torch tensor")
 
 
-def invert_and_normalize(array, stats: FeatureStats):
+def invert_and_normalize(array: ArrayLike, stats: FeatureStats):
     """Invert and normalize feature to [0, 1]."""
     if isinstance(array, np.ndarray):
         return ((stats.max - array) / (stats.max - stats.min)).astype(np.float32)
@@ -40,7 +40,7 @@ def invert_and_normalize(array, stats: FeatureStats):
         raise TypeError("Input should be a numpy array or a torch tensor")
 
 
-def standardize(array, stats: FeatureStats):
+def standardize(array: ArrayLike, stats: FeatureStats):
     """Standardize feature to mean 0 and std 1."""
     if isinstance(array, np.ndarray):
         return ((array - stats.mean) / stats.std).astype(np.float32)
@@ -50,7 +50,7 @@ def standardize(array, stats: FeatureStats):
         raise TypeError("Input should be a numpy array or a torch tensor")
 
 
-def union(array_1, array_2):
+def union(array_1: ArrayLike, array_2: ArrayLike):
     """Perform logical OR of two features."""
     if isinstance(array_1, np.ndarray) and isinstance(array_2, np.ndarray):
         return array_1 | array_2
