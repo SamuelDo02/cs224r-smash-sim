@@ -73,14 +73,14 @@ class RecurrentTrainer(Trainer):
     def train_op(self, batch: TensorDict) -> TensorDict:
         self.opt.zero_grad(set_to_none=True)
         loss_by_head = self._teacher_forcing_loop(batch)
-        loss_total = sum(v for k, v in loss_by_head.items() if k.startswith("loss"))  # type: ignore
-        loss_total.backward()
+        loss_total = sum(v for k, v in loss_by_head.items() if k.startswith("loss"))
+        loss_total.backward()  # type: ignore
         self.opt.step()
         self.scheduler.step()
 
-        loss_by_head["loss_total"] = loss_total
+        loss_by_head["loss_total"] = loss_total  # type: ignore
         metrics_dict = TensorDict({f"train/{k}": v.item() for k, v in loss_by_head.items()}, device="cpu")  # type: ignore
-        metrics_dict["lr"] = self.scheduler.get_lr()
+        metrics_dict["lr"] = self.scheduler.get_lr()  # type: ignore
         return metrics_dict
 
     def val_op(self, batch: TensorDict) -> TensorDict:
