@@ -1,5 +1,8 @@
 import argparse
 import random
+from typing import Iterable
+from typing import Optional
+from typing import Tuple
 
 import numpy as np
 import torch
@@ -42,13 +45,15 @@ class RecurrentTrainer(Trainer):
         return loss_dict
 
     def _teacher_forcing_loop(self, batch: TensorDict) -> TensorDict:
-        inputs = batch["inputs"]
-        targets = batch["targets"]
+        inputs: TensorDict = batch["inputs"]
+        targets: TensorDict = batch["targets"]
 
         # Warmup trajectory without calculating loss
         warmup_len = self.config.data.input_len
         target_len = self.config.data.target_len
         warmup_inputs = inputs[:, :warmup_len]
+
+        hidden: Iterable[Optional[Tuple[torch.Tensor, torch.Tensor]]]
         _, hidden = self.model(warmup_inputs)
 
         # Teacher forcing
@@ -57,7 +62,7 @@ class RecurrentTrainer(Trainer):
             pred, hidden = self.model(inputs[:, warmup_len + i : warmup_len + i + 1], hidden)
             preds.append(pred)
 
-        preds_td: TensorDict = torch.stack(preds)  # type: ignore
+        preds_td: TensorDict = torch.stack(preds, dim=1)  # type: ignore
         targets_td = targets[:, warmup_len : warmup_len + target_len]
 
         loss_by_head = self.loss(preds_td, targets_td)

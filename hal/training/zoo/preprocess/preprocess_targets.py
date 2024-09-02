@@ -46,7 +46,8 @@ def preprocess_targets_v0(sample: TensorDict, player: Player) -> TensorDict:
             "main_stick": torch.tensor(one_hot_main_stick, dtype=torch.float32),
             "c_stick": torch.tensor(one_hot_c_stick, dtype=torch.float32),
             "buttons": torch.tensor(one_hot_buttons, dtype=torch.float32),
-        }
+        },
+        batch_size=(one_hot_main_stick.shape[0]),
     )
 
 

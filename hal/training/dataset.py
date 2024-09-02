@@ -102,7 +102,7 @@ class InMemoryDataset(Dataset):
         player = "p1"
 
         sample = self.tensordict[idx : idx + self.trajectory_len]
-        inputs = self.input_preprocessing_fn(sample, self.trajectory_len, player, self.stats_by_feature_name)
+        inputs = self.input_preprocessing_fn(sample, self.data_config, player, self.stats_by_feature_name)
         targets = self.target_preprocessing_fn(sample, player)
         return TensorDict(
             {

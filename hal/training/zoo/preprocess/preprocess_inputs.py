@@ -4,6 +4,7 @@ from typing import Tuple
 import numpy as np
 import torch
 from tensordict import TensorDict
+from training.config import DataConfig
 
 from hal.data.constants import PLAYER_INPUT_FEATURES_TO_EMBED
 from hal.data.constants import PLAYER_INPUT_FEATURES_TO_INVERT_AND_NORMALIZE
@@ -59,7 +60,9 @@ def _preprocess_numeric_features(
     return torch.stack(numeric_inputs, dim=-1)
 
 
-def _preprocess_categorical_features(sample: TensorDict, ego: Player, stats: Dict[str, FeatureStats]) -> TensorDict:
+def _preprocess_categorical_features(
+    sample: TensorDict, ego: Player, stats: Dict[str, FeatureStats]
+) -> Dict[str, torch.Tensor]:
     """Preprocess categorical features for both players."""
     opponent = _get_opponent(ego)
 
@@ -78,15 +81,16 @@ def _preprocess_categorical_features(sample: TensorDict, ego: Player, stats: Dic
     for feature in STAGE:
         processed_features[feature] = process_feature(feature, column_name=feature)
 
-    return TensorDict(processed_features)
+    return processed_features
 
 
 @InputPreprocessRegistry.register("inputs_v0", num_features=2 * len(NUMERIC_FEATURES_V0))
 def preprocess_inputs_v0(
-    sample: TensorDict, input_len: int, ego: Player, stats: Dict[str, FeatureStats]
+    sample: TensorDict, data_config: DataConfig, ego: Player, stats: Dict[str, FeatureStats]
 ) -> TensorDict:
     """Slice input sample to the input length."""
     assert ego in VALID_PLAYERS
+    input_len = data_config.input_len
 
     categorical_features = _preprocess_categorical_features(sample[:input_len], ego=ego, stats=stats)
     gamestate = _preprocess_numeric_features(
@@ -94,4 +98,4 @@ def preprocess_inputs_v0(
     )
 
     categorical_features["gamestate"] = gamestate
-    return categorical_features
+    return TensorDict(categorical_features, batch_size=(input_len,))
