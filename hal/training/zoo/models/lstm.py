@@ -120,7 +120,7 @@ class LSTMv1(nn.Module):
         return (
             TensorDict(
                 {"buttons": button_output, "main_stick": main_stick_output, "c_stick": c_stick_output},
-                batch_size=(B, T),
+                batch_size=(B,),
             ),
             hidden_in,
         )
