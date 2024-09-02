@@ -1,13 +1,11 @@
 import argparse
 import random
 from typing import Dict
-from typing import List
 from typing import Optional
 
 import numpy as np
 import torch
 from tensordict import TensorDict
-from torch import Tensor
 from torch.nn import functional as F
 from torch.types import Number
 from training.trainer import Trainer
@@ -21,19 +19,13 @@ from hal.training.distributed import auto_distribute
 from hal.training.distributed import wrap_multiprocessing
 
 
-def slice_tensor_dict(tensor_dict: Dict[str, Tensor], start: int, end: int) -> Dict[str, Tensor]:
-    return {k: v[:, start:end] for k, v in tensor_dict.items()}
-
-
-def stack_tensor_dict(tensor_dicts: List[Dict[str, Tensor]]) -> Dict[str, Tensor]:
-    if not tensor_dicts:
-        return {}
-    return {k: torch.stack([d[k] for d in tensor_dicts], dim=-2) for k in tensor_dicts[0].keys()}
-
-
 class RecurrentTrainer(Trainer):
-    def loss_fn(self, pred: Dict[str, Tensor], target: Dict[str, Tensor]) -> Dict[str, Tensor]:
-        loss_dict: Dict[str, Tensor] = {}
+    """
+    Trainer for deep models with recurrent blocks.
+    """
+
+    def loss_fn(self, pred: TensorDict, target: TensorDict) -> TensorDict:
+        loss_dict: TensorDict = TensorDict({})
 
         # Calculate per-frame losses
         button_loss = F.cross_entropy(pred["buttons"], target["buttons"], reduction="none")
@@ -57,27 +49,26 @@ class RecurrentTrainer(Trainer):
 
         return loss_dict
 
-    def train_op(self, inputs: Dict[str, Tensor], targets: Dict[str, Tensor]) -> Dict[str, Number]:
-        # TODO migrate to tensordict
+    def train_op(self, inputs: TensorDict, targets: TensorDict) -> Dict[str, Number]:
         self.opt.zero_grad(set_to_none=True)
 
         # Warmup trajectory without calculating loss
         warmup_len = self.config.data.input_len
         target_len = self.config.data.target_len
-        warmup_inputs = slice_tensor_dict(inputs, 0, warmup_len)
+        warmup_inputs = inputs[:, :warmup_len]
         _, hidden = self.model(warmup_inputs)
 
         # Teacher forcing
         preds = []
-        for i in range(self.config.data.target_len):
-            pred, hidden = self.model(slice_tensor_dict(inputs, warmup_len + i, warmup_len + i + 1), hidden)
+        for i in range(target_len):
+            pred, hidden = self.model(inputs[:, warmup_len + i : warmup_len + i + 1], hidden)
             preds.append(pred)
 
-        preds = stack_tensor_dict(preds)
-        targets = slice_tensor_dict(targets, warmup_len, warmup_len + target_len)
+        preds_td: TensorDict = torch.stack(preds)  # type: ignore
+        targets_td = targets[:, warmup_len : warmup_len + target_len]
 
-        loss_by_head = self.loss_fn(preds, targets)
-        loss_total = sum(v for k, v in loss_by_head.items() if k.startswith("loss"))
+        loss_by_head = self.loss_fn(preds_td, targets_td)
+        loss_total = torch.tensor(sum(v for k, v in loss_by_head.items() if k.startswith("loss")))
         loss_total.backward()
         self.opt.step()
         self.scheduler.step()
@@ -87,26 +78,26 @@ class RecurrentTrainer(Trainer):
         metrics_dict["lr"] = self.scheduler.get_lr()
         return metrics_dict
 
-    def val_op(self, inputs: Dict[str, Tensor], targets: Dict[str, Tensor]) -> Dict[str, float]:
+    def val_op(self, inputs: TensorDict, targets: TensorDict) -> Dict[str, float]:
         self.eval()
         with torch.no_grad():
             # Warmup trajectory without calculating loss
             warmup_len = self.config.data.input_len
             target_len = self.config.data.target_len
-            warmup_inputs = slice_tensor_dict(inputs, 0, warmup_len)
+            warmup_inputs = inputs[:, :warmup_len]
             _, hidden = self.model(warmup_inputs)
 
             # Teacher forcing
             preds = []
             for i in range(self.config.data.target_len):
-                pred, hidden = self.model(slice_tensor_dict(inputs, warmup_len + i, warmup_len + i + 1), hidden)
+                pred, hidden = self.model(inputs[:, warmup_len + i : warmup_len + i + 1], hidden)
                 preds.append(pred)
 
-            preds = stack_tensor_dict(preds)
-            targets = slice_tensor_dict(targets, warmup_len, warmup_len + target_len)
+            preds_td: TensorDict = torch.stack(preds)  # type: ignore
+            targets_td = targets[:, warmup_len : warmup_len + target_len]
 
-            loss_by_head = self.loss_fn(preds, targets)
-            loss_total = sum(v for k, v in loss_by_head.items() if k.startswith("loss"))
+            loss_by_head = self.loss_fn(preds_td, targets_td)
+            loss_total = torch.tensor(sum(v for k, v in loss_by_head.items() if k.startswith("loss")))
 
         loss_by_head["loss_total"] = loss_total
         metrics_dict = {f"val/{k}": v.item() for k, v in loss_by_head.items()}
@@ -148,7 +139,7 @@ def parse_cli() -> TrainConfig:
 
 
 if __name__ == "__main__":
-    train_config = parse_cli()
-    train_td, val_td = create_tensordicts(train_config.data)
+    config = parse_cli()
+    train_data, val_data = create_tensordicts(config.data)
     # pass positional args and call wrapped fn; (kwargs not accepted)
-    wrap_multiprocessing(main, train_config, train_td, val_td)
+    wrap_multiprocessing(main, config, train_data, val_data)
