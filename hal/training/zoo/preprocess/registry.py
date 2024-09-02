@@ -5,10 +5,11 @@ from typing import Literal
 from tensordict import TensorDict
 
 from hal.data.stats import FeatureStats
+from hal.training.config import DataConfig
 
 Player = Literal["p1", "p2"]
 TargetPreprocessFn = Callable[[TensorDict, Player], TensorDict]
-InputPreprocessFn = Callable[[TensorDict, int, Player, Dict[str, FeatureStats]], TensorDict]
+InputPreprocessFn = Callable[[TensorDict, DataConfig, Player, Dict[str, FeatureStats]], TensorDict]
 
 
 class InputPreprocessRegistry:
