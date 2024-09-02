@@ -6,7 +6,6 @@ import numpy as np
 import torch
 from tensordict import TensorDict
 from torch.nn import functional as F
-from torch.types import Number
 from training.trainer import Trainer
 
 from hal.training.config import TrainConfig
@@ -50,8 +49,9 @@ class RecurrentTrainer(Trainer):
 
         return loss_dict
 
-    def train_op(self, inputs: TensorDict, targets: TensorDict) -> Dict[str, Number]:
-        self.opt.zero_grad(set_to_none=True)
+    def _teacher_forcing_loop(self, batch: TensorDict) -> TensorDict:
+        inputs = batch["inputs"]
+        targets = batch["targets"]
 
         # Warmup trajectory without calculating loss
         warmup_len = self.config.data.input_len
@@ -69,6 +69,12 @@ class RecurrentTrainer(Trainer):
         targets_td = targets[:, warmup_len : warmup_len + target_len]
 
         loss_by_head = self.loss_fn(preds_td, targets_td)
+
+        return loss_by_head
+
+    def train_op(self, batch: TensorDict) -> Dict[str, float]:
+        self.opt.zero_grad(set_to_none=True)
+        loss_by_head = self._teacher_forcing_loop(batch)
         loss_total = torch.tensor(sum(v for k, v in loss_by_head.items() if k.startswith("loss")))
         loss_total.backward()
         self.opt.step()
@@ -79,25 +85,10 @@ class RecurrentTrainer(Trainer):
         metrics_dict["lr"] = self.scheduler.get_lr()
         return metrics_dict
 
-    def val_op(self, inputs: TensorDict, targets: TensorDict) -> Dict[str, float]:
+    def val_op(self, batch: TensorDict) -> Dict[str, float]:
         self.eval()
         with torch.no_grad():
-            # Warmup trajectory without calculating loss
-            warmup_len = self.config.data.input_len
-            target_len = self.config.data.target_len
-            warmup_inputs = inputs[:, :warmup_len]
-            _, hidden = self.model(warmup_inputs)
-
-            # Teacher forcing
-            preds = []
-            for i in range(self.config.data.target_len):
-                pred, hidden = self.model(inputs[:, warmup_len + i : warmup_len + i + 1], hidden)
-                preds.append(pred)
-
-            preds_td: TensorDict = torch.stack(preds)  # type: ignore
-            targets_td = targets[:, warmup_len : warmup_len + target_len]
-
-            loss_by_head = self.loss_fn(preds_td, targets_td)
+            loss_by_head = self._teacher_forcing_loop(batch)
             loss_total = torch.tensor(sum(v for k, v in loss_by_head.items() if k.startswith("loss")))
 
         loss_by_head["loss_total"] = loss_total
