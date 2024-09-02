@@ -3,7 +3,6 @@ import pickle
 import time
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict
 from typing import Iterable
 from typing import Iterator
 from typing import Tuple
@@ -11,7 +10,7 @@ from typing import Union
 
 import torch
 from loguru import logger
-from torch import Tensor
+from tensordict import TensorDict
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader
 
@@ -83,27 +82,27 @@ class Trainer(torch.nn.Module, abc.ABC):
         )
 
     @abc.abstractmethod
-    def loss_fn(self, pred: Dict[str, Tensor], target: Dict[str, Tensor]) -> dict[str, Tensor]:
+    def loss_fn(self, pred: TensorDict, target: TensorDict) -> TensorDict:
         ...
 
     @abc.abstractmethod
-    def train_op(self, inputs: Dict[str, Tensor], targets: Dict[str, Tensor]) -> dict[str, Tensor]:
+    def train_op(self, inputs: TensorDict, targets: TensorDict) -> TensorDict:
         ...
 
     @abc.abstractmethod
-    def val_op(self, inputs: Dict[str, Tensor], targets: Dict[str, Tensor]) -> Dict[str, float]:
+    def val_op(self, inputs: TensorDict, targets: TensorDict) -> TensorDict:
         ...
 
-    def train_step(self, batch: Tuple[Dict[str, Tensor], Dict[str, Tensor]], writer: Writer, step: int) -> None:
+    def train_step(self, batch: Tuple[TensorDict, TensorDict], writer: Writer, step: int) -> None:
         batch = move_tensors_to_device(batch, self.device)
         inputs, targets = batch
         metrics = self.train_op(inputs, targets)
-        writer.log(metrics, step=step, commit=False)
+        writer.log(metrics.to_dict(), step=step, commit=False)
 
     def train_loop(
         self,
-        train_loader: Iterable[Tuple[Dict[str, Tensor], Dict[str, Tensor]]],
-        val_loader: Iterable[Tuple[Dict[str, Tensor], Dict[str, Tensor]]],
+        train_loader: Iterable[Tuple[TensorDict, TensorDict]],
+        val_loader: Iterable[Tuple[TensorDict, TensorDict]],
         local_batch_size: int,
         n_samples: int,
         n_val_samples: int,
@@ -166,7 +165,7 @@ class Trainer(torch.nn.Module, abc.ABC):
 
         ckpt.save_file(self.model, "model.ckpt")
 
-    def save_batch_to_disk(self, batch: tuple[Dict[str, Tensor], ...], step: int) -> None:
+    def save_batch_to_disk(self, batch: tuple[TensorDict, ...], step: int) -> None:
         save_batch_path = self.artifact_dir / "training_samples" / f"{step}.pkl"
         Path.mkdir(save_batch_path.parent, exist_ok=True, parents=True)
         with open(save_batch_path, "wb") as f:
@@ -175,7 +174,7 @@ class Trainer(torch.nn.Module, abc.ABC):
 
     def validate(
         self,
-        val_loader: Iterator[Tuple[Dict[str, Tensor], Dict[str, Tensor]]],
+        val_loader: Iterator[Tuple[TensorDict, TensorDict]],
         batch_size: int,
         n_val_samples: int,
         writer: Writer,
