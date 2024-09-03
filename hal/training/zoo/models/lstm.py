@@ -130,3 +130,4 @@ Arch.register("LSTMv1-2-nodropout", make_net=LSTMv1, embed_config=EmbeddingConfi
 Arch.register("LSTMv1-2", make_net=LSTMv1, embed_config=EmbeddingConfig(), n_blocks=2)
 Arch.register("LSTMv1-4", make_net=LSTMv1, embed_config=EmbeddingConfig(), n_blocks=4)
 Arch.register("LSTMv1-8", make_net=LSTMv1, embed_config=EmbeddingConfig(), n_blocks=8)
+Arch.register("LSTMv1-16", make_net=LSTMv1, embed_config=EmbeddingConfig(), n_blocks=16)
