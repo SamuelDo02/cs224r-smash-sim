@@ -83,6 +83,13 @@ class EmbeddingConfig:
 
 
 @attr.s(auto_attribs=True, frozen=True)
+class LossWeights:
+    buttons: float = 0.5
+    main_stick: float = 0.3
+    c_stick: float = 0.2
+
+
+@attr.s(auto_attribs=True, frozen=True)
 class BaseConfig:
     n_gpus: int
     debug: bool
@@ -101,6 +108,7 @@ class TrainConfig(BaseConfig):
 
     # Hyperparams
     loss_fn: str = "ce"
+    loss_weights: LossWeights = LossWeights()
     local_batch_size: int = 1024
     lr: float = 3e-4
     n_samples: int = 2**24
