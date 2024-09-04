@@ -1,8 +1,5 @@
 import argparse
 import random
-from typing import Iterable
-from typing import Optional
-from typing import Tuple
 
 import numpy as np
 import torch
@@ -24,9 +21,9 @@ from hal.training.trainer import MetricsDict
 from hal.training.trainer import Trainer
 
 
-class RecurrentTrainer(Trainer):
+class SimpleTrainer(Trainer):
     """
-    Trainer for deep models with recurrent blocks.
+    Trains behavior cloning by passing the entire sequence at once.
     """
 
     def loss(self, pred: TensorDict, target: TensorDict) -> TensorDict:
@@ -49,36 +46,9 @@ class RecurrentTrainer(Trainer):
 
         return loss_dict
 
-    def _teacher_forcing_loop(self, batch: TensorDict) -> TensorDict:
-        inputs: TensorDict = batch["inputs"]
-        targets: TensorDict = batch["targets"]
-
-        # Warmup trajectory without calculating loss
-        warmup_len = self.config.data.input_len
-        target_len = self.config.data.target_len
-        warmup_inputs = inputs[:, :warmup_len]
-
-        hidden: Iterable[Optional[Tuple[torch.Tensor, torch.Tensor]]]
-        _, hidden = self.model(warmup_inputs)
-
-        # Teacher forcing
-        preds = []
-        for i in range(target_len):
-            # Select the i-th input after warmup for all samples in the batch
-            current_input = inputs[:, warmup_len + i].unsqueeze(1)
-            pred, hidden = self.model(current_input, hidden)
-            preds.append(pred)
-
-        preds_td: TensorDict = torch.stack(preds, dim=1)  # type: ignore
-        targets_td = targets[:, warmup_len : warmup_len + target_len]
-
-        loss_by_head = self.loss(preds_td, targets_td)
-
-        return loss_by_head
-
     def train_op(self, batch: TensorDict) -> MetricsDict:
         self.opt.zero_grad(set_to_none=True)
-        loss_by_head = self._teacher_forcing_loop(batch)
+        loss_by_head = self.model(batch)
 
         loss_weights = self.config.loss_weights
         weighted_losses = {
@@ -122,7 +92,7 @@ def main(
     train_loader, val_loader = create_dataloaders(
         train_td, val_td, train_config, rank=rank, world_size=get_world_size()
     )
-    trainer = RecurrentTrainer(config=train_config, train_loader=train_loader, val_loader=val_loader)
+    trainer = SimpleTrainer(config=train_config, train_loader=train_loader, val_loader=val_loader)
     trainer.train_loop(
         train_loader,
         val_loader,
