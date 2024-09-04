@@ -16,11 +16,15 @@ import torch
 import torch.nn
 from loguru import logger
 from tensordict import TensorDict
+from yasoo import deserialize
+from yasoo import serialize
 
 import wandb
 from hal.training.config import BaseConfig
+from hal.training.config import TrainConfig
 from hal.training.distributed import is_master
 from hal.training.utils import get_git_repo_root
+from hal.training.zoo.models.registry import Arch
 
 
 def get_path_friendly_datetime() -> str:
@@ -74,28 +78,45 @@ def log_if_master(message: Any) -> None:
         logger.info(message)
 
 
+FILE_MATCH: str = "*.pth"
+FILE_FORMAT: str = "%012d.pth"
+CONFIG_FILENAME: str = "config.json"
+
+
+def load_model_from_artifact_dir(artifact_dir: Path) -> torch.nn.Module:
+    with open(artifact_dir / "config.json", "r", encoding="utf-8") as f:
+        config: TrainConfig = deserialize(json.load(f))  # type: ignore
+    model = Arch.get(config.arch, config=config)
+    idx = Checkpoint.find_latest_idx(Path(artifact_dir))
+    ckpt_path = artifact_dir / (FILE_FORMAT % idx)
+    ckpt = torch.load(ckpt_path)
+    model.load_state_dict(ckpt)
+    return model
+
+
 @attr.s(auto_attribs=True, frozen=True)
 class Checkpoint:
     model: torch.nn.Module
     config: BaseConfig
     artifact_dir: Path
     keep_ckpts: int
-    CONFIG_FILENAME: str = "config.json"
-    FILE_MATCH: str = "*.pth"
-    FILE_FORMAT: str = "%012d.pth"
 
     @staticmethod
-    def checkpoint_idx(filename: str) -> int:
-        return int(os.path.basename(filename).split(".")[0])
+    def find_latest_idx(artifact_dir: Path) -> int:
+        all_ckpts = artifact_dir.glob(FILE_MATCH)
+        try:
+            filename = max(str(x) for x in all_ckpts)
+            idx = int(Path(filename).stem.split(".")[0])
+            return idx
+        except ValueError:
+            return 0
 
     def restore(self, idx: Optional[int] = None, device: str = "cpu") -> Tuple[int, Optional[Path]]:
         if idx is None:
-            all_ckpts = self.artifact_dir.glob(self.FILE_MATCH)
-            try:
-                idx = self.checkpoint_idx(max(str(x) for x in all_ckpts))
-            except ValueError:
+            idx = self.find_latest_idx(self.artifact_dir)
+            if idx == 0:
                 return 0, None
-        ckpt = self.artifact_dir / (self.FILE_FORMAT % idx)
+        ckpt = self.artifact_dir / (FILE_FORMAT % idx)
         logger.info(f"Resuming checkpoint from: {ckpt}")
         with ckpt.open("rb") as f:
             self.model.load_state_dict(torch.load(f, map_location=device))
@@ -105,13 +126,13 @@ class Checkpoint:
         if not is_master():  # only save master's state
             return
         self.artifact_dir.mkdir(exist_ok=True, parents=True)
-        config_path = self.artifact_dir / self.CONFIG_FILENAME
+        config_path = self.artifact_dir / CONFIG_FILENAME
         with config_path.open("w") as f:
-            json.dump(attr.asdict(self.config), f, indent=2)
-        ckpt = self.artifact_dir / (self.FILE_FORMAT % idx)
+            json.dump(serialize(self.config), f)
+        ckpt = self.artifact_dir / (FILE_FORMAT % idx)
         with ckpt.open("wb") as f:
             torch.save(self.model.state_dict(), f)
-        old_ckpts = sorted(self.artifact_dir.glob(self.FILE_MATCH), key=str)
+        old_ckpts = sorted(self.artifact_dir.glob(FILE_MATCH), key=str)
         for ckpt in old_ckpts[: -self.keep_ckpts]:
             ckpt.unlink()
 

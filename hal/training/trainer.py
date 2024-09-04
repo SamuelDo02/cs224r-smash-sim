@@ -76,6 +76,7 @@ class Trainer(torch.nn.Module, abc.ABC):
     def __str__(self) -> str:
         return "\n".join(
             (
+                "\n",
                 f'{" Model ":-^80}',
                 str(self.model),
                 f'{" Parameters ":-^80}',
@@ -110,7 +111,7 @@ class Trainer(torch.nn.Module, abc.ABC):
 
     def train_loop(self, train_loader: Iterable[TensorDict], val_loader: Iterable[TensorDict]) -> None:
         log_if_master(self)
-        log_if_master(f"{self.artifact_dir=}")
+        log_if_master(f"Saving to {str(self.artifact_dir)}")
 
         wandb_config = WandbConfig.create(self, self.config) if is_master() else None
         batch_size = get_world_size() * self.config.local_batch_size
