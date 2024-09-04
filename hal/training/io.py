@@ -1,3 +1,4 @@
+import json
 import os
 from datetime import datetime
 from pathlib import Path
@@ -17,7 +18,7 @@ from loguru import logger
 from tensordict import TensorDict
 
 import wandb
-from hal.training.config import TrainConfig
+from hal.training.config import BaseConfig
 from hal.training.distributed import is_master
 from hal.training.utils import get_git_repo_root
 
@@ -76,8 +77,10 @@ def log_if_master(message: Any) -> None:
 @attr.s(auto_attribs=True, frozen=True)
 class Checkpoint:
     model: torch.nn.Module
-    logdir: Path
+    config: BaseConfig
+    artifact_dir: Path
     keep_ckpts: int
+    CONFIG_FILENAME: str = "config.json"
     FILE_MATCH: str = "*.pth"
     FILE_FORMAT: str = "%012d.pth"
 
@@ -87,12 +90,12 @@ class Checkpoint:
 
     def restore(self, idx: Optional[int] = None, device: str = "cpu") -> Tuple[int, Optional[Path]]:
         if idx is None:
-            all_ckpts = self.logdir.glob(self.FILE_MATCH)
+            all_ckpts = self.artifact_dir.glob(self.FILE_MATCH)
             try:
                 idx = self.checkpoint_idx(max(str(x) for x in all_ckpts))
             except ValueError:
                 return 0, None
-        ckpt = self.logdir / (self.FILE_FORMAT % idx)
+        ckpt = self.artifact_dir / (self.FILE_FORMAT % idx)
         logger.info(f"Resuming checkpoint from: {ckpt}")
         with ckpt.open("rb") as f:
             self.model.load_state_dict(torch.load(f, map_location=device))
@@ -101,19 +104,22 @@ class Checkpoint:
     def save(self, idx: int) -> None:
         if not is_master():  # only save master's state
             return
-        self.logdir.mkdir(exist_ok=True, parents=True)
-        ckpt = self.logdir / (self.FILE_FORMAT % idx)
+        self.artifact_dir.mkdir(exist_ok=True, parents=True)
+        config_path = self.artifact_dir / self.CONFIG_FILENAME
+        with config_path.open("w") as f:
+            json.dump(attr.asdict(self.config), f, indent=2)
+        ckpt = self.artifact_dir / (self.FILE_FORMAT % idx)
         with ckpt.open("wb") as f:
             torch.save(self.model.state_dict(), f)
-        old_ckpts = sorted(self.logdir.glob(self.FILE_MATCH), key=str)
+        old_ckpts = sorted(self.artifact_dir.glob(self.FILE_MATCH), key=str)
         for ckpt in old_ckpts[: -self.keep_ckpts]:
             ckpt.unlink()
 
     def save_file(self, model: torch.nn.Module, filename: str) -> None:
         if not is_master():  # only save master's state
             return
-        self.logdir.mkdir(exist_ok=True, parents=True)
-        with (self.logdir / filename).open("wb") as f:
+        self.artifact_dir.mkdir(exist_ok=True, parents=True)
+        with (self.artifact_dir / filename).open("wb") as f:
             torch.save(model.state_dict(), f)
 
 
@@ -126,7 +132,7 @@ class WandbConfig:
     model: torch.nn.Module
 
     @classmethod
-    def create(cls, model: torch.nn.Module, train_config: TrainConfig) -> Optional["WandbConfig"]:
+    def create(cls, model: torch.nn.Module, train_config: BaseConfig) -> Optional["WandbConfig"]:
         if not os.getenv("WANDB_API_KEY"):
             logger.info("W&B run not initiated because WANDB_API_KEY not set.")
             return None

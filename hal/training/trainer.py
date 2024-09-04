@@ -69,7 +69,9 @@ class Trainer(torch.nn.Module, abc.ABC):
         )
         batch_size = get_world_size() * self.config.local_batch_size
         self.scheduler = CosineAnnealingLR(self.opt, T_max=int(config.n_samples / batch_size), eta_min=1e-6)
-        self.ckpt = Checkpoint(model=self, logdir=self.artifact_dir, keep_ckpts=self.config.keep_ckpts)
+        self.ckpt = Checkpoint(
+            model=self.model, config=self.config, artifact_dir=self.artifact_dir, keep_ckpts=self.config.keep_ckpts
+        )
 
     def __str__(self) -> str:
         return "\n".join(
@@ -83,7 +85,7 @@ class Trainer(torch.nn.Module, abc.ABC):
             )
         )
 
-    def restore_checkpoint(self) -> int:
+    def _restore_checkpoint(self) -> int:
         resume_idx, _ = self.ckpt.restore()
         if resume_idx > 0:
             log_if_master(f"Resuming training at {resume_idx} ({resume_idx / (1 << 20):.2f}M samples)")
@@ -114,7 +116,7 @@ class Trainer(torch.nn.Module, abc.ABC):
         batch_size = get_world_size() * self.config.local_batch_size
         train_loader = repeater(train_loader)
         val_loader = repeater(val_loader)
-        resume_idx = self.restore_checkpoint()
+        resume_idx = self._restore_checkpoint()
 
         with Writer.create(wandb_config) as writer:
             for i in range(resume_idx, self.config.n_samples, self.config.report_len):
@@ -169,7 +171,6 @@ class Trainer(torch.nn.Module, abc.ABC):
         step: int,
     ) -> None:
         self.eval()
-        device = self.device
         range_iter = trange(
             0,
             self.config.n_val_samples,
@@ -183,7 +184,7 @@ class Trainer(torch.nn.Module, abc.ABC):
 
         for i in range_iter:
             batch = next(val_loader)
-            batch = batch.to(device, non_blocking=True)
+            batch = batch.to(self.device, non_blocking=True)
             if i == 0 and self.config.debug:
                 self.save_batch_to_disk(batch, step=step)
             metrics_dict = self.val_op(batch)
