@@ -1,7 +1,3 @@
-from typing import Iterable
-from typing import Optional
-from typing import Tuple
-
 import torch
 import torch.nn as nn
 from tensordict import TensorDict
@@ -44,11 +40,7 @@ class MLPBC(nn.Module):
         self.main_stick_head = nn.Linear(hidden_size, embed_config.num_main_stick_clusters)
         self.c_stick_head = nn.Linear(hidden_size, embed_config.num_c_stick_clusters)
 
-    def forward(
-        self,
-        inputs: TensorDict,
-        hidden_in: Optional[Iterable[Optional[Tuple[torch.Tensor, torch.Tensor]]]] = None,
-    ) -> TensorDict:
+    def forward(self, inputs: TensorDict) -> TensorDict:
         B, T, D = inputs["gamestate"].shape
         assert T > 0
 
@@ -72,7 +64,7 @@ class MLPBC(nn.Module):
         main_stick_output = self.main_stick_head(x)
         c_stick_output = self.c_stick_head(x)
 
-        TensorDict(
+        return TensorDict(
             {"buttons": button_output, "main_stick": main_stick_output, "c_stick": c_stick_output},
             batch_size=(B,),
         )
