@@ -4,6 +4,7 @@ from tensordict import TensorDict
 
 from hal.training.config import TrainConfig
 from hal.training.utils import get_nembd_from_config
+from hal.training.zoo.models.registry import Arch
 
 
 class MLPBC(nn.Module):
@@ -40,7 +41,8 @@ class MLPBC(nn.Module):
         self.main_stick_head = nn.Linear(hidden_size, embed_config.num_main_stick_clusters)
         self.c_stick_head = nn.Linear(hidden_size, embed_config.num_c_stick_clusters)
 
-    def forward(self, inputs: TensorDict) -> TensorDict:
+    def forward(self, batch: TensorDict) -> TensorDict:
+        inputs: TensorDict = batch["inputs"]
         B, T, D = inputs["gamestate"].shape
         assert T > 0
 
@@ -68,3 +70,6 @@ class MLPBC(nn.Module):
             {"buttons": button_output, "main_stick": main_stick_output, "c_stick": c_stick_output},
             batch_size=(B,),
         )
+
+
+Arch.register("MLPv1", make_net=MLPBC, hidden_size=128, n_layer=4, dropout=0.1)
