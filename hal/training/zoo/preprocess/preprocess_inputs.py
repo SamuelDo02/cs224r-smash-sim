@@ -4,7 +4,6 @@ from typing import Tuple
 import numpy as np
 import torch
 from tensordict import TensorDict
-from training.config import DataConfig
 
 from hal.data.constants import PLAYER_INPUT_FEATURES_TO_EMBED
 from hal.data.constants import PLAYER_INPUT_FEATURES_TO_INVERT_AND_NORMALIZE
@@ -18,6 +17,7 @@ from hal.data.normalize import invert_and_normalize
 from hal.data.normalize import normalize
 from hal.data.normalize import standardize
 from hal.data.stats import FeatureStats
+from hal.training.config import DataConfig
 from hal.training.zoo.preprocess.registry import InputPreprocessRegistry
 from hal.training.zoo.preprocess.registry import Player
 

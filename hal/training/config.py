@@ -45,6 +45,7 @@ class DataConfig:
 
     # Debugging
     debug_repeat_batch: bool = False
+    debug_save_batch: bool = False
 
 
 @attr.s(auto_attribs=True, frozen=True)
