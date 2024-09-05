@@ -80,13 +80,7 @@ class RecurrentTrainer(Trainer):
         self.opt.zero_grad(set_to_none=True)
         loss_by_head = self._teacher_forcing_loop(batch)
 
-        loss_weights = self.config.loss_weights
-        weighted_losses = {
-            "loss_buttons": loss_by_head["loss_buttons"] * loss_weights.buttons,
-            "loss_main_stick": loss_by_head["loss_main_stick"] * loss_weights.main_stick,
-            "loss_c_stick": loss_by_head["loss_c_stick"] * loss_weights.c_stick,
-        }
-        loss_total = sum(weighted_losses.values())
+        loss_total = sum(v for k, v in loss_by_head.items() if k.startswith("loss"))
         loss_total.backward()  # type: ignore
         self.opt.step()
         self.scheduler.step()
