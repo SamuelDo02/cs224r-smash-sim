@@ -8,8 +8,12 @@ from typing import Dict
 import melee
 from melee import enums
 from melee.menuhelper import MenuHelper
+from tensordict import TensorDict
 from training.io import load_model_from_artifact_dir
 
+from hal.data.constants import IDX_BY_ACTION
+from hal.data.constants import IDX_BY_CHARACTER
+from hal.data.constants import IDX_BY_STAGE
 from hal.eval.emulator_paths import LOCAL_CISO_PATH
 from hal.eval.emulator_paths import LOCAL_DOLPHIN_HOME_PATH
 from hal.eval.emulator_paths import LOCAL_GUI_EMULATOR_PATH
@@ -100,6 +104,74 @@ def get_console_kwargs(local: bool, no_gui: bool, debug: bool) -> Dict[str, Any]
         **headless_console_kwargs,
     }
     return console_kwargs
+
+
+def extract_gamestate(gamestate: melee.GameState) -> TensorDict:
+    players = sorted(gamestate.players.items())
+    if len(players) != 2:
+        raise ValueError(f"Expected 2 players, got {len(players)}")
+
+    frame_data = {}
+
+    frame_data["frame"].append(gamestate.frame)
+    frame_data["stage"].append(IDX_BY_STAGE[gamestate.stage])
+
+    for i, (port, player_state) in enumerate(players, start=1):
+        prefix = f"p{i}_"
+
+        # Player state data
+        player_data = {
+            "port": port,
+            "character": IDX_BY_CHARACTER[player_state.character],
+            "stock": player_state.stock,
+            "facing": int(player_state.facing),
+            "invulnerable": int(player_state.invulnerable),
+            "position_x": float(player_state.position.x),
+            "position_y": float(player_state.position.y),
+            "percent": player_state.percent,
+            "shield_strength": player_state.shield_strength,
+            "jumps_left": player_state.jumps_left,
+            "action": IDX_BY_ACTION[player_state.action],
+            "action_frame": player_state.action_frame,
+            "invulnerability_left": player_state.invulnerability_left,
+            "hitlag_left": player_state.hitlag_left,
+            "hitstun_left": player_state.hitstun_frames_left,
+            "on_ground": int(player_state.on_ground),
+            "speed_air_x_self": player_state.speed_air_x_self,
+            "speed_y_self": player_state.speed_y_self,
+            "speed_x_attack": player_state.speed_x_attack,
+            "speed_y_attack": player_state.speed_y_attack,
+            "speed_ground_x_self": player_state.speed_ground_x_self,
+        }
+
+        # ECB data
+        for ecb in ["bottom", "top", "left", "right"]:
+            player_data[f"ecb_{ecb}_x"] = getattr(player_state, f"ecb_{ecb}")[0]
+            player_data[f"ecb_{ecb}_y"] = getattr(player_state, f"ecb_{ecb}")[1]
+
+        # Append all player state data
+        for key, value in player_data.items():
+            frame_data[f"{prefix}{key}"].append(value)
+
+        # Controller data (from current gamestate)
+        controller = gamestate.players[port].controller_state
+
+        # Button data
+        buttons = ["A", "B", "X", "Y", "Z", "START", "L", "R", "D_UP"]
+        for button in buttons:
+            frame_data[f"{prefix}button_{button.lower()}"].append(
+                int(controller.button[getattr(melee.Button, f"BUTTON_{button}")])
+            )
+
+        # Stick and shoulder data
+        frame_data[f"{prefix}main_stick_x"].append(float(controller.main_stick[0]))
+        frame_data[f"{prefix}main_stick_y"].append(float(controller.main_stick[1]))
+        frame_data[f"{prefix}c_stick_x"].append(float(controller.c_stick[0]))
+        frame_data[f"{prefix}c_stick_y"].append(float(controller.c_stick[1]))
+        frame_data[f"{prefix}l_shoulder"].append(float(controller.l_shoulder))
+        frame_data[f"{prefix}r_shoulder"].append(float(controller.r_shoulder))
+
+    return TensorDict(frame_data)
 
 
 def run_episode(local: bool, no_gui: bool, debug: bool, model_dir: str) -> None:
