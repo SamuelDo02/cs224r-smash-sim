@@ -138,10 +138,10 @@ class GPT(nn.Module):
             drop = nn.Dropout(gpt_config.dropout),
             h = nn.ModuleList([Block(n_embd=self.n_embd, n_head=gpt_config.n_head, context_length=self.context_length, dropout=gpt_config.dropout, bias=gpt_config.bias) for _ in range(gpt_config.n_layer)]),
             ln_f = LayerNorm(self.n_embd, bias=gpt_config.bias),
-            button_head = nn.Linear(self.n_embd, embed_config.num_buttons, bias=False),
-            main_stick_head = nn.Linear(self.n_embd, embed_config.num_main_stick_clusters, bias=False),
-            c_stick_head = nn.Linear(self.n_embd, embed_config.num_c_stick_clusters, bias=False),
         ))
+        self.button_head = nn.Linear(self.n_embd, embed_config.num_buttons, bias=False)
+        self.main_stick_head = nn.Linear(self.n_embd, embed_config.num_main_stick_clusters, bias=False)
+        self.c_stick_head = nn.Linear(self.n_embd, embed_config.num_c_stick_clusters, bias=False)
 
         # TODO investigate weight tying
         # self.transformer.wte.weight = self.lm_head.weight # https://paperswithcode.com/method/weight-tying
@@ -173,30 +173,40 @@ class GPT(nn.Module):
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
-    def forward(self, idx, targets=None):
-        device = idx.device
-        b, t = idx.size()
-        assert t <= self.config.context_size, f"Cannot forward sequence of length {t}, block size is only {self.config.context_size}"
-        pos = torch.arange(0, t, dtype=torch.long, device=device) # shape (t)
+    def forward(self, inputs: TensorDict):
+        B, T, D = inputs["gamestate"].shape
+        assert T <= self.context_length, f"Cannot forward sequence of length {T}, block size is only {self.context_length}"
+        pos = torch.arange(0, T, dtype=torch.long, device=next(self.parameters()).device)  # shape (t)
 
-        # forward the GPT model itself
-        tok_emb = self.transformer.wte(idx) # token embeddings of shape (b, t, n_embd)
-        pos_emb = self.transformer.wpe(pos) # position embeddings of shape (t, n_embd)
-        x = self.transformer.drop(tok_emb + pos_emb)
+        # Embeddings
+        stage_emb = self.transformer.stage(inputs["stage"]).squeeze(-2)
+        ego_character_emb = self.transformer.character(inputs["ego_character"]).squeeze(-2)
+        opponent_character_emb = self.transformer.character(inputs["opponent_character"]).squeeze(-2)
+        ego_action_emb = self.transformer.action(inputs["ego_action"]).squeeze(-2)
+        opponent_action_emb = self.transformer.action(inputs["opponent_action"]).squeeze(-2)
+        gamestate = inputs["gamestate"]
+        combined_inputs = torch.cat(
+            [stage_emb, ego_character_emb, opponent_character_emb, ego_action_emb, opponent_action_emb, gamestate],
+            dim=-1,
+        )
+
+        pos_emb = self.transformer.wpe(pos)  # position embeddings of shape (t, n_embd)
+        x = self.transformer.drop(combined_inputs + pos_emb)
         for block in self.transformer.h:
             x = block(x)
         x = self.transformer.ln_f(x)
 
-        if targets is not None:
-            # if we are given some desired targets also calculate the loss
-            logits = self.lm_head(x)
-            loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
-        else:
-            # inference-time mini-optimization: only forward the lm_head on the very last position
-            logits = self.lm_head(x[:, [-1], :]) # note: using list [-1] to preserve the time dim
-            loss = None
+        button_logits = self.button_head(x).squeeze(-2)
+        main_stick_logits = self.main_stick_head(x).squeeze(-2)
+        c_stick_logits = self.c_stick_head(x).squeeze(-2)
 
-        return logits, loss
+        # TODO inference-time mini-optimization: only forward the lm_head on the very last position
+        # logits = self.lm_head(x[:, [-1], :]) # note: using list [-1] to preserve the time dim
+
+        return TensorDict(
+            {"buttons": button_logits, "main_stick": main_stick_logits, "c_stick": c_stick_logits},
+            batch_size=(B, T),
+        )
 
     def crop_block_size(self, block_size):
         # model surgery to decrease the context window if necessary
