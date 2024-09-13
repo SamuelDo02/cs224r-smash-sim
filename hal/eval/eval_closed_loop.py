@@ -22,7 +22,7 @@ from hal.eval.emulator_paths import REMOTE_DOLPHIN_HOME_PATH
 from hal.eval.emulator_paths import REMOTE_EMULATOR_PATH
 
 PLAYER_1_PORT = 1
-PLAYER_2_PORT = 4
+PLAYER_2_PORT = 2
 
 
 def self_play_menu_helper(
@@ -117,7 +117,7 @@ def extract_gamestate(gamestate: melee.GameState) -> TensorDict:
     frame_data["stage"].append(IDX_BY_STAGE[gamestate.stage])
 
     for i, (port, player_state) in enumerate(players, start=1):
-        prefix = f"p{i}_"
+        prefix = f"p{i}"
 
         # Player state data
         player_data = {
@@ -151,7 +151,7 @@ def extract_gamestate(gamestate: melee.GameState) -> TensorDict:
 
         # Append all player state data
         for key, value in player_data.items():
-            frame_data[f"{prefix}{key}"].append(value)
+            frame_data[f"{prefix}_{key}"].append(value)
 
         # Controller data (from current gamestate)
         controller = gamestate.players[port].controller_state
@@ -159,17 +159,17 @@ def extract_gamestate(gamestate: melee.GameState) -> TensorDict:
         # Button data
         buttons = ["A", "B", "X", "Y", "Z", "START", "L", "R", "D_UP"]
         for button in buttons:
-            frame_data[f"{prefix}button_{button.lower()}"].append(
+            frame_data[f"{prefix}_button_{button.lower()}"].append(
                 int(controller.button[getattr(melee.Button, f"BUTTON_{button}")])
             )
 
         # Stick and shoulder data
-        frame_data[f"{prefix}main_stick_x"].append(float(controller.main_stick[0]))
-        frame_data[f"{prefix}main_stick_y"].append(float(controller.main_stick[1]))
-        frame_data[f"{prefix}c_stick_x"].append(float(controller.c_stick[0]))
-        frame_data[f"{prefix}c_stick_y"].append(float(controller.c_stick[1]))
-        frame_data[f"{prefix}l_shoulder"].append(float(controller.l_shoulder))
-        frame_data[f"{prefix}r_shoulder"].append(float(controller.r_shoulder))
+        frame_data[f"{prefix}_main_stick_x"].append(float(controller.main_stick[0]))
+        frame_data[f"{prefix}_main_stick_y"].append(float(controller.main_stick[1]))
+        frame_data[f"{prefix}_c_stick_x"].append(float(controller.c_stick[0]))
+        frame_data[f"{prefix}_c_stick_y"].append(float(controller.c_stick[1]))
+        frame_data[f"{prefix}_l_shoulder"].append(float(controller.l_shoulder))
+        frame_data[f"{prefix}_r_shoulder"].append(float(controller.r_shoulder))
 
     return TensorDict(frame_data)
 
