@@ -83,7 +83,7 @@ FILE_FORMAT: str = "%012d.pth"
 CONFIG_FILENAME: str = "config.json"
 
 
-def load_model_from_artifact_dir(artifact_dir: Path) -> torch.nn.Module:
+def load_model_from_artifact_dir(artifact_dir: Path) -> Tuple[torch.nn.Module, TrainConfig]:
     with open(artifact_dir / "config.json", "r", encoding="utf-8") as f:
         config: TrainConfig = deserialize(json.load(f))  # type: ignore
     model = Arch.get(config.arch, config=config)
@@ -91,7 +91,7 @@ def load_model_from_artifact_dir(artifact_dir: Path) -> torch.nn.Module:
     ckpt_path = artifact_dir / (FILE_FORMAT % idx)
     ckpt = torch.load(ckpt_path)
     model.load_state_dict(ckpt)
-    return model
+    return model, config
 
 
 @attr.s(auto_attribs=True, frozen=True)

@@ -1,4 +1,5 @@
 import argparse
+from pathlib import Path
 from typing import Any
 from typing import Dict
 from typing import Optional
@@ -46,6 +47,10 @@ class DataConfig:
     # Debugging
     debug_repeat_batch: bool = False
     debug_save_batch: bool = False
+
+    @property
+    def stats_path(self) -> Path:
+        return Path(self.data_dir) / "stats.json"
 
 
 @attr.s(auto_attribs=True, frozen=True)

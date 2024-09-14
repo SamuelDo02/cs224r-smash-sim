@@ -42,8 +42,6 @@ def create_tensordicts(data_config: DataConfig) -> Tuple[TensorDict, TensorDict]
 def create_dataloaders(
     train_td: TensorDict, val_td: TensorDict, train_config: TrainConfig, rank: Optional[int], world_size: Optional[int]
 ) -> Tuple[DataLoader, DataLoader]:
-    data_dir = Path(train_config.data.data_dir)
-    stats_path = data_dir / "stats.json"
     is_distributed = rank is not None and world_size is not None and world_size > 1
 
     dataloaders: List[DataLoader] = []
@@ -52,7 +50,7 @@ def create_dataloaders(
         # Dataset
         dataset = InMemoryDataset(
             tensordict=train_td if is_train else val_td,
-            stats_path=stats_path,
+            stats_path=train_config.data.stats_path,
             data_config=train_config.data,
             embed_config=train_config.embedding,
         )
