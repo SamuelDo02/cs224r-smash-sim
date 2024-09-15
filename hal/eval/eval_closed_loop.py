@@ -23,12 +23,62 @@ from hal.eval.emulator_paths import LOCAL_CISO_PATH
 from hal.eval.emulator_paths import LOCAL_DOLPHIN_HOME_PATH
 from hal.eval.emulator_paths import LOCAL_GUI_EMULATOR_PATH
 from hal.eval.emulator_paths import LOCAL_HEADLESS_EMULATOR_PATH
+from hal.eval.emulator_paths import REMOTE_CISO_PATH
 from hal.eval.emulator_paths import REMOTE_DOLPHIN_HOME_PATH
 from hal.eval.emulator_paths import REMOTE_EMULATOR_PATH
 from hal.training.io import load_model_from_artifact_dir
 
 PLAYER_1_PORT = 1
 PLAYER_2_PORT = 2
+
+
+def get_dolphin_home_path(local: bool) -> str:
+    if local:
+        return LOCAL_DOLPHIN_HOME_PATH
+    else:
+        return REMOTE_DOLPHIN_HOME_PATH
+
+
+def get_emulator_path(local: bool, no_gui: bool) -> str:
+    if local:
+        if no_gui:
+            return LOCAL_HEADLESS_EMULATOR_PATH
+        else:
+            return LOCAL_GUI_EMULATOR_PATH
+    else:
+        return REMOTE_EMULATOR_PATH
+
+
+def get_ciso_path(local: bool) -> str:
+    if local:
+        return LOCAL_CISO_PATH
+    else:
+        return REMOTE_CISO_PATH
+
+
+def get_console_kwargs(local: bool, no_gui: bool, debug: bool) -> Dict[str, Any]:
+    headless_console_kwargs = (
+        {
+            "gfx_backend": "Null",
+            "disable_audio": True,
+            "use_exi_inputs": True,
+            "enable_ffw": False,
+        }
+        if no_gui
+        else {}
+    )
+    emulator_path = get_emulator_path(local=local, no_gui=no_gui)
+    dolphin_home_path = get_dolphin_home_path(local=local)
+    Path(dolphin_home_path).mkdir(exist_ok=True, parents=True)
+    console_kwargs = {
+        "path": emulator_path,
+        "is_dolphin": True,
+        "dolphin_home_path": dolphin_home_path,
+        "tmp_home_directory": False,
+        "blocking_input": False,  # TODO(eric): investigate why this is stopping menuhelper
+        **headless_console_kwargs,
+    }
+    return console_kwargs
 
 
 def self_play_menu_helper(
@@ -78,38 +128,6 @@ def self_play_menu_helper(
     # If we're at the postgame scores screen, spam START
     elif gamestate.menu_state == enums.Menu.POSTGAME_SCORES:
         MenuHelper.skip_postgame(controller=controller_1)
-
-
-def get_console_kwargs(local: bool, no_gui: bool, debug: bool) -> Dict[str, Any]:
-    headless_console_kwargs = {
-        "gfx_backend": "Null",
-        "disable_audio": True,
-        "use_exi_inputs": True,
-        "enable_ffw": False,
-    }
-    if local:
-        dolphin_home_path = LOCAL_DOLPHIN_HOME_PATH
-        if no_gui:
-            emulator_path = LOCAL_HEADLESS_EMULATOR_PATH
-        else:
-            emulator_path = LOCAL_GUI_EMULATOR_PATH
-            headless_console_kwargs = {}
-    else:
-        dolphin_home_path = REMOTE_DOLPHIN_HOME_PATH
-        if not no_gui:
-            print("Remote mode only supports headless operation. Forcing --no-gui.")
-        emulator_path = REMOTE_EMULATOR_PATH
-
-    Path(dolphin_home_path).mkdir(exist_ok=True)
-    console_kwargs = {
-        "path": emulator_path,
-        "is_dolphin": True,
-        "dolphin_home_path": dolphin_home_path,
-        "tmp_home_directory": False,
-        "blocking_input": False,  # TODO(eric): investigate why this is stopping menuhelper
-        **headless_console_kwargs,
-    }
-    return console_kwargs
 
 
 def extract_and_append_gamestate(gamestate: melee.GameState, frame_data: DefaultDict[str, deque]) -> None:
@@ -181,23 +199,6 @@ def convert_frame_data_to_tensor_dict(frame_data: DefaultDict[str, deque]) -> Te
     return TensorDict({k: torch.tensor(v) for k, v in frame_data.items()})
 
 
-def get_dolphin_home_path(local: bool) -> str:
-    if local:
-        return LOCAL_DOLPHIN_HOME_PATH
-    else:
-        return REMOTE_DOLPHIN_HOME_PATH
-
-
-def get_emulator_path(local: bool, no_gui: bool) -> str:
-    if local:
-        if no_gui:
-            return LOCAL_HEADLESS_EMULATOR_PATH
-        else:
-            return LOCAL_GUI_EMULATOR_PATH
-    else:
-        return REMOTE_EMULATOR_PATH
-
-
 def connect_to_console(console: melee.Console, controller_1: melee.Controller, controller_2: melee.Controller) -> None:
     # Connect to the console
     print("Connecting to console...")
@@ -246,7 +247,7 @@ def run_episode(local: bool, no_gui: bool, debug: bool, model_dir: str) -> None:
     signal.signal(signal.SIGINT, signal_handler)
 
     # Run the console
-    console.run(iso_path=LOCAL_CISO_PATH, dolphin_user_path=LOCAL_DOLPHIN_HOME_PATH)
+    console.run(iso_path=get_ciso_path(local), dolphin_user_path=get_dolphin_home_path(local))
     connect_to_console(console=console, controller_1=controller_1, controller_2=controller_2)
 
     model, train_config = load_model_from_artifact_dir(Path(model_dir))
