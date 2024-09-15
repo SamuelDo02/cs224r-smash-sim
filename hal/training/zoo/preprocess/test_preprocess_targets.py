@@ -1,4 +1,3 @@
-import numpy as np
 import pytest
 import torch
 from tensordict import TensorDict
@@ -38,30 +37,25 @@ def test_model_predictions_to_controller_inputs(mock_predictions) -> None:
         "c_stick_y",
         "button_a",
         "button_b",
-        "jump",
+        "button_x",
         "button_z",
-        "shoulder",
-        "no_button",
+        "button_shoulder",
+        "button_none",
     ]
     assert all(key in result for key in expected_keys)
 
     # Check shapes
     seq_len = mock_predictions["main_stick"].shape[0]
     for key, value in result.items():
-        if key.endswith("_x") or key.endswith("_y"):
-            assert isinstance(value, np.ndarray)
-            assert value.shape == (seq_len,)
-        else:
-            assert isinstance(value, torch.Tensor)
-            assert value.shape == (seq_len, 1)
+        assert value.shape == (seq_len,)
 
     # Check if stick values are within the valid range [-1, 1]
     for stick in ["main_stick", "c_stick"]:
-        assert np.all(result[f"{stick}_x"] >= -1) and np.all(result[f"{stick}_x"] <= 1)
-        assert np.all(result[f"{stick}_y"] >= -1) and np.all(result[f"{stick}_y"] <= 1)
+        assert torch.all(result[f"{stick}_x"] >= -1) and torch.all(result[f"{stick}_x"] <= 1)
+        assert torch.all(result[f"{stick}_y"] >= -1) and torch.all(result[f"{stick}_y"] <= 1)
 
     # Check if button values are binary (0 or 1)
-    button_keys = ["button_a", "button_b", "jump", "button_z", "shoulder", "no_button"]
+    button_keys = ["button_a", "button_b", "button_x", "button_z", "button_shoulder", "button_none"]
     for key in button_keys:
         assert torch.all((result[key] == 0) | (result[key] == 1))
 
@@ -69,13 +63,13 @@ def test_model_predictions_to_controller_inputs(mock_predictions) -> None:
     for stick in ["main_stick", "c_stick"]:
         x_values = result[f"{stick}_x"]
         y_values = result[f"{stick}_y"]
-        xy_pairs = np.column_stack((x_values, y_values))
+        xy_pairs = torch.stack((x_values, y_values), dim=1)
 
         for xy_pair in xy_pairs:
-            assert any(np.allclose(xy_pair, center) for center in STICK_XY_CLUSTER_CENTERS_V0)
+            assert any(torch.allclose(xy_pair, torch.tensor(center)) for center in STICK_XY_CLUSTER_CENTERS_V0)
 
     # Check if exactly one button is pressed at each time step
-    button_sum = sum(result[key] for key in button_keys)
+    button_sum = torch.sum(torch.stack([result[key] for key in button_keys]), dim=0)
     assert torch.all(button_sum == 1)
 
 

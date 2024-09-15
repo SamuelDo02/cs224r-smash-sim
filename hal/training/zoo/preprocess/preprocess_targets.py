@@ -2,6 +2,7 @@ from typing import Dict
 
 import numpy as np
 import torch
+from numpy.typing import ArrayLike
 from tensordict import TensorDict
 
 from hal.data.constants import STICK_XY_CLUSTER_CENTERS_V0
@@ -60,27 +61,29 @@ def model_predictions_to_controller_inputs_v0(pred: TensorDict) -> Dict[str, tor
     Reverse the one-hot encoding of buttons and analog stick x, y values for a given player.
     """
     # Decode main stick and c-stick
-    main_stick_cluster_idx = np.argmax(pred["main_stick"], axis=-1)
-    main_stick_x, main_stick_y = STICK_XY_CLUSTER_CENTERS_V0[main_stick_cluster_idx]
+    main_stick_cluster_idx = torch.argmax(pred["main_stick"], dim=-1)
+    main_stick_x, main_stick_y = torch.split(
+        torch.tensor(STICK_XY_CLUSTER_CENTERS_V0[main_stick_cluster_idx]), 1, dim=-1
+    )
 
-    c_stick_cluster_idx = np.argmax(pred["c_stick"], axis=-1)
-    c_stick_x, c_stick_y = STICK_XY_CLUSTER_CENTERS_V0[c_stick_cluster_idx]
+    c_stick_cluster_idx = torch.argmax(pred["c_stick"], dim=-1)
+    c_stick_x, c_stick_y = torch.split(torch.tensor(STICK_XY_CLUSTER_CENTERS_V0[c_stick_cluster_idx]), 1, dim=-1)
 
     # Decode buttons
     one_hot_buttons = pred["buttons"]
     button_a, button_b, jump, button_z, shoulder, no_button = torch.split(one_hot_buttons, 1, dim=-1)
 
     return {
-        "main_stick_x": main_stick_x,
-        "main_stick_y": main_stick_y,
-        "c_stick_x": c_stick_x,
-        "c_stick_y": c_stick_y,
-        "button_a": button_a,
-        "button_b": button_b,
-        "jump": jump,
-        "button_z": button_z,
-        "shoulder": shoulder,
-        "no_button": no_button,
+        "main_stick_x": main_stick_x.squeeze(),
+        "main_stick_y": main_stick_y.squeeze(),
+        "c_stick_x": c_stick_x.squeeze(),
+        "c_stick_y": c_stick_y.squeeze(),
+        "button_a": button_a.squeeze(),
+        "button_b": button_b.squeeze(),
+        "button_x": jump.squeeze(),
+        "button_z": button_z.squeeze(),
+        "button_shoulder": shoulder.squeeze(),
+        "button_none": no_button.squeeze(),
     }
 
 

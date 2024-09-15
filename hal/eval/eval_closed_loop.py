@@ -201,6 +201,35 @@ def convert_frame_data_to_tensor_dict(frame_data: DefaultDict[str, deque]) -> Te
     return TensorDict({k: torch.tensor(v) for k, v in frame_data.items()})
 
 
+def send_controller_inputs(
+    controller_inputs: Dict[str, torch.Tensor], controller: melee.Controller, idx: int = -1
+) -> None:
+    """
+    Press buttons and tilt analog sticks given a dictionary of array-like values (length T for T future time steps).
+
+    Args:
+        controller_inputs (Dict[str, torch.Tensor]): Dictionary of array-like values.
+        controller (melee.Controller): Controller object.
+        idx (int): Index in the arrays to send.
+    """
+    if idx >= 0:
+        assert idx < len(controller_inputs["main_stick_x"])
+
+    controller.tilt_analog(
+        melee.Button.BUTTON_MAIN,
+        controller_inputs["main_stick_x"][idx].item(),
+        controller_inputs["main_stick_y"][idx].item(),
+    )
+    controller.tilt_analog(
+        melee.Button.BUTTON_C,
+        controller_inputs["c_stick_x"][idx].item(),
+        controller_inputs["c_stick_y"][idx].item(),
+    )
+    for button, state in controller_inputs.items():
+        controller.tilt_analog
+        controller.press_button
+
+
 def run_episode(local: bool, no_gui: bool, debug: bool, model_dir: str) -> None:
     console_kwargs = get_console_kwargs(local=local, no_gui=no_gui, debug=debug)
     console = melee.Console(**console_kwargs)
