@@ -1,15 +1,20 @@
 import argparse
 import signal
 import sys
+from collections import defaultdict
+from collections import deque
 from pathlib import Path
 from typing import Any
+from typing import DefaultDict
 from typing import Dict
 
 import melee
+import torch
+from data.stats import load_dataset_stats
 from melee import enums
 from melee.menuhelper import MenuHelper
 from tensordict import TensorDict
-from training.io import load_model_from_artifact_dir
+from training.zoo.preprocess.registry import InputPreprocessRegistry
 
 from hal.data.constants import IDX_BY_ACTION
 from hal.data.constants import IDX_BY_CHARACTER
@@ -20,6 +25,7 @@ from hal.eval.emulator_paths import LOCAL_GUI_EMULATOR_PATH
 from hal.eval.emulator_paths import LOCAL_HEADLESS_EMULATOR_PATH
 from hal.eval.emulator_paths import REMOTE_DOLPHIN_HOME_PATH
 from hal.eval.emulator_paths import REMOTE_EMULATOR_PATH
+from hal.training.io import load_model_from_artifact_dir
 
 PLAYER_1_PORT = 1
 PLAYER_2_PORT = 2
@@ -106,12 +112,11 @@ def get_console_kwargs(local: bool, no_gui: bool, debug: bool) -> Dict[str, Any]
     return console_kwargs
 
 
-def extract_gamestate(gamestate: melee.GameState) -> TensorDict:
+def extract_and_append_gamestate(gamestate: melee.GameState, frame_data: DefaultDict[str, deque]) -> None:
+    """Extracts and appends gamestate data to sliding window."""
     players = sorted(gamestate.players.items())
     if len(players) != 2:
         raise ValueError(f"Expected 2 players, got {len(players)}")
-
-    frame_data = {}
 
     frame_data["frame"].append(gamestate.frame)
     frame_data["stage"].append(IDX_BY_STAGE[gamestate.stage])
@@ -171,38 +176,29 @@ def extract_gamestate(gamestate: melee.GameState) -> TensorDict:
         frame_data[f"{prefix}_l_shoulder"].append(float(controller.l_shoulder))
         frame_data[f"{prefix}_r_shoulder"].append(float(controller.r_shoulder))
 
-    return TensorDict(frame_data)
+
+def convert_frame_data_to_tensor_dict(frame_data: DefaultDict[str, deque]) -> TensorDict:
+    return TensorDict({k: torch.tensor(v) for k, v in frame_data.items()})
 
 
-def run_episode(local: bool, no_gui: bool, debug: bool, model_dir: str) -> None:
-    console_kwargs = get_console_kwargs(local=local, no_gui=no_gui, debug=debug)
-    console = melee.Console(**console_kwargs)
-    log = melee.Logger()
+def get_dolphin_home_path(local: bool) -> str:
+    if local:
+        return LOCAL_DOLPHIN_HOME_PATH
+    else:
+        return REMOTE_DOLPHIN_HOME_PATH
 
-    model = load_model_from_artifact_dir(Path(model_dir))
-    model.eval()
 
-    # Create our Controller object
-    #   The controller is the second primary object your bot will interact with
-    #   Your controller is your way of sending button presses to the game, whether
-    #   virtual or physical.
-    controller_1 = melee.Controller(console=console, port=PLAYER_1_PORT, type=melee.ControllerType.STANDARD)
-    controller_2 = melee.Controller(console=console, port=PLAYER_2_PORT, type=melee.ControllerType.STANDARD)
+def get_emulator_path(local: bool, no_gui: bool) -> str:
+    if local:
+        if no_gui:
+            return LOCAL_HEADLESS_EMULATOR_PATH
+        else:
+            return LOCAL_GUI_EMULATOR_PATH
+    else:
+        return REMOTE_EMULATOR_PATH
 
-    # This isn't necessary, but makes it so that Dolphin will get killed when you ^C
-    def signal_handler(sig, frame) -> None:
-        console.stop()
-        log.writelog()
-        print("")  # because the ^C will be on the terminal
-        print("Log file created: " + log.filename)
-        print("Shutting down cleanly...")
-        sys.exit(0)
 
-    signal.signal(signal.SIGINT, signal_handler)
-
-    # Run the console
-    console.run(iso_path=LOCAL_CISO_PATH, dolphin_user_path=dolphin_home_path)
-
+def connect_to_console(console: melee.Console, controller_1: melee.Controller, controller_2: melee.Controller) -> None:
     # Connect to the console
     print("Connecting to console...")
     if not console.connect():
@@ -225,6 +221,42 @@ def run_episode(local: bool, no_gui: bool, debug: bool, model_dir: str) -> None:
         sys.exit(-1)
     print("Controller 2 connected")
 
+
+def run_episode(local: bool, no_gui: bool, debug: bool, model_dir: str) -> None:
+    console_kwargs = get_console_kwargs(local=local, no_gui=no_gui, debug=debug)
+    console = melee.Console(**console_kwargs)
+    log = melee.Logger()
+
+    # Create our Controller object
+    #   The controller is the second primary object your bot will interact with
+    #   Your controller is your way of sending button presses to the game, whether
+    #   virtual or physical.
+    controller_1 = melee.Controller(console=console, port=PLAYER_1_PORT, type=melee.ControllerType.STANDARD)
+    controller_2 = melee.Controller(console=console, port=PLAYER_2_PORT, type=melee.ControllerType.STANDARD)
+
+    # This isn't necessary, but makes it so that Dolphin will get killed when you ^C
+    def signal_handler(sig, frame) -> None:
+        console.stop()
+        log.writelog()
+        print("")  # because the ^C will be on the terminal
+        print("Log file created: " + log.filename)
+        print("Shutting down cleanly...")
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, signal_handler)
+
+    # Run the console
+    console.run(iso_path=LOCAL_CISO_PATH, dolphin_user_path=LOCAL_DOLPHIN_HOME_PATH)
+    connect_to_console(console=console, controller_1=controller_1, controller_2=controller_2)
+
+    model, train_config = load_model_from_artifact_dir(Path(model_dir))
+    model.eval()
+    preprocess_inputs = InputPreprocessRegistry.get(train_config.embedding.input_preprocessing_fn)
+    stats_by_feature_name = load_dataset_stats(train_config.data.stats_path)
+
+    # Container for sliding window of model inputs
+    frame_data: DefaultDict[str, deque] = defaultdict(lambda: deque(maxlen=train_config.data.input_len))
+
     # Main loop
     i = 0
     while i < 10000:
@@ -246,9 +278,14 @@ def run_episode(local: bool, no_gui: bool, debug: bool, model_dir: str) -> None:
 
         # What menu are we in?
         if gamestate.menu_state in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
+            extract_and_append_gamestate(gamestate=gamestate, frame_data=frame_data)
+            frame_data_td = convert_frame_data_to_tensor_dict(frame_data)
+            inputs = preprocess_inputs(frame_data_td, train_config.data, "p1", stats_by_feature_name)
+            outputs = model(inputs)
+            # TODO(eric): convert outputs to controller presses
+
             melee.techskill.multishine(ai_state=gamestate.players[PLAYER_1_PORT], controller=controller_1)
             melee.techskill.multishine(ai_state=gamestate.players[PLAYER_2_PORT], controller=controller_2)
-            print(f"Frame {i}")
             i += 1
 
             # Log this frame's detailed info if we're in game
