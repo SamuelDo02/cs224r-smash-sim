@@ -39,7 +39,7 @@ def test_model_predictions_to_controller_inputs(mock_predictions) -> None:
         "button_b",
         "button_x",
         "button_z",
-        "button_shoulder",
+        "button_l",
         "button_none",
     ]
     assert all(key in result for key in expected_keys)
@@ -55,7 +55,7 @@ def test_model_predictions_to_controller_inputs(mock_predictions) -> None:
         assert torch.all(result[f"{stick}_y"] >= -1) and torch.all(result[f"{stick}_y"] <= 1)
 
     # Check if button values are binary (0 or 1)
-    button_keys = ["button_a", "button_b", "button_x", "button_z", "button_shoulder", "button_none"]
+    button_keys = ["button_a", "button_b", "button_x", "button_z", "button_l", "button_none"]
     for key in button_keys:
         assert torch.all((result[key] == 0) | (result[key] == 1))
 

@@ -2,7 +2,6 @@ from typing import Dict
 
 import numpy as np
 import torch
-from numpy.typing import ArrayLike
 from tensordict import TensorDict
 
 from hal.data.constants import STICK_XY_CLUSTER_CENTERS_V0
@@ -82,7 +81,7 @@ def model_predictions_to_controller_inputs_v0(pred: TensorDict) -> Dict[str, tor
         "button_b": button_b.squeeze(),
         "button_x": jump.squeeze(),
         "button_z": button_z.squeeze(),
-        "button_shoulder": shoulder.squeeze(),
+        "button_l": shoulder.squeeze(),
         "button_none": no_button.squeeze(),
     }
 

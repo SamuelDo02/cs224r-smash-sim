@@ -201,9 +201,7 @@ def convert_frame_data_to_tensor_dict(frame_data: DefaultDict[str, deque]) -> Te
     return TensorDict({k: torch.tensor(v) for k, v in frame_data.items()})
 
 
-def send_controller_inputs(
-    controller_inputs: Dict[str, torch.Tensor], controller: melee.Controller, idx: int = -1
-) -> None:
+def send_controller_inputs(controller: melee.Controller, inputs: Dict[str, torch.Tensor], idx: int = -1) -> None:
     """
     Press buttons and tilt analog sticks given a dictionary of array-like values (length T for T future time steps).
 
@@ -213,21 +211,22 @@ def send_controller_inputs(
         idx (int): Index in the arrays to send.
     """
     if idx >= 0:
-        assert idx < len(controller_inputs["main_stick_x"])
+        assert idx < len(inputs["main_stick_x"])
 
     controller.tilt_analog(
         melee.Button.BUTTON_MAIN,
-        controller_inputs["main_stick_x"][idx].item(),
-        controller_inputs["main_stick_y"][idx].item(),
+        inputs["main_stick_x"][idx].item(),
+        inputs["main_stick_y"][idx].item(),
     )
     controller.tilt_analog(
         melee.Button.BUTTON_C,
-        controller_inputs["c_stick_x"][idx].item(),
-        controller_inputs["c_stick_y"][idx].item(),
+        inputs["c_stick_x"][idx].item(),
+        inputs["c_stick_y"][idx].item(),
     )
-    for button, state in controller_inputs.items():
-        controller.tilt_analog
-        controller.press_button
+    for button, state in inputs.items():
+        if button.startswith("button") and button != "button_none" and state[idx].item() == 1:
+            controller.press_button(getattr(melee.Button, button.upper()))
+            break
 
 
 def run_episode(local: bool, no_gui: bool, debug: bool, model_dir: str) -> None:
@@ -312,8 +311,8 @@ def run_episode(local: bool, no_gui: bool, debug: bool, model_dir: str) -> None:
             model_inputs = preprocess_inputs(frame_data_td, train_config.data, "p1", stats_by_feature_name)
             outputs: TensorDict = model(model_inputs)
             controller_inputs = postprocess_outputs(outputs)
+            send_controller_inputs(controller_1, controller_inputs)
 
-            melee.techskill.multishine(ai_state=gamestate.players[PLAYER_1_PORT], controller=controller_1)
             melee.techskill.multishine(ai_state=gamestate.players[PLAYER_2_PORT], controller=controller_2)
             i += 1
 
