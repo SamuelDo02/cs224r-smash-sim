@@ -16,6 +16,7 @@ from melee import enums
 from melee.menuhelper import MenuHelper
 from tensordict import TensorDict
 from training.zoo.preprocess.registry import InputPreprocessRegistry
+from training.zoo.preprocess.registry import OutputProcessingRegistry
 
 from hal.data.constants import IDX_BY_ACTION
 from hal.data.constants import IDX_BY_CHARACTER
@@ -251,6 +252,7 @@ def run_episode(local: bool, no_gui: bool, debug: bool, model_dir: str) -> None:
     model.eval()
     preprocess_inputs = InputPreprocessRegistry.get(train_config.embedding.input_preprocessing_fn)
     stats_by_feature_name = load_dataset_stats(train_config.data.stats_path)
+    postprocess_outputs = OutputProcessingRegistry.get(train_config.embedding.target_preprocessing_fn)
 
     # Container for sliding window of model inputs
     frame_data: DefaultDict[str, deque] = defaultdict(lambda: deque(maxlen=train_config.data.input_len))
@@ -278,9 +280,9 @@ def run_episode(local: bool, no_gui: bool, debug: bool, model_dir: str) -> None:
         if gamestate.menu_state in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
             extract_and_append_gamestate(gamestate=gamestate, frame_data=frame_data)
             frame_data_td = convert_frame_data_to_tensor_dict(frame_data)
-            inputs = preprocess_inputs(frame_data_td, train_config.data, "p1", stats_by_feature_name)
-            outputs = model(inputs)
-            # TODO(eric): convert outputs to controller presses
+            model_inputs = preprocess_inputs(frame_data_td, train_config.data, "p1", stats_by_feature_name)
+            outputs: TensorDict = model(model_inputs)
+            controller_inputs = postprocess_outputs(outputs)
 
             melee.techskill.multishine(ai_state=gamestate.players[PLAYER_1_PORT], controller=controller_1)
             melee.techskill.multishine(ai_state=gamestate.players[PLAYER_2_PORT], controller=controller_2)

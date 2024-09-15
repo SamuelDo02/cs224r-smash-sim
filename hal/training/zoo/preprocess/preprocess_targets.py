@@ -55,7 +55,7 @@ def preprocess_targets_v0(sample: TensorDict, player: Player) -> TensorDict:
 
 
 @OutputProcessingRegistry.register("targets_v0")
-def model_predictions_to_controller_inputs(pred: TensorDict) -> Dict[str, torch.Tensor]:
+def model_predictions_to_controller_inputs_v0(pred: TensorDict) -> Dict[str, torch.Tensor]:
     """
     Reverse the one-hot encoding of buttons and analog stick x, y values for a given player.
     """
