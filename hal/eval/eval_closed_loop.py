@@ -201,6 +201,16 @@ def convert_frame_data_to_tensor_dict(frame_data: DefaultDict[str, deque]) -> Te
     return TensorDict({k: torch.tensor(v) for k, v in frame_data.items()}, batch_size=(len(frame_data["frame"])))
 
 
+def pad_tensors(td: TensorDict, length: int) -> TensorDict:
+    """For models with fixed input length, pad with zeros.
+
+    Assumes tensors are of shape (T, D)."""
+    if td.shape[0] < length:
+        pad_size = length - td.shape[0]
+        return TensorDict({k: torch.nn.functional.pad(v, (0, 0, pad_size, 0)) for k, v in td.items()})
+    return td
+
+
 def send_controller_inputs(controller: melee.Controller, inputs: Dict[str, torch.Tensor], idx: int = -1) -> None:
     """
     Press buttons and tilt analog sticks given a dictionary of array-like values (length T for T future time steps).
@@ -287,55 +297,57 @@ def run_episode(local: bool, no_gui: bool, debug: bool, model_dir: str) -> None:
 
     # Main loop
     i = 0
-    while i < 10000:
-        # "step" to the next frame
-        gamestate = console.step()
-        if gamestate is None:
-            continue
+    with torch.no_grad():
+        while i < 10000:
+            # "step" to the next frame
+            gamestate = console.step()
+            if gamestate is None:
+                continue
 
-        # The console object keeps track of how long your bot is taking to process frames
-        #   And can warn you if it's taking too long
-        if console.processingtime * 1000 > 12:
-            print("WARNING: Last frame took " + str(console.processingtime * 1000) + "ms to process.")
+            # The console object keeps track of how long your bot is taking to process frames
+            #   And can warn you if it's taking too long
+            if console.processingtime * 1000 > 12:
+                print("WARNING: Last frame took " + str(console.processingtime * 1000) + "ms to process.")
 
-        print(f"frame {i}: {gamestate.menu_state=} {gamestate.submenu=}")
-        active_buttons = tuple(button for button, state in controller_1.current.button.items() if state == True)
-        print(f"Controller 1: {active_buttons=}")
-        active_buttons = tuple(button for button, state in controller_2.current.button.items() if state == True)
-        print(f"Controller 2: {active_buttons=}")
+            print(f"frame {i}: {gamestate.menu_state=} {gamestate.submenu=}")
+            active_buttons = tuple(button for button, state in controller_1.current.button.items() if state == True)
+            print(f"Controller 1: {active_buttons=}")
+            active_buttons = tuple(button for button, state in controller_2.current.button.items() if state == True)
+            print(f"Controller 2: {active_buttons=}")
 
-        # What menu are we in?
-        if gamestate.menu_state in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
-            extract_and_append_gamestate(gamestate=gamestate, frame_data=frame_data)
-            frame_data_td = convert_frame_data_to_tensor_dict(frame_data)
-            model_inputs = preprocess_inputs(frame_data_td, train_config.data, "p1", stats_by_feature_name)
-            # Unsqueeze batch dim
-            model_inputs = model_inputs.unsqueeze(0)
-            outputs: TensorDict = model(model_inputs)
-            controller_inputs = postprocess_outputs(outputs)
-            send_controller_inputs(controller_1, controller_inputs)
+            # What menu are we in?
+            if gamestate.menu_state in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
+                extract_and_append_gamestate(gamestate=gamestate, frame_data=frame_data)
+                frame_data_td = convert_frame_data_to_tensor_dict(frame_data)
+                model_inputs = preprocess_inputs(frame_data_td, train_config.data, "p1", stats_by_feature_name)
+                model_inputs = pad_tensors(model_inputs, train_config.data.input_len)
+                # Unsqueeze batch dim
+                model_inputs = model_inputs.unsqueeze(0)
+                outputs: TensorDict = model(model_inputs)
+                controller_inputs = postprocess_outputs(outputs)
+                send_controller_inputs(controller_1, controller_inputs)
 
-            melee.techskill.multishine(ai_state=gamestate.players[PLAYER_2_PORT], controller=controller_2)
-            i += 1
+                melee.techskill.multishine(ai_state=gamestate.players[PLAYER_2_PORT], controller=controller_2)
+                i += 1
 
-            # Log this frame's detailed info if we're in game
-            if log:
-                log.logframe(gamestate)
-                log.writeframe()
+                # Log this frame's detailed info if we're in game
+                if log:
+                    log.logframe(gamestate)
+                    log.writeframe()
 
-        else:
-            self_play_menu_helper(
-                gamestate=gamestate,
-                controller_1=controller_1,
-                controller_2=controller_2,
-                character_1=melee.Character.FOX,
-                character_2=melee.Character.FOX,
-                stage_selected=melee.Stage.BATTLEFIELD,
-            )
+            else:
+                self_play_menu_helper(
+                    gamestate=gamestate,
+                    controller_1=controller_1,
+                    controller_2=controller_2,
+                    character_1=melee.Character.FOX,
+                    character_2=melee.Character.FOX,
+                    stage_selected=melee.Stage.BATTLEFIELD,
+                )
 
-            # If we're not in game, don't log the frame
-            if log:
-                log.skipframe()
+                # If we're not in game, don't log the frame
+                if log:
+                    log.skipframe()
 
 
 if __name__ == "__main__":
