@@ -95,7 +95,10 @@ NUMERIC_FEATURES_V0 = tuple(
 def preprocess_inputs_v0(
     sample: TensorDict, data_config: DataConfig, ego: Player, stats: Dict[str, FeatureStats]
 ) -> TensorDict:
-    """Slice input sample to the input length."""
+    """Slice input sample to the input length.
+
+    Expects tensordict with shape (trajectory_len,)
+    """
     assert ego in VALID_PLAYERS
     trajectory_len = data_config.input_len + data_config.target_len
 
@@ -111,7 +114,7 @@ def preprocess_inputs_v0(
     )
 
     categorical_features["gamestate"] = gamestate
-    return TensorDict(categorical_features, batch_size=(trajectory_len,))
+    return TensorDict(categorical_features, batch_size=(len(gamestate),))
 
 
 NORMALIZATION_FN_BY_FEATURE_V1: Dict[str, NormalizationFn] = {

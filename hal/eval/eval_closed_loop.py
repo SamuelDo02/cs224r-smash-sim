@@ -198,7 +198,7 @@ def extract_and_append_gamestate(gamestate: melee.GameState, frame_data: Default
 
 
 def convert_frame_data_to_tensor_dict(frame_data: DefaultDict[str, deque]) -> TensorDict:
-    return TensorDict({k: torch.tensor(v) for k, v in frame_data.items()})
+    return TensorDict({k: torch.tensor(v) for k, v in frame_data.items()}, batch_size=(len(frame_data["frame"])))
 
 
 def send_controller_inputs(controller: melee.Controller, inputs: Dict[str, torch.Tensor], idx: int = -1) -> None:
@@ -309,6 +309,8 @@ def run_episode(local: bool, no_gui: bool, debug: bool, model_dir: str) -> None:
             extract_and_append_gamestate(gamestate=gamestate, frame_data=frame_data)
             frame_data_td = convert_frame_data_to_tensor_dict(frame_data)
             model_inputs = preprocess_inputs(frame_data_td, train_config.data, "p1", stats_by_feature_name)
+            # Unsqueeze batch dim
+            model_inputs = model_inputs.unsqueeze(0)
             outputs: TensorDict = model(model_inputs)
             controller_inputs = postprocess_outputs(outputs)
             send_controller_inputs(controller_1, controller_inputs)
