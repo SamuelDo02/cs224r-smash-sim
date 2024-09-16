@@ -306,10 +306,10 @@ def run_episode(local: bool, no_gui: bool, debug: bool, model_dir: str) -> None:
     with console_manager(console, log):
         i = 0
         while i < 10000:
-            # "step" to the next frame
             gamestate = console.step()
             if gamestate is None:
-                continue
+                logger.info("Gamestate is None")
+                break
 
             # The console object keeps track of how long your bot is taking to process frames
             #   And can warn you if it's taking too long
@@ -325,7 +325,20 @@ def run_episode(local: bool, no_gui: bool, debug: bool, model_dir: str) -> None:
                 logger.info(f"Controller 2: {p2_active_buttons=}")
 
             # What menu are we in?
-            if gamestate.menu_state in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
+            if gamestate.menu_state not in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
+                self_play_menu_helper(
+                    gamestate=gamestate,
+                    controller_1=controller_1,
+                    controller_2=controller_2,
+                    character_1=melee.Character.FOX,
+                    character_2=melee.Character.FOX,
+                    stage_selected=melee.Stage.BATTLEFIELD,
+                )
+
+                # If we're not in game, don't log the frame
+                if log:
+                    log.skipframe()
+            else:
                 extract_and_append_gamestate(gamestate=gamestate, frame_data=frame_data)
                 frame_data_td = convert_frame_data_to_tensor_dict(frame_data)
                 model_inputs = preprocess_inputs(frame_data_td, train_config.data, "p1", stats_by_feature_name)
@@ -343,20 +356,6 @@ def run_episode(local: bool, no_gui: bool, debug: bool, model_dir: str) -> None:
                 if log:
                     log.logframe(gamestate)
                     log.writeframe()
-
-            else:
-                self_play_menu_helper(
-                    gamestate=gamestate,
-                    controller_1=controller_1,
-                    controller_2=controller_2,
-                    character_1=melee.Character.FOX,
-                    character_2=melee.Character.FOX,
-                    stage_selected=melee.Stage.BATTLEFIELD,
-                )
-
-                # If we're not in game, don't log the frame
-                if log:
-                    log.skipframe()
 
 
 if __name__ == "__main__":
