@@ -35,6 +35,11 @@ def union(array_1: torch.Tensor, array_2: torch.Tensor) -> torch.Tensor:
 def normalize_and_embed_fourier(array: torch.Tensor, stats: FeatureStats, dim: int = 8) -> torch.Tensor:
     """Normalize then embed values at various frequencies."""
     normalized = normalize(array, stats)
-    frequencies = 1024 * torch.linspace(0, -torch.tensor(10000.).log(), dim // 2).exp()
+    frequencies = 1024 * torch.linspace(0, -torch.tensor(10000.0).log(), dim // 2).exp()
     emb = normalized.view(-1, 1) * frequencies
     return torch.cat([torch.sin(emb), torch.cos(emb)], dim=-1)
+
+
+def offset(array: torch.Tensor, stats: FeatureStats) -> torch.Tensor:
+    """Hard-coded offset for debugging frame."""
+    return array + 123

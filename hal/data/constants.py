@@ -78,6 +78,8 @@ INCLUDED_BUTTONS: Tuple[str, ...] = (
 
 VALID_PLAYERS: Final[Tuple[str, str]] = ("p1", "p2")
 
+REPLAY_UUID: Tuple[str] = ("replay_uuid",)
+FRAME: Tuple[str] = ("frame",)
 STAGE: Tuple[str, ...] = ("stage",)
 PLAYER_INPUT_FEATURES_TO_EMBED: Tuple[str, ...] = ("character", "action")
 PLAYER_INPUT_FEATURES_TO_NORMALIZE: Tuple[str, ...] = (

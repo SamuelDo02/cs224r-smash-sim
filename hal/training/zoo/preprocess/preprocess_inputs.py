@@ -6,10 +6,12 @@ import numpy as np
 import torch
 from tensordict import TensorDict
 
+from hal.data.constants import FRAME
 from hal.data.constants import PLAYER_INPUT_FEATURES_TO_EMBED
 from hal.data.constants import PLAYER_INPUT_FEATURES_TO_INVERT_AND_NORMALIZE
 from hal.data.constants import PLAYER_INPUT_FEATURES_TO_NORMALIZE
 from hal.data.constants import PLAYER_POSITION
+from hal.data.constants import REPLAY_UUID
 from hal.data.constants import STAGE
 from hal.data.constants import VALID_PLAYERS
 from hal.data.normalize import NormalizationFn
@@ -17,6 +19,7 @@ from hal.data.normalize import cast_int32
 from hal.data.normalize import invert_and_normalize
 from hal.data.normalize import normalize
 from hal.data.normalize import normalize_and_embed_fourier
+from hal.data.normalize import offset
 from hal.data.normalize import standardize
 from hal.data.stats import FeatureStats
 from hal.training.config import DataConfig
@@ -72,7 +75,7 @@ def _preprocess_categorical_features(
             perspective_feature_name = f"{prefix}_{feature}"  # e.g. "ego_character"
             processed_features[perspective_feature_name] = process_feature(feature, col_name)
 
-    for feature in STAGE:
+    for feature in STAGE + FRAME:
         processed_features[feature] = process_feature(feature, column_name=feature)
 
     return processed_features
@@ -148,6 +151,48 @@ def preprocess_inputs_v1(
         ego=ego,
         stats=stats,
         normalization_fn_by_feature_name=NORMALIZATION_FN_BY_FEATURE_V1,
+    )
+
+    categorical_features["gamestate"] = gamestate
+    return TensorDict(categorical_features, batch_size=(trajectory_len,))
+
+
+NORMALIZATION_FN_BY_FEATURE_DEBUG: Dict[str, NormalizationFn] = {
+    **dict.fromkeys(REPLAY_UUID, cast_int32),
+    **dict.fromkeys(FRAME, offset),
+    **dict.fromkeys(STAGE, cast_int32),
+    **dict.fromkeys(PLAYER_INPUT_FEATURES_TO_EMBED, cast_int32),
+    **dict.fromkeys(PLAYER_INPUT_FEATURES_TO_NORMALIZE, normalize),
+    **dict.fromkeys(PLAYER_INPUT_FEATURES_TO_INVERT_AND_NORMALIZE, invert_and_normalize),
+    **dict.fromkeys(PLAYER_POSITION, normalize),
+}
+
+NUMERIC_FEATURES_DEBUG = tuple(
+    PLAYER_INPUT_FEATURES_TO_NORMALIZE + PLAYER_INPUT_FEATURES_TO_INVERT_AND_NORMALIZE + PLAYER_POSITION
+)
+
+
+# extra input dimensions from Fourier embedding
+@InputPreprocessRegistry.register("inputs_debug", num_features=2 * (len(NUMERIC_FEATURES_DEBUG)))
+def preprocess_inputs_debug(
+    sample: TensorDict, data_config: DataConfig, ego: Player, stats: Dict[str, FeatureStats]
+) -> TensorDict:
+    """Slice input sample to the input length."""
+    assert ego in VALID_PLAYERS
+    trajectory_len = data_config.input_len + data_config.target_len
+
+    categorical_features = _preprocess_categorical_features(
+        sample[:trajectory_len],
+        ego=ego,
+        stats=stats,
+        normalization_fn_by_feature_name=NORMALIZATION_FN_BY_FEATURE_DEBUG,
+    )
+    gamestate = _preprocess_numeric_features(
+        sample=sample[:trajectory_len],
+        features_to_process=NUMERIC_FEATURES_DEBUG,
+        ego=ego,
+        stats=stats,
+        normalization_fn_by_feature_name=NORMALIZATION_FN_BY_FEATURE_DEBUG,
     )
 
     categorical_features["gamestate"] = gamestate
