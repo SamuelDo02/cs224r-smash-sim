@@ -2,7 +2,6 @@ from functools import partial
 from typing import Dict
 from typing import Tuple
 
-import numpy as np
 import torch
 from tensordict import TensorDict
 
@@ -63,9 +62,9 @@ def _preprocess_categorical_features(
     """Preprocess categorical features for both players."""
     opponent = _get_opponent(ego)
 
-    def process_feature(feature_name: str, column_name: str) -> np.ndarray:
+    def process_feature(feature_name: str, column_name: str) -> torch.Tensor:
         preprocess_fn: NormalizationFn = normalization_fn_by_feature_name[feature_name]
-        return preprocess_fn(sample[column_name], stats[column_name])[..., np.newaxis]
+        return preprocess_fn(sample[column_name], stats[column_name]).unsqueeze(-1)
 
     processed_features = {}
 
@@ -75,7 +74,7 @@ def _preprocess_categorical_features(
             perspective_feature_name = f"{prefix}_{feature}"  # e.g. "ego_character"
             processed_features[perspective_feature_name] = process_feature(feature, col_name)
 
-    for feature in STAGE + FRAME:
+    for feature in STAGE:
         processed_features[feature] = process_feature(feature, column_name=feature)
 
     return processed_features

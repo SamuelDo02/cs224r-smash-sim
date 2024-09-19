@@ -15,7 +15,7 @@
                 "--n_gpus",
                 "1",
                 "--arch",
-                "MLPDebug",
+                "GPTv1-4-4",
                 "--n_samples",
                 "524288",
                 "--n_val_samples",
@@ -25,11 +25,11 @@
                 "--report_len",
                 "65536",
                 "--data.input_len",
-                "30",
+                "64",
                 "--data.target_len",
-                "5",
+                "0",
                 "--embedding.input_preprocessing_fn",
-                "inputs_debug",
+                "inputs_v0",
                 "--debug",
             ]
         }
