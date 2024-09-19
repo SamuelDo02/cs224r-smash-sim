@@ -149,3 +149,4 @@ class MLPDebug(nn.Module):
 
 Arch.register("MLPv1", make_net=MLPBC, hidden_size=128, n_layer=4, dropout=0.1)
 Arch.register("MLPDebug", make_net=MLPDebug, hidden_size=128, n_layer=4, dropout=0.0)
+Arch.register("MLPDebug-512-8", make_net=MLPDebug, hidden_size=512, n_layer=8, dropout=0.0)
