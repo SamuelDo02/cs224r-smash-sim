@@ -43,11 +43,6 @@ class Trainer(torch.nn.Module, abc.ABC):
         return str(next(self.model.parameters()).device)
 
     @property
-    def artifact_dir(self) -> Path:
-        params = get_exp_name(self.config)
-        return get_artifact_dir(params)
-
-    @property
     def log_dir(self) -> Path:
         params = get_exp_name(self.config)
         return get_log_dir(params)
@@ -60,6 +55,7 @@ class Trainer(torch.nn.Module, abc.ABC):
         assert self.config.report_len % self.config.local_batch_size == 0
         assert self.config.n_samples % self.config.report_len == 0
         self.samples = 0
+        self.artifact_dir = get_artifact_dir(get_exp_name(self.config))
 
         model = Arch.get(self.config.arch, config=self.config)
         self.model = maybe_wrap_model_distributed(model)
