@@ -13,8 +13,6 @@ from torch.nn import functional as F
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader
 
-from hal.data.constants import STICK_XY_CLUSTER_CENTERS_V0
-from hal.data.constants import TARGET_FEATURES_TO_ONE_HOT_ENCODE
 from hal.training.config import TrainConfig
 from hal.training.distributed import get_world_size
 from hal.training.distributed import is_master
@@ -197,7 +195,7 @@ class Trainer(torch.nn.Module, abc.ABC):
         writer.log(loss_dict, step=step, commit=False)
 
 
-class CategoricalBCTrainer(Trainer):
+class CategoricalBCTrainer(Trainer, abc.ABC):
     """
     Trains behavior cloning with cross-entropy loss for all controller inputs.
     """
@@ -206,40 +204,15 @@ class CategoricalBCTrainer(Trainer):
         loss_dict: TensorDict = TensorDict({})
         loss_fns = {"buttons": F.cross_entropy, "main_stick": F.cross_entropy, "c_stick": F.cross_entropy}
 
-        # Calculate and log losses for each controller input
         for control, loss_fn in loss_fns.items():
-            # Calculate per-frame losses
-            frame_losses = loss_fn(pred[control], target[control], reduction="none")
-
-            # Loss for each class
-            for t in range(frame_losses.shape[1]):
-                if control == "buttons":
-                    loss_dict[f"_{control}_loss_{TARGET_FEATURES_TO_ONE_HOT_ENCODE[t]}"] = frame_losses[:, t].mean()
-                else:
-                    loss_dict[f"_{control}_loss_{STICK_XY_CLUSTER_CENTERS_V0[t]}"] = frame_losses[:, t].mean()
-            mean_loss = frame_losses.mean()
-            loss_dict[f"loss_{control}"] = mean_loss
+            frame_losses = loss_fn(pred[control], target[control])
+            loss_dict[f"loss_{control}"] = frame_losses
 
         return loss_dict
 
+    @abc.abstractmethod
     def _forward_loop(self, batch: TensorDict) -> TensorDict:
-        inputs: TensorDict = batch["inputs"]
-        targets: TensorDict = batch["targets"]
-
-        input_len = self.config.data.input_len
-        target_len = self.config.data.target_len
-
-        preds = []
-        for i in range(target_len):
-            pred = self.model(inputs[:, i : i + input_len])
-            preds.append(pred)
-
-        preds_td: TensorDict = torch.stack(preds, dim=1)  # type: ignore
-        targets_td = targets[:, input_len : input_len + target_len]
-
-        loss_by_head = self.loss(preds_td, targets_td)
-
-        return loss_by_head
+        ...
 
     def train_op(self, batch: TensorDict) -> MetricsDict:
         self.opt.zero_grad(set_to_none=True)

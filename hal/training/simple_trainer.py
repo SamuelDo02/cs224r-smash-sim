@@ -27,8 +27,9 @@ class SimpleTrainer(CategoricalBCTrainer):
         targets: TensorDict = batch["targets"]
 
         # No warm-up inputs, just next-token prediction for the entire sequence
-        preds = self.model(inputs)
-        loss_by_head = self.loss(preds, targets)
+        pred = self.model(inputs)
+        B, T, *_ = pred.shape
+        loss_by_head = self.loss(pred.reshape(B * T, -1).squeeze(), targets.reshape(B * T, -1).squeeze())
 
         return loss_by_head
 
