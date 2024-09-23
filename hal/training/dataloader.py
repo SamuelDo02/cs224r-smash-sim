@@ -4,6 +4,7 @@ from typing import Optional
 from typing import Tuple
 
 import torch
+from loguru import logger
 from tensordict import TensorDict
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
@@ -32,6 +33,7 @@ def create_tensordicts(data_config: DataConfig) -> Tuple[TensorDict, TensorDict]
     data_dir = Path(data_config.data_dir)
     tds: List[TensorDict] = []
     for split in ("train", "val"):
+        logger.info(f"Loading {split} dataset into shared memory")
         input_path = data_dir / f"{split}.parquet"
         td = load_filtered_parquet_as_tensordict(input_path, data_config)
         td.share_memory_()
