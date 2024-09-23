@@ -8,6 +8,7 @@ from typing import Iterator
 from typing import Union
 
 import torch
+from loguru import logger
 from tensordict import TensorDict
 from torch.nn import functional as F
 from torch.optim.lr_scheduler import CosineAnnealingLR
@@ -55,6 +56,7 @@ class Trainer(torch.nn.Module, abc.ABC):
         self.samples = 0
         self.artifact_dir = get_artifact_dir(get_exp_name(self.config))
 
+        logger.info(f"Initializing model {self.config.arch}")
         model = Arch.get(self.config.arch, config=self.config)
         self.model = maybe_wrap_model_distributed(model)
         self.opt = torch.optim.AdamW(
