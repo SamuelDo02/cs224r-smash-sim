@@ -38,8 +38,8 @@ class DataConfig:
     data_dir: str = "data/dev"
 
     # Number of input and target frames in example/rollout
-    input_len: int = 120
-    target_len: int = 5
+    input_len: int = 256
+    target_len: int = 0
     replay_filter: ReplayFilter = ReplayFilter()
     include_both_players: bool = False
     truncate_rollouts_to_replay_end: bool = False
@@ -69,7 +69,7 @@ class EmbeddingConfig:
 
     stage_embedding_dim: int = 4
     character_embedding_dim: int = 12
-    action_embedding_dim: int = 256
+    action_embedding_dim: int = 128
 
     num_stages: int = len(IDX_BY_STAGE)
     num_characters: int = len(IDX_BY_CHARACTER)
@@ -107,12 +107,12 @@ class TrainConfig(BaseConfig):
 
     # Hyperparams
     loss_fn: str = "ce"
-    local_batch_size: int = 1024
+    local_batch_size: int = 256
     lr: float = 3e-4
     n_samples: int = 2**24
-    n_val_samples: int = 2**16
+    n_val_samples: int = 2**18
     keep_ckpts: int = 8
-    report_len: int = 2**19
+    report_len: int = 2**18
     betas: Tuple[float, float] = (0.9, 0.999)
     eps: float = 1e-8
     wd: float = 1e-2
