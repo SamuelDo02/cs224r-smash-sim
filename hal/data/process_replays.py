@@ -160,9 +160,15 @@ def process_replay_batch(replay_paths: Tuple[str, ...], output_dir: str, min_fra
 
     output_file = Path(output_dir) / f"{batch_id}.parquet"
     output_file.parent.mkdir(parents=True, exist_ok=True)
+
+    combined_data = defaultdict(list)
     for frame_data in replay_data:
-        table = pa.Table.from_pydict(frame_data, schema=SCHEMA)
-        pq.write_table(table, output_file)
+        for key, value in frame_data.items():
+            combined_data[key].extend(value)
+
+    table = pa.Table.from_pydict(combined_data, schema=SCHEMA)
+    pq.write_table(table, output_file)
+    logger.trace(f"Wrote {len(replay_data)} replays to {output_file}")
 
 
 def write_dataset_incrementally(
