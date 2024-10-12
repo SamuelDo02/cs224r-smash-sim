@@ -12,16 +12,50 @@ autoflake==2.1.1
     # via -r requirements.in
 autotyping==23.3.0
     # via -r requirements.in
+azure-core==1.31.0
+    # via
+    #   azure-identity
+    #   azure-storage-blob
+    #   azure-storage-file-datalake
+azure-identity==1.19.0
+    # via mosaicml-streaming
+azure-storage-blob==12.23.1
+    # via
+    #   azure-storage-file-datalake
+    #   mosaicml-streaming
+azure-storage-file-datalake==12.17.0
+    # via mosaicml-streaming
+bcrypt==4.2.0
+    # via paramiko
 black==23.9.1
     # via -r requirements.in
+boto3==1.35.39
+    # via mosaicml-streaming
+botocore==1.35.39
+    # via
+    #   boto3
+    #   s3transfer
+brotli==1.1.0
+    # via mosaicml-streaming
 build==1.2.1
     # via pip-tools
+cachetools==5.5.0
+    # via
+    #   google-auth
+    #   nvitop
 certifi==2024.7.4
     # via
+    #   oci
     #   requests
     #   sentry-sdk
+cffi==1.17.1
+    # via
+    #   cryptography
+    #   pynacl
 charset-normalizer==3.3.2
     # via requests
+circuitbreaker==2.0.0
+    # via oci
 click==8.1.3
     # via
     #   -r requirements.in
@@ -29,11 +63,20 @@ click==8.1.3
     #   pip-tools
     #   wandb
 cloudpickle==3.0.0
-    # via
-    #   scalene
-    #   tensordict
+    # via tensordict
 contourpy==1.2.1
     # via matplotlib
+cramjam==2.8.4
+    # via python-snappy
+cryptography==43.0.1
+    # via
+    #   azure-identity
+    #   azure-storage-blob
+    #   msal
+    #   oci
+    #   paramiko
+    #   pyjwt
+    #   pyopenssl
 cycler==0.12.1
     # via matplotlib
 cython==0.29.37
@@ -42,26 +85,59 @@ docker-pycreds==0.4.0
     # via wandb
 filelock==3.15.1
     # via
+    #   huggingface-hub
     #   torch
+    #   transformers
     #   triton
 fonttools==4.53.0
     # via matplotlib
 fsspec==2024.6.0
-    # via torch
+    # via
+    #   huggingface-hub
+    #   torch
 gitdb==4.0.11
     # via gitpython
 gitpython==3.1.43
     # via wandb
+google-api-core==2.21.0
+    # via
+    #   google-cloud-core
+    #   google-cloud-storage
+google-auth==2.35.0
+    # via
+    #   google-api-core
+    #   google-cloud-core
+    #   google-cloud-storage
+google-cloud-core==2.4.1
+    # via google-cloud-storage
+google-cloud-storage==2.10.0
+    # via mosaicml-streaming
+google-crc32c==1.6.0
+    # via google-resumable-media
+google-resumable-media==2.7.2
+    # via google-cloud-storage
+googleapis-common-protos==1.65.0
+    # via google-api-core
+huggingface-hub==0.25.2
+    # via
+    #   tokenizers
+    #   transformers
 idna==3.7
     # via requests
 iniconfig==2.0.0
     # via pytest
+isodate==0.7.2
+    # via
+    #   azure-storage-blob
+    #   azure-storage-file-datalake
 isort==5.12.0
     # via -r requirements.in
 jinja2==3.1.4
+    # via torch
+jmespath==1.0.1
     # via
-    #   scalene
-    #   torch
+    #   boto3
+    #   botocore
 joblib==1.4.2
     # via scikit-learn
 kiwisolver==1.4.5
@@ -72,24 +148,29 @@ libcst==1.0.1
     #   autotyping
 loguru==0.7.2
     # via -r requirements.in
-markdown-it-py==3.0.0
-    # via rich
 markupsafe==2.1.5
     # via jinja2
 matplotlib==3.9.1
     # via
     #   -r requirements.in
+    #   mosaicml-streaming
     #   seaborn
-mdurl==0.1.2
-    # via markdown-it-py
 melee @ git+https://github.com/vladfi1/libmelee
     # via -r requirements.in
 more-itertools==10.3.0
     # via
     #   -r requirements.in
     #   yasoo
+mosaicml-streaming==0.9.0
+    # via -r requirements.in
 mpmath==1.3.0
     # via sympy
+msal==1.31.0
+    # via
+    #   azure-identity
+    #   msal-extensions
+msal-extensions==1.2.0
+    # via azure-identity
 mypy-extensions==1.0.0
     # via
     #   -r requirements.in
@@ -110,6 +191,7 @@ numpy==1.24.4
     #   seaborn
     #   tensordict
     #   torchvision
+    #   transformers
 nvidia-cublas-cu12==12.1.3.1
     # via
     #   nvidia-cudnn-cu12
@@ -133,10 +215,8 @@ nvidia-cusparse-cu12==12.1.0.106
     # via
     #   nvidia-cusolver-cu12
     #   torch
-nvidia-ml-py==12.555.43
-    # via scalene
-nvidia-ml-py3==7.352.0
-    # via scalene
+nvidia-ml-py==12.535.161
+    # via nvitop
 nvidia-nccl-cu12==2.20.5
     # via torch
 nvidia-nvjitlink-cu12==12.5.40
@@ -145,18 +225,26 @@ nvidia-nvjitlink-cu12==12.5.40
     #   nvidia-cusparse-cu12
 nvidia-nvtx-cu12==12.1.105
     # via torch
+nvitop==1.3.2
+    # via -r requirements.in
+oci==2.135.2
+    # via mosaicml-streaming
 packaging==22.0
     # via
     #   -r requirements.in
     #   black
     #   build
+    #   huggingface-hub
     #   matplotlib
     #   melee
     #   pytest
+    #   transformers
 pandas==2.1.0
     # via
     #   -r requirements.in
     #   seaborn
+paramiko==3.5.0
+    # via mosaicml-streaming
 pathspec==0.11.1
     # via
     #   -r requirements.in
@@ -174,11 +262,19 @@ platformdirs==3.2.0
     #   wandb
 pluggy==1.5.0
     # via pytest
+portalocker==2.10.1
+    # via msal-extensions
+proto-plus==1.24.0
+    # via google-api-core
 protobuf==5.27.2
-    # via wandb
+    # via
+    #   google-api-core
+    #   googleapis-common-protos
+    #   proto-plus
+    #   wandb
 psutil==6.0.0
     # via
-    #   scalene
+    #   nvitop
     #   wandb
 py-ubjson==0.16.1
     # via melee
@@ -186,16 +282,28 @@ pyarrow==14.0.2
     # via -r requirements.in
 pyarrow-hotfix==0.6
     # via -r requirements.in
+pyasn1==0.6.1
+    # via
+    #   pyasn1-modules
+    #   rsa
+pyasn1-modules==0.4.1
+    # via google-auth
 pybind11==2.10.4
     # via -r requirements.in
-pyenet==1.3.17
+pycparser==2.22
+    # via cffi
+pyenet @ git+https://github.com/piqueserver/pyenet
     # via melee
 pyflakes==3.0.1
     # via
     #   -r requirements.in
     #   autoflake
-pygments==2.18.0
-    # via rich
+pyjwt[crypto]==2.9.0
+    # via msal
+pynacl==1.5.0
+    # via paramiko
+pyopenssl==24.2.1
+    # via oci
 pyparsing==3.1.2
     # via matplotlib
 pyproject-hooks==1.1.0
@@ -206,21 +314,40 @@ pytest==8.2.2
     # via -r requirements.in
 python-dateutil==2.9.0.post0
     # via
+    #   botocore
     #   matplotlib
+    #   oci
     #   pandas
+python-snappy==0.7.3
+    # via mosaicml-streaming
 pytz==2024.1
-    # via pandas
+    # via
+    #   oci
+    #   pandas
 pyyaml==6.0
     # via
     #   -r requirements.in
+    #   huggingface-hub
     #   libcst
+    #   transformers
     #   wandb
+regex==2024.9.11
+    # via transformers
 requests==2.32.3
-    # via wandb
-rich==13.7.1
-    # via scalene
-scalene==1.5.42.2
-    # via -r requirements.in
+    # via
+    #   azure-core
+    #   google-api-core
+    #   google-cloud-storage
+    #   huggingface-hub
+    #   msal
+    #   transformers
+    #   wandb
+rsa==4.9
+    # via google-auth
+s3transfer==0.10.3
+    # via boto3
+safetensors==0.4.5
+    # via transformers
 scikit-learn==1.5.1
     # via -r requirements.in
 scipy==1.14.0
@@ -233,16 +360,23 @@ setproctitle==1.3.3
     # via wandb
 six==1.16.0
     # via
+    #   azure-core
     #   docker-pycreds
     #   python-dateutil
 smmap==5.0.1
     # via gitdb
 sympy==1.12.1
     # via torch
+tabulate==0.9.0
+    # via -r requirements.in
 tensordict==0.4.0
     # via -r requirements.in
+termcolor==2.5.0
+    # via nvitop
 threadpoolctl==3.5.0
     # via scikit-learn
+tokenizers==0.20.1
+    # via transformers
 toml==0.10.2
     # via -r requirements.in
 tomli==2.0.1
@@ -250,17 +384,31 @@ tomli==2.0.1
 torch==2.3.0
     # via
     #   -r requirements.in
+    #   mosaicml-streaming
     #   tensordict
     #   torchvision
 torchvision==0.18.0
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   mosaicml-streaming
 tqdm==4.66.4
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   huggingface-hub
+    #   mosaicml-streaming
+    #   transformers
+transformers==4.45.2
+    # via mosaicml-streaming
 triton==2.3.0
     # via torch
 typing-extensions==4.9.0
     # via
     #   -r requirements.in
+    #   azure-core
+    #   azure-identity
+    #   azure-storage-blob
+    #   azure-storage-file-datalake
+    #   huggingface-hub
     #   libcst
     #   torch
     #   typing-inspect
@@ -272,6 +420,7 @@ tzdata==2024.1
     # via pandas
 urllib3==2.2.2
     # via
+    #   botocore
     #   requests
     #   sentry-sdk
 wandb==0.17.4
@@ -280,9 +429,12 @@ wheel==0.38.4
     # via
     #   -r requirements.in
     #   pip-tools
-    #   scalene
+xxhash==3.5.0
+    # via mosaicml-streaming
 yasoo==0.12.6
     # via -r requirements.in
+zstd==1.5.5.1
+    # via mosaicml-streaming
 
 # The following packages are considered to be unsafe in a requirements file:
 # pip
