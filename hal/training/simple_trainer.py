@@ -34,11 +34,7 @@ class SimpleTrainer(CategoricalBCTrainer):
 
 
 @auto_distribute
-def main(
-    train_config: TrainConfig,
-    train_td: TensorDict,
-    val_td: TensorDict,
-) -> None:
+def main(train_config: TrainConfig) -> None:
     rank = get_device_id()
     seed = train_config.seed + rank
     random.seed(seed)
