@@ -10,8 +10,8 @@ from hal.training.config import DataConfig
 from hal.training.config import EmbeddingConfig
 from hal.training.dataloader import create_tensordicts
 from hal.training.dataset import InMemoryTensordictDataset
-from hal.training.zoo.preprocess.preprocess_inputs import NUMERIC_FEATURES_V0
-from hal.training.zoo.preprocess.preprocess_inputs import preprocess_inputs_v0
+from hal.training.preprocess.preprocess_inputs import NUMERIC_FEATURES_V0
+from hal.training.preprocess.preprocess_inputs import preprocess_inputs_v0
 
 players = ["p1", "p2"]
 cols = []

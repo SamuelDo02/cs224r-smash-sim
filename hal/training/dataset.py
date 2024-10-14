@@ -16,8 +16,8 @@ from hal.data.stats import load_dataset_stats
 from hal.training.config import DataConfig
 from hal.training.config import EmbeddingConfig
 from hal.training.utils import pyarrow_table_to_tensordict
-from hal.training.zoo.preprocess.registry import InputPreprocessRegistry
-from hal.training.zoo.preprocess.registry import TargetPreprocessRegistry
+from hal.training.preprocess.registry import InputPreprocessRegistry
+from hal.training.preprocess.registry import TargetPreprocessRegistry
 
 
 def _create_filters_from_replay_filter(data_config: DataConfig) -> Optional[List[List[Tuple[str, str, Any]]]]:

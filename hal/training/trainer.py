@@ -26,10 +26,10 @@ from hal.training.io import get_artifact_dir
 from hal.training.io import get_exp_name
 from hal.training.io import get_log_dir
 from hal.training.io import log_if_master
+from hal.training.models.registry import Arch
 from hal.training.utils import repeater
 from hal.training.utils import report_module_weights
 from hal.training.utils import time_format
-from hal.training.zoo.models.registry import Arch
 
 MetricsDict = Dict[str, float]
 

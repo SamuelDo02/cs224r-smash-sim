@@ -12,7 +12,7 @@ import torch
 from tensordict import TensorDict
 
 from hal.training.config import EmbeddingConfig
-from hal.training.zoo.preprocess.registry import InputPreprocessRegistry
+from hal.training.preprocess.registry import InputPreprocessRegistry
 
 T = TypeVar("T")
 

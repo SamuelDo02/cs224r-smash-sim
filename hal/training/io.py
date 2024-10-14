@@ -14,17 +14,17 @@ from typing import Type
 import attr
 import torch
 import torch.nn
+import wandb
 from loguru import logger
 from tensordict import TensorDict
 from yasoo import deserialize
 from yasoo import serialize
 
-import wandb
 from hal.training.config import BaseConfig
 from hal.training.config import TrainConfig
 from hal.training.distributed import is_master
+from hal.training.models.registry import Arch
 from hal.training.utils import get_git_repo_root
-from hal.training.zoo.models.registry import Arch
 
 
 def get_path_friendly_datetime() -> str:

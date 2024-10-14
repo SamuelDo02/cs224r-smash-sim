@@ -22,8 +22,8 @@ from hal.data.normalize import offset
 from hal.data.normalize import standardize
 from hal.data.stats import FeatureStats
 from hal.training.config import DataConfig
-from hal.training.zoo.preprocess.registry import InputPreprocessRegistry
-from hal.training.zoo.preprocess.registry import Player
+from hal.training.preprocess.registry import InputPreprocessRegistry
+from hal.training.preprocess.registry import Player
 
 
 def _get_opponent(player: Player) -> Player:

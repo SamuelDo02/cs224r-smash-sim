@@ -29,8 +29,8 @@ from hal.eval.emulator_paths import REMOTE_CISO_PATH
 from hal.eval.emulator_paths import REMOTE_DOLPHIN_HOME_PATH
 from hal.eval.emulator_paths import REMOTE_EMULATOR_PATH
 from hal.training.io import load_model_from_artifact_dir
-from hal.training.zoo.preprocess.registry import InputPreprocessRegistry
-from hal.training.zoo.preprocess.registry import OutputProcessingRegistry
+from hal.training.preprocess.registry import InputPreprocessRegistry
+from hal.training.preprocess.registry import OutputProcessingRegistry
 
 PLAYER_1_PORT = 1
 PLAYER_2_PORT = 2

@@ -8,8 +8,8 @@ from tensordict import TensorDict
 from torch.nn import functional as F
 
 from hal.training.config import TrainConfig
+from hal.training.models.registry import Arch
 from hal.training.utils import get_input_size_from_config
-from hal.training.zoo.models.registry import Arch
 
 
 @attr.s(auto_attribs=True, frozen=True)

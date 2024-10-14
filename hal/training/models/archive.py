@@ -11,7 +11,7 @@ from hal.data.constants import CHARACTER_BY_IDX
 from hal.data.constants import INCLUDED_BUTTONS
 from hal.data.constants import STAGE_BY_IDX
 from hal.data.constants import STICK_XY_CLUSTER_CENTERS_V0
-from hal.training.zoo.models.registry import Arch
+from hal.training.models.registry import Arch
 
 
 # TODO: programmatically pass input size

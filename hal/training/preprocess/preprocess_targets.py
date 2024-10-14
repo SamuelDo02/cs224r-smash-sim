@@ -7,12 +7,12 @@ from tensordict import TensorDict
 from hal.data.constants import STICK_XY_CLUSTER_CENTERS_V0
 from hal.data.constants import VALID_PLAYERS
 from hal.data.normalize import union
-from hal.training.zoo.preprocess.encoding import get_closest_stick_xy_cluster_v0
-from hal.training.zoo.preprocess.encoding import one_hot_2d
-from hal.training.zoo.preprocess.encoding import one_hot_from_int
-from hal.training.zoo.preprocess.registry import OutputProcessingRegistry
-from hal.training.zoo.preprocess.registry import Player
-from hal.training.zoo.preprocess.registry import TargetPreprocessRegistry
+from hal.training.preprocess.encoding import get_closest_stick_xy_cluster_v0
+from hal.training.preprocess.encoding import one_hot_2d
+from hal.training.preprocess.encoding import one_hot_from_int
+from hal.training.preprocess.registry import OutputProcessingRegistry
+from hal.training.preprocess.registry import Player
+from hal.training.preprocess.registry import TargetPreprocessRegistry
 
 
 @TargetPreprocessRegistry.register("targets_v0")

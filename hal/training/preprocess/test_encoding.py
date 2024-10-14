@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from numpy.testing import assert_array_equal
 
-from hal.training.zoo.preprocess.encoding import one_hot_2d
+from hal.training.preprocess.encoding import one_hot_2d
 
 
 @pytest.mark.parametrize(

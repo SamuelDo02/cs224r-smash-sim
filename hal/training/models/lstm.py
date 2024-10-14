@@ -7,8 +7,8 @@ import torch.nn as nn
 from tensordict import TensorDict
 
 from hal.training.config import TrainConfig
+from hal.training.models.registry import Arch
 from hal.training.utils import get_input_size_from_config
-from hal.training.zoo.models.registry import Arch
 
 
 class MLP(nn.Module):
