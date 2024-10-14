@@ -8,7 +8,7 @@ from tensordict import TensorDict
 from hal.data.stats import load_dataset_stats
 from hal.training.config import DataConfig
 from hal.training.config import EmbeddingConfig
-from hal.training.dataset import InMemoryTensordictDataset
+from hal.training.deprecated.dataset import InMemoryTensordictDataset
 from hal.training.deprecated.tensordict_dataloader import create_tensordicts
 from hal.training.preprocess.preprocess_inputs import NUMERIC_FEATURES_V0
 from hal.training.preprocess.preprocess_inputs import preprocess_inputs_v0

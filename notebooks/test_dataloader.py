@@ -6,7 +6,7 @@ import numpy as np
 from hal.training.config import DataConfig
 from hal.training.config import DataworkerConfig
 from hal.training.config import TrainConfig
-from hal.training.dataset import MmappedParquetDataset
+from hal.training.deprecated.dataset import MmappedParquetDataset
 from hal.training.deprecated.tensordict_dataloader import create_tensordict_dataloaders
 
 # %%

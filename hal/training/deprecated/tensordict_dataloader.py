@@ -14,8 +14,8 @@ from torch.utils.data import Sampler
 
 from hal.training.config import DataConfig
 from hal.training.config import TrainConfig
-from hal.training.dataset import InMemoryTensordictDataset
-from hal.training.dataset import load_filtered_parquet_as_tensordict
+from hal.training.deprecated.dataset import InMemoryTensordictDataset
+from hal.training.deprecated.dataset import load_filtered_parquet_as_tensordict
 
 
 class RepeatFirstBatchSampler(Sampler):
