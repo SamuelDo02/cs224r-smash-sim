@@ -7,7 +7,7 @@ from training.config import DataworkerConfig
 from training.config import TrainConfig
 from training.dataset import MmappedParquetDataset
 
-from hal.training.dataloader import create_dataloaders
+from hal.training.dataloader import create_tensordict_dataloaders
 
 # %%
 np.set_printoptions(threshold=np.inf)
@@ -26,7 +26,7 @@ train_config = TrainConfig(
     dataworker=DataworkerConfig(),
 )
 # %%
-train_loader, val_loader = create_dataloaders(train_config, rank=None, world_size=None)
+train_loader, val_loader = create_tensordict_dataloaders(train_config, rank=None, world_size=None)
 train_iter = iter(train_loader)
 # %%
 for i, (x, y) in enumerate(train_iter):

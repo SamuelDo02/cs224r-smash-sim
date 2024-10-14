@@ -13,7 +13,7 @@ from torch.utils.data import Sampler
 
 from hal.training.config import DataConfig
 from hal.training.config import TrainConfig
-from hal.training.dataset import InMemoryDataset
+from hal.training.dataset import InMemoryTensordictDataset
 from hal.training.dataset import load_filtered_parquet_as_tensordict
 
 
@@ -41,7 +41,7 @@ def create_tensordicts(data_config: DataConfig) -> Tuple[TensorDict, TensorDict]
     return tds[0], tds[1]
 
 
-def create_dataloaders(
+def create_tensordict_dataloaders(
     train_td: TensorDict, val_td: TensorDict, train_config: TrainConfig, rank: Optional[int], world_size: Optional[int]
 ) -> Tuple[DataLoader, DataLoader]:
     is_distributed = rank is not None and world_size is not None and world_size > 1
@@ -50,7 +50,7 @@ def create_dataloaders(
     for split in ("train", "val"):
         is_train = split == "train"
         # Dataset
-        dataset = InMemoryDataset(
+        dataset = InMemoryTensordictDataset(
             tensordict=train_td if is_train else val_td,
             stats_path=train_config.data.stats_path,
             data_config=train_config.data,

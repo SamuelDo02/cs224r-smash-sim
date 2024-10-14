@@ -5,7 +5,7 @@ from data.stats import load_dataset_stats
 from training.config import DataConfig
 from training.config import EmbeddingConfig
 from training.config import ReplayFilter
-from training.dataset import InMemoryDataset
+from training.dataset import InMemoryTensordictDataset
 from training.dataset import load_filtered_parquet_as_tensordict
 from training.zoo.preprocess.preprocess_inputs import preprocess_inputs_v0
 from training.zoo.preprocess.preprocess_targets import preprocess_targets_v0
@@ -25,7 +25,7 @@ preprocess_inputs_v0(td[:70], 60, "p1", stats)
 preprocess_targets_v0(td[:70], "p1")
 
 # %%
-dataset = InMemoryDataset(td, stats_path, data_config, EmbeddingConfig())
+dataset = InMemoryTensordictDataset(td, stats_path, data_config, EmbeddingConfig())
 
 # %%
 dataset[0]

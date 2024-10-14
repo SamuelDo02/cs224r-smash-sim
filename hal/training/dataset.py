@@ -69,7 +69,9 @@ def load_filtered_parquet_as_tensordict(
     return tensordict
 
 
-class InMemoryDataset(Dataset):
+class InMemoryTensordictDataset(Dataset):
+    """Deprecated"""
+
     def __init__(
         self,
         tensordict: TensorDict,

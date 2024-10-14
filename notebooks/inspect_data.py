@@ -9,7 +9,7 @@ from hal.data.stats import load_dataset_stats
 from hal.training.config import DataConfig
 from hal.training.config import EmbeddingConfig
 from hal.training.dataloader import create_tensordicts
-from hal.training.dataset import InMemoryDataset
+from hal.training.dataset import InMemoryTensordictDataset
 from hal.training.zoo.preprocess.preprocess_inputs import NUMERIC_FEATURES_V0
 from hal.training.zoo.preprocess.preprocess_inputs import preprocess_inputs_v0
 
@@ -25,7 +25,7 @@ data_dir = Path(data_config.data_dir)
 stats_path = data_dir / "stats.json"
 
 train_td, val_td = create_tensordicts(data_config)
-dataset = InMemoryDataset(train_td, stats_path, data_config, embed_config)
+dataset = InMemoryTensordictDataset(train_td, stats_path, data_config, embed_config)
 stats_by_feature_name = load_dataset_stats(stats_path)
 
 # %%

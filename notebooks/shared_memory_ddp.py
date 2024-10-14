@@ -9,7 +9,7 @@ from loguru import logger
 
 from hal.training.config import DataConfig
 from hal.training.config import TrainConfig
-from hal.training.dataset import InMemoryDataset
+from hal.training.dataset import InMemoryTensordictDataset
 from hal.training.dataset import load_filtered_parquet_as_tensordict
 from hal.training.distributed import print
 from hal.training.mem_utils import MemoryMonitor
@@ -49,7 +49,7 @@ def train() -> None:
     print(monitor.table())
 
     logger.info(f"Creating {split} dataloader")
-    dataset = InMemoryDataset(
+    dataset = InMemoryTensordictDataset(
         tensordict=td,
         stats_path=train_config.data.stats_path,
         data_config=train_config.data,
