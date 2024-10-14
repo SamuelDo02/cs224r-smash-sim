@@ -11,7 +11,7 @@ from torch.utils.data import Dataset
 
 from hal.data.constants import IDX_BY_CHARACTER_STR
 from hal.data.constants import IDX_BY_STAGE_STR
-from hal.data.schema import SCHEMA
+from hal.data.schema import PYARROW_SCHEMA
 from hal.data.stats import load_dataset_stats
 from hal.training.config import DataConfig
 from hal.training.config import EmbeddingConfig
@@ -62,7 +62,7 @@ def load_filtered_parquet_as_tensordict(
     data_config: DataConfig,
 ) -> TensorDict:
     filters = _create_filters_from_replay_filter(data_config) or None
-    table = pq.read_table(input_path, schema=SCHEMA, filters=filters)
+    table = pq.read_table(input_path, schema=PYARROW_SCHEMA, filters=filters)
     num_unique_replays = len(table["replay_uuid"].unique())
     logger.info(f"Loaded {num_unique_replays} replays from {input_path}")
     tensordict = pyarrow_table_to_tensordict(table)
