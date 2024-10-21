@@ -28,13 +28,22 @@ class HALStreamingDataset(StreamingDataset):
         self.stats_by_feature_name = load_dataset_stats(stats_path)
         self.data_config = data_config
         self.embed_config = embed_config
+        self.trajectory_len = data_config.input_len + data_config.target_len
 
         self.input_preprocessing_fn = InputPreprocessRegistry.get(self.embed_config.input_preprocessing_fn)
         self.target_preprocessing_fn = TargetPreprocessRegistry.get(self.embed_config.target_preprocessing_fn)
 
+    def get_td_from_sample(self, sample: dict) -> TensorDict:
+        episode_len = len(sample["frame"])
+        random_start_idx = random.randint(0, episode_len - self.trajectory_len)
+        return TensorDict(
+            {key: value[random_start_idx : random_start_idx + self.trajectory_len] for key, value in sample.items()},
+            batch_size=(self.trajectory_len,),
+        )
+
     def __getitem__(self, idx: int) -> TensorDict:
         sample = super().__getitem__(idx)
-        sample_td = TensorDict(sample)
+        sample_td = self.get_td_from_sample(sample)
 
         player_perspective = random.choice(VALID_PLAYERS)
         inputs = self.input_preprocessing_fn(
@@ -46,5 +55,6 @@ class HALStreamingDataset(StreamingDataset):
             {
                 "inputs": inputs,
                 "targets": targets,
-            }  # type: ignore
+            },
+            batch_size=(self.trajectory_len,),
         )

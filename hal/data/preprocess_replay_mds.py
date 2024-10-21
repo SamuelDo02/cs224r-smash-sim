@@ -156,7 +156,7 @@ def process_replay(replay_path: str) -> Optional[Dict[str, Any]]:
         for key, dtype in PYARROW_DTYPE_BY_COLUMN.items()
         if key in frame_data
     }
-    sample["replay_uuid"] = np.array([replay_uuid], dtype=np.int64)
+    sample["replay_uuid"] = np.array([replay_uuid] * len(frame_data["frame"]), dtype=np.int64)
     return sample
 
 

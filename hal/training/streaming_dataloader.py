@@ -1,10 +1,20 @@
 from pathlib import Path
+from typing import Sequence
 from typing import Tuple
 
+import torch
+from tensordict import TensorDict
 from torch.utils.data import DataLoader
 
 from hal.training.config import TrainConfig
 from hal.training.streaming_dataset import HALStreamingDataset
+
+
+def collate_tensordicts(batch: Sequence[TensorDict]) -> TensorDict:
+    # Custom collate function for TensorDict because PyTorch type routing doesn't know about it yet
+    # Assuming all items in the batch have the same keys
+    keys = batch[0].keys()
+    return TensorDict({key: torch.stack([item[key] for item in batch]) for key in keys})
 
 
 def get_dataloaders(config: TrainConfig) -> Tuple[DataLoader, DataLoader]:
@@ -30,7 +40,7 @@ def get_dataloaders(config: TrainConfig) -> Tuple[DataLoader, DataLoader]:
         stats_path=config.data.stats_path,
     )
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, collate_fn=collate_tensordicts)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, collate_fn=collate_tensordicts)
 
     return train_loader, val_loader
