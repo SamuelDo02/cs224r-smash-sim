@@ -177,7 +177,10 @@ def process_replays(
         if overwrite_existing and split_output_dir.exists():
             shutil.rmtree(split_output_dir)
         split_output_dir.mkdir(parents=True, exist_ok=True)
-        with MDSWriter(out=str(split_output_dir), columns=NP_DTYPE_STR_BY_COLUMN, compression="zstd") as out:
+        # Write larger shards to disk, data is repetitive so compression helps a lot
+        with MDSWriter(
+            out=str(split_output_dir), columns=NP_DTYPE_STR_BY_COLUMN, compression="zstd", size_limit=1 << 30
+        ) as out:
             with mp.Pool() as pool:
                 samples = pool.imap_unordered(process_replay, split_replay_paths)
                 for sample in tqdm(samples, total=len(split_replay_paths), desc=f"Processing {split} split"):
