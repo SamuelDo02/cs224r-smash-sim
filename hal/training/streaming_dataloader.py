@@ -12,7 +12,7 @@ from hal.training.streaming_dataset import HALStreamingDataset
 
 def collate_tensordicts(batch: Sequence[TensorDict]) -> TensorDict:
     # Custom collate function for TensorDict because PyTorch type routing doesn't know about it yet
-    # Assuming all items in the batch have the same keys
+    # Use tensordict's built-in compatibility with torch.stack
     return torch.stack(batch)  # type: ignore
 
 
@@ -43,17 +43,19 @@ def get_dataloaders(config: TrainConfig) -> Tuple[DataLoader, DataLoader]:
         train_dataset,
         batch_size=batch_size,
         collate_fn=collate_tensordicts,
-        num_workers=4,
+        num_workers=config.dataworker.data_workers_per_gpu,
         pin_memory=True,
         persistent_workers=True,
+        prefetch_factor=config.dataworker.prefetch_factor,
     )
     val_loader = DataLoader(
         val_dataset,
         batch_size=batch_size,
         collate_fn=collate_tensordicts,
-        num_workers=4,
+        num_workers=config.dataworker.data_workers_per_gpu,
         pin_memory=True,
         persistent_workers=True,
+        prefetch_factor=config.dataworker.prefetch_factor,
     )
 
     return train_loader, val_loader

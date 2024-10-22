@@ -55,7 +55,7 @@ class DataConfig:
 
 @attr.s(auto_attribs=True, frozen=True)
 class DataworkerConfig:
-    data_workers_per_gpu: int = 4
+    data_workers_per_gpu: int = 8
     prefetch_factor: int = 2
     collate_fn: Optional[str] = None
 
@@ -110,9 +110,9 @@ class TrainConfig(BaseConfig):
     local_batch_size: int = 64
     lr: float = 3e-4
     n_samples: int = 2**24
-    n_val_samples: int = 2**19
-    keep_ckpts: int = 2**4
-    report_len: int = 2**18
+    n_val_samples: int = 2**16
+    keep_ckpts: int = 2**3
+    report_len: int = 2**17
     betas: Tuple[float, float] = (0.9, 0.999)
     eps: float = 1e-8
     wd: float = 1e-2
