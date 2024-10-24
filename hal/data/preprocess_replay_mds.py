@@ -161,7 +161,12 @@ def process_replay(replay_path: str) -> Optional[Dict[str, Any]]:
 
 
 def process_replays(
-    replay_dir: str, output_dir: str, seed: int, max_replays: int = -1, overwrite_existing: bool = True
+    replay_dir: str,
+    output_dir: str,
+    seed: int,
+    max_replays: int = -1,
+    max_parallelism: int = 32,
+    overwrite_existing: bool = True,
 ) -> None:
     replay_paths = list(Path(replay_dir).rglob("*.slp"))
     if max_replays > 0:
@@ -181,7 +186,7 @@ def process_replays(
         with MDSWriter(
             out=str(split_output_dir), columns=NP_DTYPE_STR_BY_COLUMN, compression="zstd", size_limit=1 << 30
         ) as out:
-            with mp.Pool() as pool:
+            with mp.Pool(max_parallelism) as pool:
                 samples = pool.imap_unordered(process_replay, split_replay_paths)
                 for sample in tqdm(samples, total=len(split_replay_paths), desc=f"Processing {split} split"):
                     if sample is not None:
@@ -213,6 +218,9 @@ if __name__ == "__main__":
     parser.add_argument("--output_dir", required=True, help="Output directory for processed data")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility")
     parser.add_argument("--max_replays", type=int, default=-1, help="Maximum number of replays to process")
+    parser.add_argument(
+        "--max_parallelism", type=int, default=32, help="Maximum number of workers to process replays in parallel"
+    )
     parser.add_argument("--debug", action="store_true", help="Enable debug mode")
     args = parser.parse_args()
 
@@ -228,4 +236,5 @@ if __name__ == "__main__":
         output_dir=args.output_dir,
         seed=args.seed,
         max_replays=args.max_replays,
+        max_parallelism=args.max_parallelism,
     )

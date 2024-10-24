@@ -209,7 +209,7 @@ def pad_tensors(td: TensorDict, length: int) -> TensorDict:
     Assumes tensors are of shape (T, D)."""
     if td.shape[0] < length:
         pad_size = length - td.shape[0]
-        return TensorDict({k: torch.nn.functional.pad(v, (0, 0, pad_size, 0)) for k, v in td.items()})
+        return TensorDict({k: torch.nn.functional.pad(v, (pad_size, 0)) for k, v in td.items()}, batch_size=(length,))
     return td
 
 
@@ -305,6 +305,7 @@ def run_episode(local: bool, no_gui: bool, debug: bool, model_dir: str, idx: Opt
 
     # Main loop
     with console_manager(console, log):
+        logger.info("Starting episode")
         i = 0
         while i < 10000:
             gamestate = console.step()
@@ -340,17 +341,19 @@ def run_episode(local: bool, no_gui: bool, debug: bool, model_dir: str, idx: Opt
                 if log:
                     log.skipframe()
             else:
+                if i % 60 == 0:
+                    logger.info(f"frame {gamestate.frame}")
                 extract_and_append_gamestate(gamestate=gamestate, frame_data=frame_data)
                 frame_data_td = convert_frame_data_to_tensor_dict(frame_data)
-                model_inputs = preprocess_inputs(frame_data_td, train_config.data, "p1", stats_by_feature_name)
-                model_inputs = pad_tensors(model_inputs, train_config.data.input_len)
+                model_inputs = pad_tensors(frame_data_td, train_config.data.input_len)
+                model_inputs = preprocess_inputs(model_inputs, train_config.data, "p1", stats_by_feature_name)
                 # Unsqueeze batch dim
                 model_inputs = model_inputs.unsqueeze(0)
-                outputs: TensorDict = model(model_inputs)
+                outputs: TensorDict = model(model_inputs)[:, -1]
                 controller_inputs = postprocess_outputs(outputs)
                 send_controller_inputs(controller_1, controller_inputs)
 
-                melee.techskill.multishine(ai_state=gamestate.players[PLAYER_2_PORT], controller=controller_2)
+                # melee.techskill.multishine(ai_state=gamestate.players[PLAYER_2_PORT], controller=controller_2)
                 i += 1
 
                 # Log this frame's detailed info if we're in game
