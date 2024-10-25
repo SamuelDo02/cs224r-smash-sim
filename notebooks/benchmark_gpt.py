@@ -61,6 +61,15 @@ print(f"Time taken (cuda): {cuda_time} seconds")
 
 # %%
 print("Compiling model...")
-opt_model = torch.compile(model)
+opt_model = torch.compile(model, mode="reduce-overhead")
 
 # %%
+t0 = time.perf_counter()
+with torch.no_grad():
+    for tensor_dict in tensor_dicts:
+        tensor_dict = tensor_dict.to("cuda", non_blocking=False)
+        model(tensor_dict)
+        tensor_dict = tensor_dict.to("cpu", non_blocking=False)
+t1 = time.perf_counter()
+cuda_time = (t1 - t0) / N
+print(f"Time taken (torch.compile): {cuda_time} seconds")

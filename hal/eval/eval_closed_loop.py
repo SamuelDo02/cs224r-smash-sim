@@ -21,13 +21,10 @@ from tensordict import TensorDict
 from hal.data.constants import IDX_BY_ACTION
 from hal.data.constants import IDX_BY_CHARACTER
 from hal.data.constants import IDX_BY_STAGE
-from hal.eval.emulator_paths import LOCAL_CISO_PATH
-from hal.eval.emulator_paths import LOCAL_DOLPHIN_HOME_PATH
-from hal.eval.emulator_paths import LOCAL_GUI_EMULATOR_PATH
-from hal.eval.emulator_paths import LOCAL_HEADLESS_EMULATOR_PATH
 from hal.eval.emulator_paths import REMOTE_CISO_PATH
 from hal.eval.emulator_paths import REMOTE_DOLPHIN_HOME_PATH
 from hal.eval.emulator_paths import REMOTE_EMULATOR_PATH
+from hal.eval.emulator_paths import REMOTE_EVAL_REPLAY_DIR
 from hal.training.io import load_model_from_artifact_dir
 from hal.training.preprocess.registry import InputPreprocessRegistry
 from hal.training.preprocess.registry import OutputProcessingRegistry
@@ -36,31 +33,7 @@ PLAYER_1_PORT = 1
 PLAYER_2_PORT = 2
 
 
-def get_dolphin_home_path(local: bool) -> str:
-    if local:
-        return LOCAL_DOLPHIN_HOME_PATH
-    else:
-        return REMOTE_DOLPHIN_HOME_PATH
-
-
-def get_emulator_path(local: bool, no_gui: bool) -> str:
-    if local:
-        if no_gui:
-            return LOCAL_HEADLESS_EMULATOR_PATH
-        else:
-            return LOCAL_GUI_EMULATOR_PATH
-    else:
-        return REMOTE_EMULATOR_PATH
-
-
-def get_ciso_path(local: bool) -> str:
-    if local:
-        return LOCAL_CISO_PATH
-    else:
-        return REMOTE_CISO_PATH
-
-
-def get_console_kwargs(local: bool, no_gui: bool, debug: bool) -> Dict[str, Any]:
+def get_console_kwargs(no_gui: bool, debug: bool) -> Dict[str, Any]:
     headless_console_kwargs = (
         {
             "gfx_backend": "Null",
@@ -71,14 +44,17 @@ def get_console_kwargs(local: bool, no_gui: bool, debug: bool) -> Dict[str, Any]
         if no_gui
         else {}
     )
-    emulator_path = get_emulator_path(local=local, no_gui=no_gui)
-    dolphin_home_path = get_dolphin_home_path(local=local)
+    emulator_path = REMOTE_EMULATOR_PATH
+    dolphin_home_path = REMOTE_DOLPHIN_HOME_PATH
     Path(dolphin_home_path).mkdir(exist_ok=True, parents=True)
+    replay_dir = REMOTE_EVAL_REPLAY_DIR
+    Path(replay_dir).mkdir(exist_ok=True, parents=True)
     console_kwargs = {
         "path": emulator_path,
         "is_dolphin": True,
         "dolphin_home_path": dolphin_home_path,
         "tmp_home_directory": False,
+        "replay_dir": replay_dir,
         "blocking_input": True,
         **headless_console_kwargs,
     }
@@ -261,9 +237,8 @@ def console_manager(console: melee.Console, log: melee.Logger):
         logger.info("Shutting down cleanly...")
 
 
-@torch.no_grad()
 def run_episode(local: bool, no_gui: bool, debug: bool, model_dir: str, idx: Optional[int] = None) -> None:
-    console_kwargs = get_console_kwargs(local=local, no_gui=no_gui, debug=debug)
+    console_kwargs = get_console_kwargs(no_gui=no_gui, debug=debug)
     console = melee.Console(**console_kwargs)
     log = melee.Logger()
 
@@ -271,7 +246,7 @@ def run_episode(local: bool, no_gui: bool, debug: bool, model_dir: str, idx: Opt
     controller_2 = melee.Controller(console=console, port=PLAYER_2_PORT, type=melee.ControllerType.STANDARD)
 
     # Run the console
-    console.run(iso_path=get_ciso_path(local), dolphin_user_path=get_dolphin_home_path(local))
+    console.run(iso_path=REMOTE_CISO_PATH, dolphin_user_path=REMOTE_DOLPHIN_HOME_PATH)
     # Connect to the console
     logger.info("Connecting to console...")
     if not console.connect():
@@ -296,6 +271,8 @@ def run_episode(local: bool, no_gui: bool, debug: bool, model_dir: str, idx: Opt
 
     model, train_config = load_model_from_artifact_dir(Path(model_dir), idx=idx)
     model.eval()
+    model = model.to("cuda")
+    model = torch.compile(model, mode="default")
     preprocess_inputs = InputPreprocessRegistry.get(train_config.embedding.input_preprocessing_fn)
     stats_by_feature_name = load_dataset_stats(train_config.data.stats_path)
     postprocess_outputs = OutputProcessingRegistry.get(train_config.embedding.target_preprocessing_fn)
@@ -348,8 +325,9 @@ def run_episode(local: bool, no_gui: bool, debug: bool, model_dir: str, idx: Opt
                 model_inputs = pad_tensors(frame_data_td, train_config.data.input_len)
                 model_inputs = preprocess_inputs(model_inputs, train_config.data, "p1", stats_by_feature_name)
                 # Unsqueeze batch dim
-                model_inputs = model_inputs.unsqueeze(0)
-                outputs: TensorDict = model(model_inputs)[:, -1]
+                model_inputs = model_inputs.unsqueeze(0).to("cuda")
+                with torch.no_grad():
+                    outputs: TensorDict = model(model_inputs)[:, -1].to("cpu")
                 controller_inputs = postprocess_outputs(outputs)
                 send_controller_inputs(controller_1, controller_inputs)
 
