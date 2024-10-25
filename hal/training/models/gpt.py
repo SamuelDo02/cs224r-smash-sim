@@ -200,16 +200,15 @@ class GPTv1(nn.Module):
         ), f"Cannot forward sequence of length {T}, block size is only {self.context_length}"
         pos = torch.arange(0, T, dtype=torch.long, device=next(self.parameters()).device)  # shape (t)
 
-        # Embeddings
-        # TODO inference-time optimization: parallelize this somehow?
-        stage_emb = self.transformer.stage(inputs["stage"]).squeeze(-2)
-        ego_character_emb = self.transformer.character(inputs["ego_character"]).squeeze(-2)
-        opponent_character_emb = self.transformer.character(inputs["opponent_character"]).squeeze(-2)
-        ego_action_emb = self.transformer.action(inputs["ego_action"]).squeeze(-2)
-        opponent_action_emb = self.transformer.action(inputs["opponent_action"]).squeeze(-2)
-        gamestate = inputs["gamestate"]
         combined_inputs = torch.cat(
-            [stage_emb, ego_character_emb, opponent_character_emb, ego_action_emb, opponent_action_emb, gamestate],
+            [
+                self.transformer.stage(inputs["stage"]).squeeze(-2),
+                self.transformer.character(inputs["ego_character"]).squeeze(-2),
+                self.transformer.character(inputs["opponent_character"]).squeeze(-2),
+                self.transformer.action(inputs["ego_action"]).squeeze(-2),
+                self.transformer.action(inputs["opponent_action"]).squeeze(-2),
+                inputs["gamestate"],
+            ],
             dim=-1,
         )
         proj_inputs = self.transformer.proj_down(combined_inputs)
@@ -220,15 +219,12 @@ class GPTv1(nn.Module):
             x = block(x)
         x = self.transformer.ln_f(x)
 
-        button_logits = self.button_head(x).squeeze(-2)
-        main_stick_logits = self.main_stick_head(x).squeeze(-2)
-        c_stick_logits = self.c_stick_head(x).squeeze(-2)
-
-        # TODO inference-time mini-optimization: only forward the lm_head on the very last position
-        # logits = self.lm_head(x[:, [-1], :]) # note: using list [-1] to preserve the time dim
-
         return TensorDict(
-            {"buttons": button_logits, "main_stick": main_stick_logits, "c_stick": c_stick_logits},
+            {
+                "buttons": self.button_head(x).squeeze(-2),
+                "main_stick": self.main_stick_head(x).squeeze(-2),
+                "c_stick": self.c_stick_head(x).squeeze(-2),
+            },
             batch_size=(B, T),
         )
 
