@@ -13,20 +13,19 @@ from typing import Sequence
 
 import melee
 import torch
-from data.stats import load_dataset_stats
 from loguru import logger
 from melee import enums
 from melee.menuhelper import MenuHelper
 from tensordict import TensorDict
 
-from hal.data.constants import IDX_BY_ACTION
-from hal.data.constants import IDX_BY_CHARACTER
-from hal.data.constants import IDX_BY_STAGE
 from hal.data.schema import PYARROW_DTYPE_BY_COLUMN
+from hal.data.stats import load_dataset_stats
 from hal.eval.emulator_paths import REMOTE_CISO_PATH
 from hal.eval.emulator_paths import REMOTE_DOLPHIN_HOME_PATH
 from hal.eval.emulator_paths import REMOTE_EMULATOR_PATH
 from hal.eval.emulator_paths import REMOTE_EVAL_REPLAY_DIR
+from hal.eval.eval_helper import extract_and_append_gamestate
+from hal.eval.eval_helper import send_controller_inputs
 from hal.training.io import load_model_from_artifact_dir
 from hal.training.preprocess.registry import InputPreprocessRegistry
 from hal.training.preprocess.registry import OutputProcessingRegistry
@@ -35,7 +34,7 @@ PLAYER_1_PORT = 1
 PLAYER_2_PORT = 2
 
 
-def get_console_kwargs(no_gui: bool, debug: bool) -> Dict[str, Any]:
+def get_console_kwargs(no_gui: bool = True) -> Dict[str, Any]:
     headless_console_kwargs = (
         {
             "gfx_backend": "Null",
@@ -108,71 +107,6 @@ def self_play_menu_helper(
         MenuHelper.skip_postgame(controller=controller_1)
 
 
-def extract_and_append_gamestate(gamestate: melee.GameState, frame_data: DefaultDict[str, deque]) -> None:
-    """Extracts and appends gamestate data to sliding window."""
-    players = sorted(gamestate.players.items())
-    if len(players) != 2:
-        raise ValueError(f"Expected 2 players, got {len(players)}")
-
-    frame_data["frame"].append(gamestate.frame)
-    frame_data["stage"].append(IDX_BY_STAGE[gamestate.stage])
-
-    for i, (port, player_state) in enumerate(players, start=1):
-        prefix = f"p{i}"
-
-        # Player state data
-        player_data = {
-            "port": port,
-            "character": IDX_BY_CHARACTER[player_state.character],
-            "stock": player_state.stock,
-            "facing": int(player_state.facing),
-            "invulnerable": int(player_state.invulnerable),
-            "position_x": float(player_state.position.x),
-            "position_y": float(player_state.position.y),
-            "percent": player_state.percent,
-            "shield_strength": player_state.shield_strength,
-            "jumps_left": player_state.jumps_left,
-            "action": IDX_BY_ACTION[player_state.action],
-            "action_frame": player_state.action_frame,
-            "invulnerability_left": player_state.invulnerability_left,
-            "hitlag_left": player_state.hitlag_left,
-            "hitstun_left": player_state.hitstun_frames_left,
-            "on_ground": int(player_state.on_ground),
-            "speed_air_x_self": player_state.speed_air_x_self,
-            "speed_y_self": player_state.speed_y_self,
-            "speed_x_attack": player_state.speed_x_attack,
-            "speed_y_attack": player_state.speed_y_attack,
-            "speed_ground_x_self": player_state.speed_ground_x_self,
-        }
-
-        # ECB data
-        for ecb in ["bottom", "top", "left", "right"]:
-            player_data[f"ecb_{ecb}_x"] = getattr(player_state, f"ecb_{ecb}")[0]
-            player_data[f"ecb_{ecb}_y"] = getattr(player_state, f"ecb_{ecb}")[1]
-
-        # Append all player state data
-        for key, value in player_data.items():
-            frame_data[f"{prefix}_{key}"].append(value)
-
-        # Controller data (from current gamestate)
-        controller = gamestate.players[port].controller_state
-
-        # Button data
-        buttons = ["A", "B", "X", "Y", "Z", "START", "L", "R", "D_UP"]
-        for button in buttons:
-            frame_data[f"{prefix}_button_{button.lower()}"].append(
-                int(controller.button[getattr(melee.Button, f"BUTTON_{button}")])
-            )
-
-        # Stick and shoulder data
-        frame_data[f"{prefix}_main_stick_x"].append(float(controller.main_stick[0]))
-        frame_data[f"{prefix}_main_stick_y"].append(float(controller.main_stick[1]))
-        frame_data[f"{prefix}_c_stick_x"].append(float(controller.c_stick[0]))
-        frame_data[f"{prefix}_c_stick_y"].append(float(controller.c_stick[1]))
-        frame_data[f"{prefix}_l_shoulder"].append(float(controller.l_shoulder))
-        frame_data[f"{prefix}_r_shoulder"].append(float(controller.r_shoulder))
-
-
 def get_mock_framedata(seq_len: int) -> TensorDict:
     """Mock frame data for warming up compiled model."""
     return TensorDict({k: torch.zeros(seq_len) for k in PYARROW_DTYPE_BY_COLUMN}, batch_size=(seq_len,))
@@ -190,35 +124,6 @@ def pad_tensors(td: TensorDict, length: int) -> TensorDict:
         pad_size = length - td.shape[0]
         return TensorDict({k: torch.nn.functional.pad(v, (pad_size, 0)) for k, v in td.items()}, batch_size=(length,))
     return td
-
-
-def send_controller_inputs(controller: melee.Controller, inputs: Dict[str, torch.Tensor], idx: int = -1) -> None:
-    """
-    Press buttons and tilt analog sticks given a dictionary of array-like values (length T for T future time steps).
-
-    Args:
-        controller_inputs (Dict[str, torch.Tensor]): Dictionary of array-like values.
-        controller (melee.Controller): Controller object.
-        idx (int): Index in the arrays to send.
-    """
-    if idx >= 0:
-        assert idx < len(inputs["main_stick_x"])
-
-    controller.tilt_analog(
-        melee.Button.BUTTON_MAIN,
-        inputs["main_stick_x"][idx].item(),
-        inputs["main_stick_y"][idx].item(),
-    )
-    controller.tilt_analog(
-        melee.Button.BUTTON_C,
-        inputs["c_stick_x"][idx].item(),
-        inputs["c_stick_y"][idx].item(),
-    )
-    for button, state in inputs.items():
-        if button.startswith("button") and button != "button_none" and state[idx].item() == 1:
-            controller.press_button(getattr(melee.Button, button.upper()))
-            break
-    controller.flush()
 
 
 @contextmanager
@@ -239,8 +144,8 @@ def console_manager(console: melee.Console):
         logger.info("Shutting down cleanly...")
 
 
-def run_episode(local: bool, no_gui: bool, debug: bool, model_dir: str, idx: Optional[int] = None) -> None:
-    console_kwargs = get_console_kwargs(no_gui=no_gui, debug=debug)
+def run_episode(model_dir: str, no_gui: bool = True, idx: Optional[int] = None) -> None:
+    console_kwargs = get_console_kwargs(no_gui=no_gui)
     console = melee.Console(**console_kwargs)
 
     controller_1 = melee.Controller(console=console, port=PLAYER_1_PORT, type=melee.ControllerType.STANDARD)
@@ -341,9 +246,8 @@ def run_episode(local: bool, no_gui: bool, debug: bool, model_dir: str, idx: Opt
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run Melee in emulator")
-    parser.add_argument("--local", action="store_true", help="Run in local mode")
     parser.add_argument("--no-gui", action="store_true", help="Run without GUI")
     parser.add_argument("--debug", action="store_true", help="Run with debug mode")
     parser.add_argument("--model_dir", type=str, help="Path to model directory")
     args = parser.parse_args()
-    run_episode(local=args.local, no_gui=args.no_gui, debug=args.debug, model_dir=args.model_dir)
+    run_episode(model_dir=args.model_dir, no_gui=args.no_gui)
