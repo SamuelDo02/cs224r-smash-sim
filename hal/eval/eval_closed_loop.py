@@ -77,7 +77,6 @@ def self_play_menu_helper(
     elif gamestate.menu_state == enums.Menu.CHARACTER_SELECT:
         player_1 = gamestate.players[controller_1.port]
         player_1_character_selected = player_1.character == character_1
-        player_2 = gamestate.players[controller_2.port]
 
         if not player_1_character_selected:
             MenuHelper.choose_character(
@@ -223,7 +222,7 @@ def send_controller_inputs(controller: melee.Controller, inputs: Dict[str, torch
 
 
 @contextmanager
-def console_manager(console: melee.Console, log: melee.Logger):
+def console_manager(console: melee.Console):
     def signal_handler(sig, frame):
         raise KeyboardInterrupt
 
@@ -237,15 +236,12 @@ def console_manager(console: melee.Console, log: melee.Logger):
     finally:
         signal.signal(signal.SIGINT, original_handler)
         console.stop()
-        log.writelog()
-        logger.info(f"\nLog file created: {log.filename}")
         logger.info("Shutting down cleanly...")
 
 
 def run_episode(local: bool, no_gui: bool, debug: bool, model_dir: str, idx: Optional[int] = None) -> None:
     console_kwargs = get_console_kwargs(no_gui=no_gui, debug=debug)
     console = melee.Console(**console_kwargs)
-    log = melee.Logger()
 
     controller_1 = melee.Controller(console=console, port=PLAYER_1_PORT, type=melee.ControllerType.STANDARD)
     controller_2 = melee.Controller(console=console, port=PLAYER_2_PORT, type=melee.ControllerType.STANDARD)
@@ -296,7 +292,8 @@ def run_episode(local: bool, no_gui: bool, debug: bool, model_dir: str, idx: Opt
     frame_data: DefaultDict[str, deque] = defaultdict(lambda: deque(maxlen=train_config.data.input_len))
 
     # Main loop
-    with console_manager(console, log):
+    match_started = False
+    with console_manager(console):
         logger.info("Starting episode")
         i = 0
         while i < 10000:
@@ -310,16 +307,11 @@ def run_episode(local: bool, no_gui: bool, debug: bool, model_dir: str, idx: Opt
             if console.processingtime * 1000 > 12:
                 logger.info("WARNING: Last frame took " + str(console.processingtime * 1000) + "ms to process.")
 
-            # logger.info(f"frame {gamestate.frame}")
-            # p1_active_buttons = tuple(button for button, state in controller_1.current.button.items() if state == True)
-            # if p1_active_buttons:
-            #     logger.info(f"Controller 1: {p1_active_buttons=}")
-            # p2_active_buttons = tuple(button for button, state in controller_2.current.button.items() if state == True)
-            # if p2_active_buttons:
-            #     logger.info(f"Controller 2: {p2_active_buttons=}")
-
             # What menu are we in?
             if gamestate.menu_state not in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
+                if match_started:
+                    return
+
                 self_play_menu_helper(
                     gamestate=gamestate,
                     controller_1=controller_1,
@@ -328,12 +320,10 @@ def run_episode(local: bool, no_gui: bool, debug: bool, model_dir: str, idx: Opt
                     character_2=melee.Character.FOX,
                     stage_selected=melee.Stage.BATTLEFIELD,
                 )
-
-                # If we're not in game, don't log the frame
-                if log:
-                    log.skipframe()
             else:
-                if i % 60 == 0:
+                if not match_started:
+                    match_started = True
+                if gamestate.frame % 60 == 0:
                     logger.info(f"frame {gamestate.frame}")
                 extract_and_append_gamestate(gamestate=gamestate, frame_data=frame_data)
                 frame_data_td = convert_frame_data_to_tensor_dict(frame_data)
@@ -346,13 +336,7 @@ def run_episode(local: bool, no_gui: bool, debug: bool, model_dir: str, idx: Opt
                 controller_inputs = postprocess_outputs(outputs)
                 send_controller_inputs(controller_1, controller_inputs)
 
-                # melee.techskill.multishine(ai_state=gamestate.players[PLAYER_2_PORT], controller=controller_2)
                 i += 1
-
-                # Log this frame's detailed info if we're in game
-                if log:
-                    log.logframe(gamestate)
-                    log.writeframe()
 
 
 if __name__ == "__main__":
