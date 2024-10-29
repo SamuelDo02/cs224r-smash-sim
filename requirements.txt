@@ -155,7 +155,7 @@ matplotlib==3.9.1
     #   -r requirements.in
     #   mosaicml-streaming
     #   seaborn
-melee @ git+https://github.com/vladfi1/libmelee
+melee @ git+https://github.com/vladfi1/libmelee@b4a1a2585119bcedc398a512990dd9b95102eb74
     # via -r requirements.in
 more-itertools==10.3.0
     # via

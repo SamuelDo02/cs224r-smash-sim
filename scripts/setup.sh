@@ -6,14 +6,14 @@ Yellow='\033[0;33m'
 sudo apt-get update
 sudo apt-get install p7zip-full libasound2 libegl1 libgl1 libusb-1.0-0 libglib2.0-0 libgdk-pixbuf2.0-0 libpangocairo-1.0-0 libasound2-dev pkg-config libegl-dev libusb-1.0-0-dev -y
 
-PROJECT_DIR="/opt/projects"
+PROJECT_DIR="/opt/projects/hal2"
 EMULATOR_FILE_PATH="$PROJECT_DIR/emulator/Slippi_Online-Ubuntu20.04-Exi-x86_64.AppImage"
 cd $PROJECT_DIR
-git clone git@gitlab.com:ericyuegu/hal2.git
-cd hal2
+pushd "emulator"
 chmod +x $EMULATOR_FILE_PATH
 $EMULATOR_FILE_PATH --appimage-extract
 echo "${Yellow}Extracted emulator"
+popd
 
 if [ ! -d ".venv" ]; then
   python -m venv .venv
