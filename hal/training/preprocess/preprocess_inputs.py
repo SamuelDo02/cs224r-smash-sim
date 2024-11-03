@@ -115,8 +115,7 @@ def preprocess_inputs_v0(
         normalization_fn_by_feature_name=NORMALIZATION_FN_BY_FEATURE_V0,
     )
 
-    categorical_features["gamestate"] = gamestate
-    return TensorDict(categorical_features, batch_size=(trajectory_len,))
+    return TensorDict({**categorical_features, "gamestate": gamestate}, batch_size=(trajectory_len,))
 
 
 NORMALIZATION_FN_BY_FEATURE_V1: Dict[str, NormalizationFn] = {
@@ -152,8 +151,7 @@ def preprocess_inputs_v1(
         normalization_fn_by_feature_name=NORMALIZATION_FN_BY_FEATURE_V1,
     )
 
-    categorical_features["gamestate"] = gamestate
-    return TensorDict(categorical_features, batch_size=(trajectory_len,))
+    return TensorDict({**categorical_features, "gamestate": gamestate}, batch_size=(trajectory_len,))
 
 
 NORMALIZATION_FN_BY_FEATURE_DEBUG: Dict[str, NormalizationFn] = {
@@ -194,5 +192,4 @@ def preprocess_inputs_debug(
         normalization_fn_by_feature_name=NORMALIZATION_FN_BY_FEATURE_DEBUG,
     )
 
-    categorical_features["gamestate"] = gamestate
-    return TensorDict(categorical_features, batch_size=(trajectory_len,))
+    return TensorDict({**categorical_features, "gamestate": gamestate}, batch_size=(trajectory_len,))
