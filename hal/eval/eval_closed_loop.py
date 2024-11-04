@@ -3,13 +3,10 @@ import sys
 import time
 from multiprocessing.synchronize import Event as EventType
 from pathlib import Path
-from typing import Any
 from typing import Dict
 from typing import Generator
 from typing import List
-from typing import Mapping
 from typing import Optional
-from typing import Sequence
 
 import attr
 import melee
@@ -18,7 +15,6 @@ import torch.multiprocessing as mp
 from loguru import logger
 from tensordict import TensorDict
 
-from hal.data.schema import PYARROW_DTYPE_BY_COLUMN
 from hal.data.stats import FeatureStats
 from hal.data.stats import load_dataset_stats
 from hal.eval.emulator_helper import console_manager
@@ -26,7 +22,10 @@ from hal.eval.emulator_helper import get_console_kwargs
 from hal.eval.emulator_helper import self_play_menu_helper
 from hal.eval.emulator_paths import REMOTE_CISO_PATH
 from hal.eval.emulator_paths import REMOTE_DOLPHIN_HOME_PATH
+from hal.eval.eval_helper import mock_framedata_as_tensordict
+from hal.eval.eval_helper import mock_preds_as_tensordict
 from hal.eval.eval_helper import send_controller_inputs
+from hal.eval.eval_helper import share_and_pin_memory
 from hal.gamestate_utils import extract_gamestate_as_tensordict
 from hal.training.config import TrainConfig
 from hal.training.io import load_config_from_artifact_dir
@@ -40,25 +39,6 @@ mp.set_start_method("spawn", force=True)
 
 PLAYER_1_PORT = 1
 PLAYER_2_PORT = 2
-
-
-def get_mock_framedata(seq_len: int) -> TensorDict:
-    """Mock frame data for warming up compiled model."""
-    return TensorDict({k: torch.zeros(seq_len) for k in PYARROW_DTYPE_BY_COLUMN}, batch_size=(seq_len,))
-
-
-def convert_frame_data_to_tensor_dict(frame_data: Mapping[str, Sequence]) -> TensorDict:
-    return TensorDict({k: torch.tensor(v) for k, v in frame_data.items()}, batch_size=(len(frame_data["frame"])))
-
-
-def pad_tensors(td: TensorDict, length: int) -> TensorDict:
-    """For models with fixed input length, pad with zeros.
-
-    Assumes tensors are of shape (T, D)."""
-    if td.shape[0] < length:
-        pad_size = length - td.shape[0]
-        return TensorDict({k: torch.nn.functional.pad(v, (pad_size, 0)) for k, v in td.items()}, batch_size=(length,))
-    return td
 
 
 def run_episode(max_steps: int = 8 * 60 * 60) -> Generator[Optional[melee.GameState], TensorDict, None]:
@@ -138,8 +118,8 @@ def cpu_worker(
     rank: int,
     preprocess_inputs: InputPreprocessFn,
     postprocess_outputs: PredPostprocessFn,
-    model_input_ready_flags: EventType,
-    model_output_ready_flags: EventType,
+    model_input_ready_flag: EventType,
+    model_output_ready_flag: EventType,
     stop_event: EventType,
     train_config: TrainConfig,
     stats_by_feature_name: Dict[str, FeatureStats],
@@ -157,11 +137,12 @@ def cpu_worker(
         # Preprocess single frame
         data_config = attr.evolve(train_config.data, input_len=1, target_len=0)
         model_inputs = preprocess_inputs(gamestate_td, data_config, "p1", stats_by_feature_name)
-        shared_batched_model_input[rank].copy_(model_inputs)
-        model_input_ready_flags[rank].set()
+        sharded_model_input: TensorDict = shared_batched_model_input[rank]
+        sharded_model_input.update_(model_inputs, non_blocking=True)
+        model_input_ready_flag.set()
 
         # Wait for the output to be ready
-        while not model_output_ready_flags[rank].is_set() and not stop_event.is_set():
+        while not model_output_ready_flag.is_set() and not stop_event.is_set():
             time.sleep(0.0001)  # Sleep briefly to avoid busy waiting
 
         if stop_event.is_set():
@@ -173,7 +154,7 @@ def cpu_worker(
         emulator_generator.send(controller_inputs)
 
         # Clear the output ready flag for the next iteration
-        model_output_ready_flags[rank].clear()
+        model_output_ready_flag.clear()
 
     stop_event.set()
 
@@ -183,8 +164,8 @@ def gpu_worker(
     shared_batched_model_output: TensorDict,  # (n_workers,)
     model_input_ready_flags: List[EventType],
     model_output_ready_flags: List[EventType],
-    context_window_size: int,
-    stop_event: List[EventType],
+    seq_len: int,
+    stop_events: List[EventType],
     model_dir: str,
     device: torch.device | str,
     idx: Optional[int] = None,
@@ -198,8 +179,8 @@ def gpu_worker(
     model.to(device)
 
     # Stack along time dimension
-    # shape: (n_workers, context_window_size)
-    context_window: TensorDict = torch.stack([shared_batched_model_input[i] for i in range(context_window_size)], dim=-1).to(device)  # type: ignore
+    # shape: (n_workers, seq_len)
+    context_window: TensorDict = torch.stack([shared_batched_model_input for _ in range(seq_len)], dim=-1).to(device)  # type: ignore
 
     # Warmup CUDA graphs with dummy inputs
     logger.info("Compiling model...")
@@ -207,20 +188,18 @@ def gpu_worker(
     with torch.no_grad():
         model(context_window)
 
-    while not all(event.is_set() for event in stop_event):
+    while not all(event.is_set() for event in stop_events):
         # Wait for all CPU workers to signal that data is ready
         for flag in model_input_ready_flags:
-            while not flag.is_set() and not all(event.is_set() for event in stop_event):
+            while not flag.is_set() and not all(event.is_set() for event in stop_events):
                 time.sleep(0.0001)  # Sleep briefly to avoid busy waiting
 
-        if all(event.is_set() for event in stop_event):
+        if all(event.is_set() for event in stop_events):
             break
 
-        # Read data from shared tensor on cpu
-        batch_data = shared_batched_model_input.clone().to(device)  # (n_workers,)
         # Update the context window by rolling and adding new data
-        context_window[:, :-1] = context_window[:, 1:].clone()
-        context_window[:, -1] = batch_data
+        context_window[:, :-1] = context_window[:, 1:]
+        context_window[:, -1].copy_(shared_batched_model_input, non_blocking=True)
         with torch.no_grad():
             outputs: TensorDict = model(context_window)[:, -1]  # (n_workers,)
         # Write the output to shared_batched_model_output
@@ -236,12 +215,11 @@ def gpu_worker(
 
 
 def main(model_dir: str, n_workers: int, idx: Optional[int] = None) -> None:
-    # Set the multiprocessing start method
     mp.set_start_method("spawn")
 
     device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
     train_config: TrainConfig = load_config_from_artifact_dir(Path(model_dir))
+    seq_len = train_config.data.input_len
     preprocess_inputs = InputPreprocessRegistry.get(train_config.embedding.input_preprocessing_fn)
     stats_by_feature_name = load_dataset_stats(train_config.data.stats_path)
     postprocess_outputs = PredPostprocessingRegistry.get(train_config.embedding.target_preprocessing_fn)
@@ -252,22 +230,29 @@ def main(model_dir: str, n_workers: int, idx: Optional[int] = None) -> None:
     # Create events to signal when emulator episodes end
     stop_events: List[EventType] = [mp.Event() for _ in range(n_workers)]
 
-    # TODO: initialize
-    shared_batched_model_input: Any
-    shared_batched_model_output: Any
+    # Share and pin buffers in CPU memory for transferring model inputs and outputs
+    shared_batched_model_input: TensorDict = torch.stack(
+        [mock_framedata_as_tensordict(seq_len) for _ in range(n_workers)], dim=0  # type: ignore
+    )
+    shared_batched_model_input = share_and_pin_memory(shared_batched_model_input)
+    shared_batched_model_output: TensorDict = torch.stack(
+        [mock_preds_as_tensordict(train_config.embedding) for _ in range(n_workers)], dim=0  # type: ignore
+    )
+    shared_batched_model_output = share_and_pin_memory(shared_batched_model_output)
 
     gpu_process: mp.Process = mp.Process(
         target=gpu_worker,
-        args=(
-            shared_batched_model_input,
-            shared_batched_model_output,
-            model_input_ready_flags,
-            model_output_ready_flags,
-            train_config.data.input_len,
-            stop_events,
-            device,
-            idx,
-        ),
+        kwargs={
+            "shared_batched_model_input": shared_batched_model_input,
+            "shared_batched_model_output": shared_batched_model_output,
+            "model_input_ready_flags": model_input_ready_flags,
+            "model_output_ready_flags": model_output_ready_flags,
+            "seq_len": seq_len,
+            "stop_events": stop_events,
+            "model_dir": model_dir,
+            "device": device,
+            "idx": idx,
+        },
     )
     gpu_process.start()
 
@@ -275,18 +260,18 @@ def main(model_dir: str, n_workers: int, idx: Optional[int] = None) -> None:
     for i in range(n_workers):
         p: mp.Process = mp.Process(
             target=cpu_worker,
-            args=(
-                shared_batched_model_input,
-                shared_batched_model_output,
-                i,
-                preprocess_inputs,
-                postprocess_outputs,
-                model_input_ready_flags[i],
-                model_output_ready_flags[i],
-                stop_events[i],
-                train_config,
-                stats_by_feature_name,
-            ),
+            kwargs={
+                "shared_batched_model_input": shared_batched_model_input,
+                "shared_batched_model_output": shared_batched_model_output,
+                "rank": i,
+                "preprocess_inputs": preprocess_inputs,
+                "postprocess_outputs": postprocess_outputs,
+                "model_input_ready_flag": model_input_ready_flags[i],
+                "model_output_ready_flag": model_output_ready_flags[i],
+                "stop_event": stop_events[i],
+                "train_config": train_config,
+                "stats_by_feature_name": stats_by_feature_name,
+            },
         )
         cpu_processes.append(p)
         p.start()
