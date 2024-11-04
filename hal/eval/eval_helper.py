@@ -1,17 +1,16 @@
 from collections import deque
 from typing import DefaultDict
-from typing import Dict
 
 import melee
-import torch
 from loguru import logger
+from tensordict import TensorDict
 
 from hal.data.constants import IDX_BY_ACTION
 from hal.data.constants import IDX_BY_CHARACTER
 from hal.data.constants import IDX_BY_STAGE
 
 
-def send_controller_inputs(controller: melee.Controller, inputs: Dict[str, torch.Tensor], idx: int = -1) -> None:
+def send_controller_inputs(controller: melee.Controller, inputs: TensorDict, idx: int = -1) -> None:
     """
     Press buttons and tilt analog sticks given a dictionary of array-like values (length T for T future time steps).
 

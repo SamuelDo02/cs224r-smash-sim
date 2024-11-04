@@ -60,21 +60,21 @@ class TargetPreprocessRegistry:
         return decorator
 
 
-OutputPreprocessFn = Callable[[TensorDict], TensorDict]
+PredPostprocessFn = Callable[[TensorDict], TensorDict]
 
 
-class OutputProcessingRegistry:
-    EMBED: Dict[str, OutputPreprocessFn] = {}
+class PredPostprocessingRegistry:
+    EMBED: Dict[str, PredPostprocessFn] = {}
 
     @classmethod
-    def get(cls, name: str) -> OutputPreprocessFn:
+    def get(cls, name: str) -> PredPostprocessFn:
         if name in cls.EMBED:
             return cls.EMBED[name]
         raise NotImplementedError(f"Embedding fn {name} not found." f"Valid functions: {sorted(cls.EMBED.keys())}.")
 
     @classmethod
     def register(cls, name: str):
-        def decorator(embed_fn: OutputPreprocessFn):
+        def decorator(embed_fn: PredPostprocessFn):
             cls.EMBED[name] = embed_fn
             return embed_fn
 

@@ -1,15 +1,25 @@
+from collections import defaultdict
 from typing import Any
 from typing import DefaultDict
 from typing import MutableSequence
 from typing import Optional
 
 import melee
+import torch
+from tensordict import TensorDict
 
 from hal.data.constants import IDX_BY_ACTION
 from hal.data.constants import IDX_BY_CHARACTER
 from hal.data.constants import IDX_BY_STAGE
 
 FrameData = DefaultDict[str, MutableSequence[Any]]
+
+
+def extract_gamestate_as_tensordict(gamestate: melee.GameState) -> TensorDict:
+    # TODO: make this faster / more direct
+    frame_data: FrameData = defaultdict(list)
+    extract_and_append_gamestate_inplace(frame_data, gamestate)
+    return TensorDict({k: torch.tensor(v) for k, v in frame_data.items()})
 
 
 def extract_and_append_gamestate_inplace(

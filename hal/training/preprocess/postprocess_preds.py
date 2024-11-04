@@ -2,10 +2,10 @@ import torch
 from data.constants import STICK_XY_CLUSTER_CENTERS_V0
 from tensordict import TensorDict
 
-from hal.training.preprocess.registry import OutputProcessingRegistry
+from hal.training.preprocess.registry import PredPostprocessingRegistry
 
 
-@OutputProcessingRegistry.register("targets_v0")
+@PredPostprocessingRegistry.register("targets_v0")
 def model_predictions_to_controller_inputs_v0(pred: TensorDict) -> TensorDict:
     """
     Reverse the one-hot encoding of buttons and analog stick x, y values for a given player.

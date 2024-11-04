@@ -83,11 +83,16 @@ FILE_FORMAT: str = "%012d.pth"
 CONFIG_FILENAME: str = "config.json"
 
 
+def load_config_from_artifact_dir(artifact_dir: Path) -> TrainConfig:
+    with open(artifact_dir / "config.json", "r", encoding="utf-8") as f:
+        config: TrainConfig = deserialize(json.load(f))  # type: ignore
+    return config
+
+
 def load_model_from_artifact_dir(
     artifact_dir: Path, idx: Optional[int] = None, device: str = "cpu"
 ) -> Tuple[torch.nn.Module, TrainConfig]:
-    with open(artifact_dir / "config.json", "r", encoding="utf-8") as f:
-        config: TrainConfig = deserialize(json.load(f))  # type: ignore
+    config = load_config_from_artifact_dir(artifact_dir)
     model = Arch.get(config.arch, config=config)
     ckpt = Checkpoint(model, config, artifact_dir, keep_ckpts=config.keep_ckpts)
     ckpt.restore(idx=idx, device=device)
