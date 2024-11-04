@@ -39,7 +39,9 @@ PLAYER_1_PORT = 1
 PLAYER_2_PORT = 2
 
 
-def run_episode(rank: int, max_steps: int = 8 * 60 * 60) -> Generator[Optional[melee.GameState], TensorDict, None]:
+def run_episode(
+    rank: int, max_steps: int = 8 * 60 * 60, latency_warning_threshold: float = 14.0
+) -> Generator[Optional[melee.GameState], TensorDict, None]:
     console_kwargs = get_console_kwargs()
     console = melee.Console(**console_kwargs, slippi_port=51441 + rank)
 
@@ -81,8 +83,8 @@ def run_episode(rank: int, max_steps: int = 8 * 60 * 60) -> Generator[Optional[m
                     logger.info("Gamestate is None")
                     break
 
-                if console.processingtime * 1000 > 12:
-                    logger.info("WARNING: Last frame took " + str(console.processingtime * 1000) + "ms to process.")
+                if console.processingtime * 1000 > latency_warning_threshold:
+                    logger.debug("Last frame took " + str(console.processingtime * 1000) + "ms to process.")
 
                 if gamestate.menu_state not in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
                     if match_started:
@@ -111,6 +113,7 @@ def run_episode(rank: int, max_steps: int = 8 * 60 * 60) -> Generator[Optional[m
             logger.error(f"Episode {rank} encountered an error: {e}")
         finally:
             # Signal end of episode
+            logger.info(f"Episode {rank} ending")
             yield None
 
 
@@ -232,19 +235,16 @@ def gpu_worker(
         transfer_start = time.perf_counter()
         context_window[:, :-1].copy_(context_window[:, 1:].clone())
         context_window[:, -1].copy_(shared_batched_model_input, non_blocking=True)
-        torch.cuda.synchronize()  # Ensure transfer is complete before timing
         transfer_time = time.perf_counter() - transfer_start
 
         inference_start = time.perf_counter()
         with torch.no_grad():
             outputs: TensorDict = model(context_window)[:, -1]  # (n_workers,)
-        torch.cuda.synchronize()  # Ensure inference is complete before timing
         inference_time = time.perf_counter() - inference_start
 
         writeback_start = time.perf_counter()
         # Write the output to shared_batched_model_output
         shared_batched_model_output.copy_(outputs)
-        torch.cuda.synchronize()
         writeback_time = time.perf_counter() - writeback_start
 
         total_time = time.perf_counter() - iteration_start
@@ -338,7 +338,7 @@ def main(model_dir: str, n_workers: int, idx: Optional[int] = None) -> None:
     for p in cpu_processes:
         p.join()
 
-    print("Processing complete.")
+    logger.success("Processing complete.")
 
 
 if __name__ == "__main__":

@@ -90,7 +90,7 @@ def run_episode(rank: int, max_steps: int = 8 * 60 * 60) -> Generator[Optional[m
             yield None
 
 
-def run_episode_wrapper(rank: int):
+def run_episode_wrapper(rank: int) -> None:
     for _ in run_episode(rank=rank):
         pass
 
