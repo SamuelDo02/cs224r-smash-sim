@@ -35,15 +35,13 @@ from hal.training.preprocess.registry import InputPreprocessRegistry
 from hal.training.preprocess.registry import PredPostprocessFn
 from hal.training.preprocess.registry import PredPostprocessingRegistry
 
-mp.set_start_method("spawn", force=True)
-
 PLAYER_1_PORT = 1
 PLAYER_2_PORT = 2
 
 
-def run_episode(max_steps: int = 8 * 60 * 60) -> Generator[Optional[melee.GameState], TensorDict, None]:
+def run_episode(rank: int, max_steps: int = 8 * 60 * 60) -> Generator[Optional[melee.GameState], TensorDict, None]:
     console_kwargs = get_console_kwargs()
-    console = melee.Console(**console_kwargs)
+    console = melee.Console(**console_kwargs, slippi_port=51441 + rank)
 
     controller_1 = melee.Controller(console=console, port=PLAYER_1_PORT, type=melee.ControllerType.STANDARD)
     controller_2 = melee.Controller(console=console, port=PLAYER_2_PORT, type=melee.ControllerType.STANDARD)
@@ -82,11 +80,13 @@ def run_episode(max_steps: int = 8 * 60 * 60) -> Generator[Optional[melee.GameSt
                 if gamestate is None:
                     logger.info("Gamestate is None")
                     break
+                logger.info(f"Iteration {i}: Menu state: {gamestate.menu_state}")
 
                 if console.processingtime * 1000 > 12:
                     logger.info("WARNING: Last frame took " + str(console.processingtime * 1000) + "ms to process.")
 
                 if gamestate.menu_state not in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
+                    logger.info("Menu helper")
                     if match_started:
                         break
 
@@ -101,6 +101,7 @@ def run_episode(max_steps: int = 8 * 60 * 60) -> Generator[Optional[melee.GameSt
                 else:
                     if not match_started:
                         match_started = True
+                        logger.info("Match started")
 
                     # Yield gamestate and receive controller inputs
                     controller_inputs = yield gamestate
@@ -132,8 +133,9 @@ def cpu_worker(
     logger.info(f"CPU worker {rank} starting. Input buffer shape: {shared_batched_model_input.shape}")
 
     try:
-        emulator_generator = run_episode()
-        for gamestate in emulator_generator:
+        emulator_generator = run_episode(rank=rank)
+        for i, gamestate in enumerate(emulator_generator):
+            logger.info(f"Worker {rank}: Iteration {i}: {gamestate=}")
             if gamestate is None:
                 break
 
@@ -157,7 +159,7 @@ def cpu_worker(
             model_input_ready_flag.set()
 
             # Wait for the output to be ready
-            while not model_output_ready_flag.is_set() and not stop_event.is_set():
+            while not (model_output_ready_flag.is_set() or stop_event.is_set()):
                 time.sleep(0.0001)  # Sleep briefly to avoid busy waiting
 
             if stop_event.is_set():
@@ -173,6 +175,7 @@ def cpu_worker(
             model_output_ready_flag.clear()
     finally:
         logger.info(f"CPU worker {rank} stopping")
+        model_input_ready_flag.set()
         stop_event.set()
 
 
@@ -204,7 +207,7 @@ def gpu_worker(
 
     # Warmup CUDA graphs with dummy inputs
     logger.info("Compiling model...")
-    model = torch.compile(model, mode="reduce-overhead")
+    model = torch.compile(model, mode="default")
     with torch.no_grad():
         model(context_window)
     logger.info("Warmup step finished")
@@ -215,8 +218,8 @@ def gpu_worker(
 
         # Wait for all CPU workers to signal that data is ready
         for flag in model_input_ready_flags:
-            while not flag.is_set() and not all(event.is_set() for event in stop_events):
-                time.sleep(0.0001)  # Sleep briefly to avoid busy waiting
+            while not (flag.is_set() or all(event.is_set() for event in stop_events)):
+                time.sleep(0.001)  # Sleep briefly to avoid busy waiting
 
         logger.info(f"Iteration {iteration}: All CPU workers ready")
 
@@ -263,6 +266,7 @@ def gpu_worker(
 
 
 def main(model_dir: str, n_workers: int, idx: Optional[int] = None) -> None:
+    mp.set_start_method("spawn")
     device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     train_config: TrainConfig = load_config_from_artifact_dir(Path(model_dir))
     seq_len = train_config.data.input_len
