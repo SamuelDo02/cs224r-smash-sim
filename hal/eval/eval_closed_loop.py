@@ -103,9 +103,12 @@ def run_episode(rank: int, max_steps: int = 8 * 60 * 60) -> Generator[Optional[m
 
                     # Yield gamestate and receive controller inputs
                     controller_inputs = yield gamestate
-                    send_controller_inputs(controller_1, controller_inputs)
+                    if controller_inputs is not None:
+                        send_controller_inputs(controller_1, controller_inputs)
 
                     i += 1
+        except Exception as e:
+            logger.error(f"Episode {rank} encountered an error: {e}")
         finally:
             # Signal end of episode
             yield None
@@ -133,9 +136,11 @@ def cpu_worker(
     try:
         emulator_generator = run_episode(rank=rank)
         for i, gamestate in enumerate(emulator_generator):
-            logger.info(f"Worker {rank}: Iteration {i}: {gamestate=}")
             if gamestate is None:
-                break
+                # First gamestate after match start is None for some reason
+                if i > 1:
+                    break
+                continue
 
             preprocess_start = time.perf_counter()
             # Returns a TensorDict with shape (1,) for single frame
@@ -151,9 +156,10 @@ def cpu_worker(
             sharded_model_input.update_(model_inputs[-1], non_blocking=True)
             transfer_time = time.perf_counter() - transfer_start
 
-            logger.debug(
-                f"Worker {rank}: Preprocess: {preprocess_time*1000:.2f}ms, " f"Transfer: {transfer_time*1000:.2f}ms"
-            )
+            if i % 60 == 0:
+                logger.debug(
+                    f"Worker {rank}: Preprocess: {preprocess_time*1000:.2f}ms, Transfer: {transfer_time*1000:.2f}ms"
+                )
 
             model_input_ready_flag.set()
 
@@ -217,9 +223,7 @@ def gpu_worker(
         # Wait for all CPU workers to signal that data is ready
         for flag in model_input_ready_flags:
             while not (flag.is_set() or all(event.is_set() for event in stop_events)):
-                time.sleep(0.001)  # Sleep briefly to avoid busy waiting
-
-        logger.info(f"Iteration {iteration}: All CPU workers ready")
+                time.sleep(0.0001)  # Sleep briefly to avoid busy waiting
 
         if all(event.is_set() for event in stop_events):
             break
@@ -245,12 +249,13 @@ def gpu_worker(
 
         total_time = time.perf_counter() - iteration_start
 
-        logger.info(
-            f"Iteration {iteration}: Total: {total_time*1000:.2f}ms "
-            f"(Transfer: {transfer_time*1000:.2f}ms, "
-            f"Inference: {inference_time*1000:.2f}ms, "
-            f"Writeback: {writeback_time*1000:.2f}ms)"
-        )
+        if iteration % 60 == 0:
+            logger.debug(
+                f"Iteration {iteration}: Total: {total_time*1000:.2f}ms "
+                f"(Transfer: {transfer_time*1000:.2f}ms, "
+                f"Inference: {inference_time*1000:.2f}ms, "
+                f"Writeback: {writeback_time*1000:.2f}ms)"
+            )
 
         iteration += 1
 
