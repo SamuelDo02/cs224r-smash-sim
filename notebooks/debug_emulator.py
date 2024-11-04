@@ -17,9 +17,10 @@ PLAYER_1_PORT = 1
 PLAYER_2_PORT = 2
 
 
-def run_episode(max_steps: int = 8 * 60 * 60) -> Generator[Optional[melee.GameState], TensorDict, None]:
+def run_episode(rank: int, max_steps: int = 8 * 60 * 60) -> Generator[Optional[melee.GameState], TensorDict, None]:
     console_kwargs = get_console_kwargs()
-    console = melee.Console(**console_kwargs)
+    console = melee.Console(**console_kwargs, slippi_port=51441 + rank)
+    logger.info(f"Worker {rank}: slippi port {console.slippi_port}")
 
     controller_1 = melee.Controller(console=console, port=PLAYER_1_PORT, type=melee.ControllerType.STANDARD)
     controller_2 = melee.Controller(console=console, port=PLAYER_2_PORT, type=melee.ControllerType.STANDARD)
@@ -89,8 +90,8 @@ def run_episode(max_steps: int = 8 * 60 * 60) -> Generator[Optional[melee.GameSt
             yield None
 
 
-def run_episode_wrapper():
-    for _ in run_episode():
+def run_episode_wrapper(rank: int):
+    for _ in run_episode(rank=rank):
         pass
 
 
@@ -99,6 +100,7 @@ if __name__ == "__main__":
     for i in range(2):
         p: mp.Process = mp.Process(
             target=run_episode_wrapper,
+            kwargs=dict(rank=i),
         )
         p.start()
         cpu_processes.append(p)
