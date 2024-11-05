@@ -15,6 +15,8 @@ import torch.multiprocessing as mp
 from loguru import logger
 from tensordict import TensorDict
 
+from hal.constants import PLAYER_1_PORT
+from hal.constants import PLAYER_2_PORT
 from hal.data.stats import FeatureStats
 from hal.data.stats import load_dataset_stats
 from hal.eval.emulator_helper import console_manager
@@ -34,9 +36,6 @@ from hal.training.preprocess.registry import InputPreprocessFn
 from hal.training.preprocess.registry import InputPreprocessRegistry
 from hal.training.preprocess.registry import PredPostprocessFn
 from hal.training.preprocess.registry import PredPostprocessingRegistry
-
-PLAYER_1_PORT = 1
-PLAYER_2_PORT = 2
 
 
 def setup_cpu_logger() -> None:

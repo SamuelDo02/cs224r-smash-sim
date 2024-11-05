@@ -2,13 +2,13 @@ import numpy as np
 import torch
 from tensordict import TensorDict
 
+from hal.constants import Player
 from hal.constants import STICK_XY_CLUSTER_CENTERS_V0
 from hal.constants import VALID_PLAYERS
 from hal.data.normalize import union
 from hal.training.preprocess.encoding import get_closest_stick_xy_cluster_v0
 from hal.training.preprocess.encoding import one_hot_2d
 from hal.training.preprocess.encoding import one_hot_from_int
-from hal.training.preprocess.registry import Player
 from hal.training.preprocess.registry import TargetPreprocessRegistry
 
 

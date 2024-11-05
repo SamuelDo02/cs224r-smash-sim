@@ -1,12 +1,19 @@
 from enum import Enum
 from typing import Dict
 from typing import Final
+from typing import Literal
 from typing import Tuple
 
 import numpy as np
 from melee import Action
 from melee import Character
 from melee import Stage
+
+VALID_PLAYERS: Final[Tuple[str, str]] = ("p1", "p2")
+Player = Literal["p1", "p2"]
+PLAYER_1_PORT: Final[int] = 1
+PLAYER_2_PORT: Final[int] = 2
+
 
 # Gamestate
 STAGES: Final[Tuple[str, ...]] = (
@@ -153,8 +160,6 @@ INCLUDED_BUTTONS: Tuple[str, ...] = (
 ###################
 # Embeddings      #
 ###################
-
-VALID_PLAYERS: Final[Tuple[str, str]] = ("p1", "p2")
 
 REPLAY_UUID: Tuple[str] = ("replay_uuid",)
 FRAME: Tuple[str] = ("frame",)

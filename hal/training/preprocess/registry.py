@@ -1,14 +1,12 @@
 from typing import Callable
 from typing import Dict
-from typing import Literal
 
 from tensordict import TensorDict
 
+from hal.constants import Player
 from hal.data.stats import FeatureStats
 from hal.training.config import DataConfig
 from hal.training.config import EmbeddingConfig
-
-Player = Literal["p1", "p2"]
 
 InputPreprocessFn = Callable[[TensorDict, DataConfig, Player, Dict[str, FeatureStats]], TensorDict]
 

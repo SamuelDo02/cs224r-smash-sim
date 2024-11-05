@@ -9,6 +9,7 @@ from hal.constants import PLAYER_INPUT_FEATURES_TO_EMBED
 from hal.constants import PLAYER_INPUT_FEATURES_TO_INVERT_AND_NORMALIZE
 from hal.constants import PLAYER_INPUT_FEATURES_TO_NORMALIZE
 from hal.constants import PLAYER_POSITION
+from hal.constants import Player
 from hal.constants import STAGE
 from hal.constants import VALID_PLAYERS
 from hal.data.normalize import NormalizationFn
@@ -20,7 +21,6 @@ from hal.data.normalize import standardize
 from hal.data.stats import FeatureStats
 from hal.training.config import DataConfig
 from hal.training.preprocess.registry import InputPreprocessRegistry
-from hal.training.preprocess.registry import Player
 
 
 def _get_opponent(player: Player) -> Player:
