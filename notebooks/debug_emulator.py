@@ -22,7 +22,7 @@ def run_episode(rank: int, port: int, max_steps: int = 8 * 60 * 60) -> None:
     controller_2 = melee.Controller(console=console, port=PLAYER_2_PORT, type=melee.ControllerType.STANDARD)
 
     # Run the console
-    console.run(iso_path=REMOTE_CISO_PATH, dolphin_user_path=REMOTE_DOLPHIN_HOME_PATH)
+    console.run(iso_path=REMOTE_CISO_PATH)
     # Connect to the console
     logger.info("Connecting to console...")
     if not console.connect():

@@ -21,7 +21,6 @@ from hal.eval.emulator_helper import console_manager
 from hal.eval.emulator_helper import get_console_kwargs
 from hal.eval.emulator_helper import self_play_menu_helper
 from hal.eval.emulator_paths import REMOTE_CISO_PATH
-from hal.eval.emulator_paths import REMOTE_DOLPHIN_HOME_PATH
 from hal.eval.eval_helper import mock_framedata_as_tensordict
 from hal.eval.eval_helper import mock_preds_as_tensordict
 from hal.eval.eval_helper import send_controller_inputs
@@ -49,7 +48,7 @@ def run_episode(
     controller_2 = melee.Controller(console=console, port=PLAYER_2_PORT, type=melee.ControllerType.STANDARD)
 
     # Run the console
-    console.run(iso_path=REMOTE_CISO_PATH, dolphin_user_path=REMOTE_DOLPHIN_HOME_PATH)
+    console.run(iso_path=REMOTE_CISO_PATH)  # Do not pass dolphin_user_path to avoid overwriting init kwargs
     # Connect to the console
     logger.info("Connecting to console...")
     if not console.connect():
@@ -113,7 +112,6 @@ def run_episode(
             logger.error(f"Episode {rank} encountered an error: {e}")
         finally:
             # Signal end of episode
-            logger.info(f"Episode {rank} ending")
             yield None
 
 
@@ -180,12 +178,14 @@ def cpu_worker(
 
             # Clear the output ready flag for the next iteration
             model_output_ready_flag.clear()
+
+        logger.success(f"CPU worker {rank} complete.")
     except Exception as e:
         logger.error(f"CPU worker {rank} encountered an error: {e}")
     finally:
-        logger.info(f"CPU worker {rank} stopping")
         model_input_ready_flag.set()
         stop_event.set()
+        logger.info(f"CPU worker {rank} stopped")
 
 
 def gpu_worker(
@@ -338,7 +338,7 @@ def main(model_dir: str, n_workers: int, idx: Optional[int] = None) -> None:
     for p in cpu_processes:
         p.join()
 
-    logger.success("Processing complete.")
+    logger.info("Processing complete.")
 
 
 if __name__ == "__main__":

@@ -13,7 +13,6 @@ from loguru import logger
 from melee import enums
 from melee.menuhelper import MenuHelper
 
-from hal.eval.emulator_paths import REMOTE_DOLPHIN_HOME_PATH
 from hal.eval.emulator_paths import REMOTE_EMULATOR_PATH
 from hal.eval.emulator_paths import REMOTE_EVAL_REPLAY_DIR
 
@@ -69,8 +68,6 @@ def get_console_kwargs(rank: int, port: int, no_gui: bool = True) -> Dict[str, A
         else {}
     )
     emulator_path = REMOTE_EMULATOR_PATH
-    # dolphin_home_path = Path(REMOTE_DOLPHIN_HOME_PATH) / f"worker_{rank}"
-    # Path(dolphin_home_path).mkdir(exist_ok=True, parents=True)
     replay_dir = Path(REMOTE_EVAL_REPLAY_DIR) / f"worker_{rank}"
     Path(replay_dir).mkdir(exist_ok=True, parents=True)
     console_kwargs = {
