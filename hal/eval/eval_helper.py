@@ -20,6 +20,7 @@ class EpisodeStats:
     p1_stocks_lost: int = 0
     p2_stocks_lost: int = 0
     frames: int = 0
+    episodes: int = 1
     _prev_p1_stock: int = 0
     _prev_p2_stock: int = 0
     _prev_p1_percent: float = 0.0
@@ -32,7 +33,16 @@ class EpisodeStats:
             p1_stocks_lost=self.p1_stocks_lost + other.p1_stocks_lost,
             p2_stocks_lost=self.p2_stocks_lost + other.p2_stocks_lost,
             frames=self.frames + other.frames,
+            episodes=self.episodes + other.episodes,
         )
+
+    def __radd__(self, other: "EpisodeStats") -> "EpisodeStats":
+        if other == 0:
+            return self
+        return self.__add__(other)
+
+    def __str__(self) -> str:
+        return f"EpisodeStats({self.episodes=}, {self.p1_damage=}, {self.p2_damage=}, {self.p1_stocks_lost=}, {self.p2_stocks_lost=}, {self.frames=})"
 
     def update(self, gamestate: melee.GameState) -> None:
         if gamestate.menu_state not in (melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH):
@@ -54,10 +64,12 @@ class EpisodeStats:
 
     def to_wandb_dict(self, player: Player) -> Dict[str, float]:
         return {
+            "episodes": self.episodes,
             "damage_inflicted": self.p2_damage if player == "p1" else self.p1_damage,
             "damage_received": self.p1_damage if player == "p1" else self.p2_damage,
             "stocks_taken": self.p2_stocks_lost if player == "p1" else self.p1_stocks_lost,
             "stocks_lost": self.p1_stocks_lost if player == "p1" else self.p2_stocks_lost,
+            "frames": self.frames,
         }
 
 

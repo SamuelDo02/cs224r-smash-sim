@@ -155,6 +155,7 @@ def cpu_worker(
     stop_event: EventType,
     train_config: TrainConfig,
     stats_by_feature_name: Dict[str, FeatureStats],
+    episode_stats_queue: mp.Queue,
     debug: bool = False,
 ) -> None:
     """
@@ -214,6 +215,8 @@ def cpu_worker(
         finally:
             model_input_ready_flag.set()
             stop_event.set()
+            logger.debug(f"CPU worker {rank} episode stats: {emulator_manager.episode_stats}")
+            episode_stats_queue.put(emulator_manager.episode_stats)
             logger.info(f"CPU worker {rank} stopped")
 
 
@@ -350,6 +353,7 @@ def main(model_dir: str, n_workers: int, idx: Optional[int] = None) -> None:
 
     cpu_processes: List[mp.Process] = []
     ports = find_open_udp_ports(n_workers)
+    episode_stats_queue: mp.Queue = mp.Queue()
     for i in range(n_workers):
         p: mp.Process = mp.Process(
             target=cpu_worker,
@@ -365,6 +369,7 @@ def main(model_dir: str, n_workers: int, idx: Optional[int] = None) -> None:
                 "stop_event": stop_events[i],
                 "train_config": train_config,
                 "stats_by_feature_name": stats_by_feature_name,
+                "episode_stats_queue": episode_stats_queue,
             },
         )
         cpu_processes.append(p)
@@ -374,6 +379,12 @@ def main(model_dir: str, n_workers: int, idx: Optional[int] = None) -> None:
 
     for p in cpu_processes:
         p.join()
+
+    episode_stats: List[EpisodeStats] = []
+    while not episode_stats_queue.empty():
+        episode_stats.append(episode_stats_queue.get())
+    total_stats = sum(episode_stats, EpisodeStats(episodes=0))
+    logger.info(f"Total eval stats: {total_stats}")
 
     logger.info("Processing complete.")
 
