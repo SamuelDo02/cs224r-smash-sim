@@ -24,6 +24,7 @@ from hal.data.stats import load_dataset_stats
 from hal.eval.emulator_helper import console_manager
 from hal.eval.emulator_helper import find_open_udp_ports
 from hal.eval.emulator_helper import get_console_kwargs
+from hal.eval.emulator_helper import get_replay_dir
 from hal.eval.emulator_helper import self_play_menu_helper
 from hal.eval.emulator_paths import REMOTE_CISO_PATH
 from hal.eval.eval_helper import EpisodeStats
@@ -58,6 +59,7 @@ class EmulatorManager:
     rank: int
     port: int
     player: Player
+    replay_dir: Path | None = None
     episode_stats: EpisodeStats = EpisodeStats()
     max_steps: int = 8 * 60 * 60
     latency_warning_threshold: float = 14.0
@@ -71,7 +73,7 @@ class EmulatorManager:
         Sends:
             TensorDict: Controller inputs to be applied to the game
         """
-        console_kwargs = get_console_kwargs(rank=self.rank, port=self.port)
+        console_kwargs = get_console_kwargs(port=self.port, replay_dir=self.replay_dir)
         console = melee.Console(**console_kwargs)
 
         def _get_port(player: Player) -> int:
@@ -160,6 +162,7 @@ def cpu_worker(
     rank: int,
     port: int,
     player: Player,
+    replay_dir: Path,
     preprocess_inputs: InputPreprocessFn,
     postprocess_outputs: PredPostprocessFn,
     model_input_ready_flag: EventType,
@@ -178,7 +181,7 @@ def cpu_worker(
 
     with logger.contextualize(rank=rank):
         try:
-            emulator_manager = EmulatorManager(rank=rank, port=port, player=player)
+            emulator_manager = EmulatorManager(rank=rank, port=port, player=player, replay_dir=replay_dir)
             gamestate_generator = emulator_manager.gamestate_generator()
             for i, gamestate in enumerate(gamestate_generator):
                 if gamestate is None:
@@ -239,7 +242,7 @@ def gpu_worker(
     model_output_ready_flags: List[EventType],
     seq_len: int,
     stop_events: List[EventType],
-    model_dir: str,
+    artifact_dir: Path,
     device: torch.device | str,
     checkpoint_idx: Optional[int] = None,
     cpu_flag_timeout: float = 10.0,
@@ -249,7 +252,7 @@ def gpu_worker(
     performs inference with model, and writes output back to shared memory.
     """
     torch.set_float32_matmul_precision("high")
-    model, _ = load_model_from_artifact_dir(Path(model_dir), idx=checkpoint_idx)
+    model, _ = load_model_from_artifact_dir(Path(artifact_dir), idx=checkpoint_idx)
     model.eval()
     model.to(device)
 
@@ -320,7 +323,7 @@ def gpu_worker(
 
 
 def run_closed_loop_evaluation(
-    model_dir: str,
+    artifact_dir: Path,
     n_workers: int,
     checkpoint_idx: Optional[int] = None,
     eval_stats_queue: Optional[mp.Queue] = None,
@@ -331,7 +334,7 @@ def run_closed_loop_evaluation(
     except RuntimeError:
         pass
     device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    train_config: TrainConfig = load_config_from_artifact_dir(Path(model_dir))
+    train_config: TrainConfig = load_config_from_artifact_dir(artifact_dir)
     seq_len = train_config.data.input_len
     preprocess_inputs = InputPreprocessRegistry.get(train_config.embedding.input_preprocessing_fn)
     stats_by_feature_name = load_dataset_stats(train_config.data.stats_path)
@@ -369,7 +372,7 @@ def run_closed_loop_evaluation(
             "model_output_ready_flags": model_output_ready_flags,
             "seq_len": seq_len,
             "stop_events": stop_events,
-            "model_dir": model_dir,
+            "artifact_dir": artifact_dir,
             "device": device,
             "checkpoint_idx": checkpoint_idx,
         },
@@ -379,6 +382,8 @@ def run_closed_loop_evaluation(
     cpu_processes: List[mp.Process] = []
     ports = find_open_udp_ports(n_workers)
     episode_stats_queue: mp.Queue = mp.Queue()
+    replay_dir = get_replay_dir(artifact_dir)
+    logger.info(f"Replays will be saved to {replay_dir}")
     for i in range(n_workers):
         p: mp.Process = mp.Process(
             target=cpu_worker,
@@ -387,6 +392,7 @@ def run_closed_loop_evaluation(
                 "shared_batched_model_output": shared_batched_model_output,
                 "rank": i,
                 "port": ports[i],
+                "replay_dir": replay_dir,
                 "player": player,
                 "preprocess_inputs": preprocess_inputs,
                 "postprocess_outputs": postprocess_outputs,
@@ -422,4 +428,4 @@ if __name__ == "__main__":
     parser.add_argument("--model_dir", type=str, help="Path to model directory")
     parser.add_argument("--n_workers", type=int, help="Number of CPU workers")
     args = parser.parse_args()
-    run_closed_loop_evaluation(model_dir=args.model_dir, n_workers=args.n_workers)
+    run_closed_loop_evaluation(artifact_dir=Path(args.model_dir), n_workers=args.n_workers)

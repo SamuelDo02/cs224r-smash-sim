@@ -26,6 +26,8 @@ from hal.training.distributed import is_master
 from hal.training.models.registry import Arch
 from hal.training.utils import get_git_repo_root
 
+ARTIFACT_DIR_ROOT = "runs"
+
 
 def get_path_friendly_datetime() -> str:
     return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -50,7 +52,7 @@ def get_exp_name(config) -> str:
 
 
 def get_artifact_dir(*args) -> Path:
-    artifact_dir = get_git_repo_root().joinpath("runs", get_path_friendly_datetime(), *args)
+    artifact_dir = get_git_repo_root().joinpath(ARTIFACT_DIR_ROOT, get_path_friendly_datetime(), *args)
     Path.mkdir(artifact_dir, parents=True, exist_ok=True)
     return artifact_dir
 
@@ -99,6 +101,16 @@ def load_model_from_artifact_dir(
     return ckpt.model, config
 
 
+def find_latest_idx(artifact_dir: Path) -> int:
+    all_ckpts = artifact_dir.glob(FILE_MATCH)
+    try:
+        filename = max(str(x) for x in all_ckpts)
+        idx = int(Path(filename).stem.split(".")[0])
+        return idx
+    except ValueError:
+        return 0
+
+
 @attr.s(auto_attribs=True, frozen=True)
 class Checkpoint:
     model: torch.nn.Module
@@ -106,19 +118,9 @@ class Checkpoint:
     artifact_dir: Path
     keep_ckpts: int
 
-    @staticmethod
-    def find_latest_idx(artifact_dir: Path) -> int:
-        all_ckpts = artifact_dir.glob(FILE_MATCH)
-        try:
-            filename = max(str(x) for x in all_ckpts)
-            idx = int(Path(filename).stem.split(".")[0])
-            return idx
-        except ValueError:
-            return 0
-
     def restore(self, idx: Optional[int] = None, device: str = "cpu") -> Tuple[int, Optional[Path]]:
         if idx is None:
-            idx = self.find_latest_idx(self.artifact_dir)
+            idx = find_latest_idx(self.artifact_dir)
             if idx == 0:
                 return 0, None
         ckpt = self.artifact_dir / (FILE_FORMAT % idx)

@@ -15,6 +15,9 @@ from melee.menuhelper import MenuHelper
 
 from hal.eval.emulator_paths import REMOTE_EMULATOR_PATH
 from hal.eval.emulator_paths import REMOTE_EVAL_REPLAY_DIR
+from hal.training.io import ARTIFACT_DIR_ROOT
+from hal.training.io import get_path_friendly_datetime
+from hal.training.utils import get_git_repo_root
 
 
 def find_open_udp_ports(num: int) -> List[int]:
@@ -56,7 +59,13 @@ def find_open_udp_ports(num: int) -> List[int]:
     return random.sample(list(available_ports), num)
 
 
-def get_console_kwargs(rank: int, port: int, no_gui: bool = True) -> Dict[str, Any]:
+def get_replay_dir(artifact_dir: Path | None = None) -> Path:
+    if artifact_dir is None:
+        return Path(REMOTE_EVAL_REPLAY_DIR) / get_path_friendly_datetime()
+    return Path(REMOTE_EVAL_REPLAY_DIR) / artifact_dir.relative_to(get_git_repo_root() / ARTIFACT_DIR_ROOT)
+
+
+def get_console_kwargs(port: int, no_gui: bool = True, replay_dir: Path | None = None) -> Dict[str, Any]:
     headless_console_kwargs = (
         {
             "gfx_backend": "Null",
@@ -68,8 +77,9 @@ def get_console_kwargs(rank: int, port: int, no_gui: bool = True) -> Dict[str, A
         else {}
     )
     emulator_path = REMOTE_EMULATOR_PATH
-    replay_dir = Path(REMOTE_EVAL_REPLAY_DIR) / f"worker_{rank}"
-    Path(replay_dir).mkdir(exist_ok=True, parents=True)
+    if replay_dir is None:
+        replay_dir = get_replay_dir()
+    replay_dir.mkdir(exist_ok=True, parents=True)
     console_kwargs = {
         "path": emulator_path,
         "is_dolphin": True,
