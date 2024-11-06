@@ -320,9 +320,16 @@ def gpu_worker(
 
 
 def run_closed_loop_evaluation(
-    model_dir: str, n_workers: int, checkpoint_idx: Optional[int] = None, player: Player = "p1"
-) -> Dict[str, float]:
-    mp.set_start_method("spawn")
+    model_dir: str,
+    n_workers: int,
+    checkpoint_idx: Optional[int] = None,
+    eval_stats_queue: Optional[mp.Queue] = None,
+    player: Player = "p1",
+) -> None:
+    try:
+        mp.set_start_method("spawn")
+    except RuntimeError:
+        pass
     device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     train_config: TrainConfig = load_config_from_artifact_dir(Path(model_dir))
     seq_len = train_config.data.input_len
@@ -400,9 +407,11 @@ def run_closed_loop_evaluation(
     while not episode_stats_queue.empty():
         episode_stats.append(episode_stats_queue.get())
     total_stats = sum(episode_stats, EpisodeStats(episodes=0))
+    logger.info(f"Closed loop evaluation stats: {total_stats}")
     logger.info("Closed loop evaluation complete")
 
-    return total_stats.to_wandb_dict(player=player)
+    if eval_stats_queue is not None:
+        eval_stats_queue.put(total_stats)
 
 
 if __name__ == "__main__":
@@ -410,5 +419,4 @@ if __name__ == "__main__":
     parser.add_argument("--model_dir", type=str, help="Path to model directory")
     parser.add_argument("--n_workers", type=int, help="Number of CPU workers")
     args = parser.parse_args()
-    eval_stats = run_closed_loop_evaluation(model_dir=args.model_dir, n_workers=args.n_workers)
-    logger.info(f"Closed loop evaluation stats: {eval_stats}")
+    run_closed_loop_evaluation(model_dir=args.model_dir, n_workers=args.n_workers)

@@ -1,7 +1,9 @@
 import abc
+import multiprocessing as mp
 import time
 from collections import defaultdict
 from pathlib import Path
+from queue import Empty
 from typing import Dict
 from typing import Iterable
 from typing import Iterator
@@ -14,6 +16,8 @@ from torch.nn import functional as F
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader
 
+from hal.eval.eval_closed_loop import run_closed_loop_evaluation
+from hal.eval.eval_helper import EpisodeStats
 from hal.training.config import TrainConfig
 from hal.training.distributed import get_world_size
 from hal.training.distributed import is_master
@@ -173,6 +177,21 @@ class Trainer(torch.nn.Module, abc.ABC):
         step: int,
     ) -> None:
         self.eval()
+
+        logger.debug("Starting closed loop evaluation")
+        eval_stats_queue: mp.Queue = mp.Queue()
+        eval_process = mp.Process(
+            target=run_closed_loop_evaluation,
+            kwargs=dict(
+                model_dir=self.artifact_dir,
+                n_workers=16,
+                checkpoint_idx=self.samples,
+                eval_stats_queue=eval_stats_queue,
+                player="p1",
+            ),
+        )
+        eval_process.start()
+
         range_iter = trange(
             0,
             self.config.n_val_samples,
@@ -194,7 +213,16 @@ class Trainer(torch.nn.Module, abc.ABC):
         loss_dict = {f"val/{k}": sum(v) / len(v) for k, v in concat_metrics.items() if "loss" in k}
         loss_total = sum(v for k, v in loss_dict.items() if "loss" in k)
         loss_dict["val/loss_total"] = loss_total
+
+        try:
+            logger.debug("Waiting for closed loop evaluation")
+            closed_loop_eval_stats: EpisodeStats = eval_stats_queue.get(block=True, timeout=60 * 5)
+            loss_dict.update(closed_loop_eval_stats.to_wandb_dict(prefix="closed_loop_eval", player="p1"))
+        except Empty:
+            logger.warning("Closed loop evaluation stats not available")
         writer.log(loss_dict, step=step, commit=False)
+        if not eval_process.join(timeout=1.0):
+            eval_process.kill()
 
 
 class CategoricalBCTrainer(Trainer, abc.ABC):
