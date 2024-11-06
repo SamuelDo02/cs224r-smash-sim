@@ -248,6 +248,7 @@ def gpu_worker(
     GPU worker that batches data from shared memory, updates the context window,
     performs inference with model, and writes output back to shared memory.
     """
+    torch.set_float32_matmul_precision("high")
     model, _ = load_model_from_artifact_dir(Path(model_dir), idx=checkpoint_idx)
     model.eval()
     model.to(device)
