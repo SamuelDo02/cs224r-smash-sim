@@ -155,7 +155,7 @@ def cpu_worker(
     stop_event: EventType,
     train_config: TrainConfig,
     stats_by_feature_name: Dict[str, FeatureStats],
-    debug: bool = True,
+    debug: bool = False,
 ) -> None:
     """
     CPU worker that preprocesses data, writes it into shared memory,
@@ -194,7 +194,7 @@ def cpu_worker(
                 model_input_ready_flag.set()
 
                 # Wait for the output to be ready
-                while not (model_output_ready_flag.is_set() or stop_event.is_set()):
+                while not model_output_ready_flag.is_set() and not stop_event.is_set():
                     time.sleep(0.0001)  # Sleep briefly to avoid busy waiting
 
                 if stop_event.is_set():
@@ -227,6 +227,7 @@ def gpu_worker(
     model_dir: str,
     device: torch.device | str,
     idx: Optional[int] = None,
+    cpu_flag_timeout: float = 10.0,
 ) -> None:
     """
     GPU worker that batches data from shared memory, updates the context window,
@@ -253,8 +254,13 @@ def gpu_worker(
         iteration_start = time.perf_counter()
 
         # Wait for all CPU workers to signal that data is ready
-        for flag in model_input_ready_flags:
-            while not (flag.is_set() or all(event.is_set() for event in stop_events)):
+        flag_wait_start = time.perf_counter()
+        for i, (flag, stop_event) in enumerate(zip(model_input_ready_flags, stop_events)):
+            while not flag.is_set() and not stop_event.is_set():
+                if not flag.is_set() and time.perf_counter() - flag_wait_start > cpu_flag_timeout:
+                    logger.warning(f"CPU worker {i} input flag wait took too long, stopping episode")
+                    flag.set()
+                    stop_event.set()
                 time.sleep(0.0001)  # Sleep briefly to avoid busy waiting
 
         if all(event.is_set() for event in stop_events):
