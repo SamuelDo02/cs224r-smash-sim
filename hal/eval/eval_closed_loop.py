@@ -351,7 +351,6 @@ def run_closed_loop_evaluation(
         [mock_model_inputs for _ in range(n_workers)], dim=0  # type: ignore
     )
     shared_batched_model_input = share_and_pin_memory(shared_batched_model_input)
-    logger.info(f"{shared_batched_model_input=}")
     shared_batched_model_output: TensorDict = torch.stack(
         [mock_preds_as_tensordict(train_config.embedding) for _ in range(n_workers)], dim=0  # type: ignore
     )
