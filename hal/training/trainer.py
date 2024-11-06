@@ -148,6 +148,9 @@ class Trainer(torch.nn.Module, abc.ABC):
                     commit=False,
                 )
 
+                # Save checkpoint & configs before validation & closed loop eval
+                self.ckpt.save(self.samples)
+
                 self.validate(val_loader, writer=writer, step=self.samples)
                 t2 = time.perf_counter()
                 writer.log(
@@ -155,7 +158,6 @@ class Trainer(torch.nn.Module, abc.ABC):
                     step=self.samples,
                     commit=True,
                 )
-                self.ckpt.save(self.samples)
 
                 log_if_master(
                     f"{self.samples / (1 << 20):.2f}M/{self.config.n_samples / (1 << 20):.2f}M samples, "
@@ -203,7 +205,7 @@ class Trainer(torch.nn.Module, abc.ABC):
         )
         concat_metrics = defaultdict(list)
 
-        for i in range_iter:
+        for _ in range_iter:
             batch = next(val_loader)
             batch = batch.to(self.device, non_blocking=True)
             metrics_dict = self.val_op(batch)
@@ -216,12 +218,15 @@ class Trainer(torch.nn.Module, abc.ABC):
 
         try:
             logger.debug("Waiting for closed loop evaluation")
-            closed_loop_eval_stats: EpisodeStats = eval_stats_queue.get(block=True, timeout=60 * 5)
+            closed_loop_eval_stats: EpisodeStats = eval_stats_queue.get(block=True, timeout=60 * 2)
             loss_dict.update(closed_loop_eval_stats.to_wandb_dict(prefix="closed_loop_eval", player="p1"))
         except Empty:
             logger.warning("Closed loop evaluation stats not available")
+
         writer.log(loss_dict, step=step, commit=False)
-        if not eval_process.join(timeout=1.0):
+
+        eval_process.join(timeout=1.0)
+        if eval_process.is_alive():
             eval_process.kill()
 
 
