@@ -19,6 +19,13 @@ ds = HALStreamingDataset(
 )
 
 # %%
+x = super(HALStreamingDataset, ds).__getitem__(0)
+x
+# %%
+for value in x.values():
+    print(f"{type(value)} {value.shape}")
+
+# %%
 ds[0]
 
 # %%
