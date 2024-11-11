@@ -60,10 +60,14 @@ def find_open_udp_ports(num: int) -> List[int]:
     return random.sample(list(available_ports), num)
 
 
-def get_replay_dir(artifact_dir: Path | None = None) -> Path:
+def get_replay_dir(artifact_dir: Path | None = None, step: int | None = None) -> Path:
     if artifact_dir is None:
-        return Path(REMOTE_EVAL_REPLAY_DIR) / get_path_friendly_datetime()
-    return Path(REMOTE_EVAL_REPLAY_DIR) / artifact_dir.relative_to(get_git_repo_root() / ARTIFACT_DIR_ROOT)
+        replay_dir = Path(REMOTE_EVAL_REPLAY_DIR) / get_path_friendly_datetime()
+    else:
+        replay_dir = Path(REMOTE_EVAL_REPLAY_DIR) / artifact_dir.relative_to(get_git_repo_root() / ARTIFACT_DIR_ROOT)
+    if step is not None:
+        replay_dir = replay_dir / f"{step:012d}"
+    return replay_dir
 
 
 def get_console_kwargs(port: int, no_gui: bool = True, replay_dir: Path | None = None) -> Dict[str, Any]:

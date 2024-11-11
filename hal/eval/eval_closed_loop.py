@@ -402,8 +402,7 @@ def run_closed_loop_evaluation(
     cpu_processes: List[mp.Process] = []
     ports = find_open_udp_ports(n_workers)
     episode_stats_queue: mp.Queue = mp.Queue()
-    # TODO set checkpoint_idx
-    replay_dir = get_replay_dir(artifact_dir)
+    replay_dir = get_replay_dir(artifact_dir, step=checkpoint_idx)
     logger.info(f"Replays will be saved to {replay_dir}")
     for i in range(n_workers):
         p: mp.Process = mp.Process(

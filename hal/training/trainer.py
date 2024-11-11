@@ -187,7 +187,7 @@ class Trainer(torch.nn.Module, abc.ABC):
             kwargs=dict(
                 artifact_dir=self.artifact_dir,
                 n_workers=16,
-                checkpoint_idx=self.samples,
+                checkpoint_idx=step,
                 eval_stats_queue=eval_stats_queue,
                 player="p1",
             ),
