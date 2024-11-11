@@ -152,7 +152,7 @@ def console_manager(console: melee.Console, shutdown_timeout: float = 5.0):
     except KeyboardInterrupt:
         logger.info("Received interrupt, shutting down...")
     except TimeoutError:
-        logger.error("console.step() timed out")
+        pass
     except Exception as e:
         logger.error(f"Stopping console due to exception: {e}")
     finally:

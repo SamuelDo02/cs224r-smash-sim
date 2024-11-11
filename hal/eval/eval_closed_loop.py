@@ -64,6 +64,7 @@ class EmulatorManager:
     episode_stats: EpisodeStats = EpisodeStats()
     max_steps: int = 8 * 60 * 60
     latency_warning_threshold: float = 14.0
+    console_timeout: float = 5.0
 
     def gamestate_generator(self) -> Generator[Optional[melee.GameState], TensorDict, None]:
         """Generator that yields gamestates and receives controller inputs.
@@ -114,14 +115,16 @@ class EmulatorManager:
         i = 0
         match_started = False
 
+        #
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor, console_manager(console):
             logger.debug("Starting episode")
             while i < self.max_steps:
                 # Wrap `console.step()` in a thread with timeout
                 future = executor.submit(console.step)
                 try:
-                    gamestate = future.result(timeout=5.0)
+                    gamestate = future.result(timeout=self.console_timeout)
                 except concurrent.futures.TimeoutError:
+                    logger.error("console.step() timed out")
                     raise
 
                 if gamestate is None:
