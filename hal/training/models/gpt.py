@@ -312,6 +312,47 @@ class GPTv1(nn.Module):
         return idx
 
 
+class GPTv2(GPTv1):
+    # TODO refactor
+    def forward(self, inputs: TensorDict):
+        B, T, D = inputs["gamestate"].shape
+        assert (
+            T <= self.context_length
+        ), f"Cannot forward sequence of length {T}, block size is only {self.context_length}"
+        pos = torch.arange(0, T, dtype=torch.long, device=next(self.parameters()).device)  # shape (t)
+
+        combined_inputs = torch.cat(
+            [
+                self.transformer.stage(inputs["stage"]).squeeze(-2),
+                self.transformer.character(inputs["ego_character"]).squeeze(-2),
+                self.transformer.character(inputs["opponent_character"]).squeeze(-2),
+                self.transformer.action(inputs["ego_action"]).squeeze(-2),
+                self.transformer.action(inputs["opponent_action"]).squeeze(-2),
+                inputs["gamestate"],
+                inputs["main_stick"],
+                inputs["c_stick"],
+                inputs["buttons"],
+            ],
+            dim=-1,
+        )
+        proj_inputs = self.transformer.proj_down(combined_inputs)
+
+        pos_emb = self.transformer.wpe(pos)  # position embeddings of shape (t, n_embd)
+        x = self.transformer.drop(proj_inputs + pos_emb)
+        for block in self.transformer.h:
+            x = block(x)
+        x = self.transformer.ln_f(x)
+
+        return TensorDict(
+            {
+                "buttons": self.button_head(x).squeeze(-2),
+                "main_stick": self.main_stick_head(x).squeeze(-2),
+                "c_stick": self.c_stick_head(x).squeeze(-2),
+            },
+            batch_size=(B, T),
+        )
+
+
 @attr.s(auto_attribs=True, frozen=True)
 class MultiTokenGPTConfig(GPTConfig):
     n_lookahead: int = 4
@@ -420,3 +461,5 @@ Arch.register("GPTv1-8-4-dropout", GPTv1, gpt_config=GPTConfig(n_embd=256, n_lay
 Arch.register("GPTv1-12-4", GPTv1, gpt_config=GPTConfig(n_embd=256, n_layer=12, n_head=4))
 Arch.register("GPTv1-12-4-dropout", GPTv1, gpt_config=GPTConfig(n_embd=256, n_layer=12, n_head=4, dropout=0.1))
 Arch.register("GPTv1-12-512-4-dropout", GPTv1, gpt_config=GPTConfig(n_embd=512, n_layer=12, n_head=4, dropout=0.1))
+
+Arch.register("GPTv2-12-4-dropout", GPTv2, gpt_config=GPTConfig(n_embd=256, n_layer=12, n_head=4, dropout=0.1))

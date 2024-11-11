@@ -32,6 +32,7 @@ class HALStreamingDataset(StreamingDataset):
         self.stats_by_feature_name = load_dataset_stats(stats_path)
         self.data_config = data_config
         self.embed_config = embed_config
+        self.input_len = data_config.input_len
         self.trajectory_len = data_config.input_len + data_config.target_len
 
         self.input_preprocessing_fn = InputPreprocessRegistry.get(self.embed_config.input_preprocessing_fn)
@@ -54,12 +55,14 @@ class HALStreamingDataset(StreamingDataset):
         inputs = self.input_preprocessing_fn(
             sample_td, self.data_config, player_perspective, self.stats_by_feature_name
         )
-        targets = self.target_preprocessing_fn(sample_td, player_perspective)
+        # TODO refactor this to be less confusing / hacky
+        targets = self.target_preprocessing_fn(sample_td[1:], player_perspective)
 
         return TensorDict(
             {
                 "inputs": inputs,
                 "targets": targets,
             },
-            batch_size=(self.trajectory_len,),
+            # TODO refactor this to be less confusing / footgun-y
+            batch_size=(self.input_len,),
         )

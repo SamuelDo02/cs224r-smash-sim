@@ -39,7 +39,7 @@ class DataConfig:
 
     # Number of input and target frames in example/rollout
     input_len: int = 256
-    target_len: int = 0
+    target_len: int = 1
     replay_filter: ReplayFilter = ReplayFilter()
     include_both_players: bool = False
     truncate_rollouts_to_replay_end: bool = False
@@ -63,10 +63,10 @@ class DataworkerConfig:
 @attr.s(auto_attribs=True, frozen=True)
 class EmbeddingConfig:
     # Implicitly controls # numeric features
-    input_preprocessing_fn: str = "inputs_v0"
+    input_preprocessing_fn: str = "inputs_v2"
     # Implicitly determines # categorical target features
     target_preprocessing_fn: str = "targets_v0"
-    # pred_postprocessing_fn: str = "preds_v0"
+    pred_postprocessing_fn: str = "preds_v2"
 
     stage_embedding_dim: int = 4
     character_embedding_dim: int = 12

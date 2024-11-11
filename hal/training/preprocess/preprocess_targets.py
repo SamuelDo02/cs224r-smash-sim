@@ -5,7 +5,6 @@ from tensordict import TensorDict
 from hal.constants import Player
 from hal.constants import STICK_XY_CLUSTER_CENTERS_V0
 from hal.constants import VALID_PLAYERS
-from hal.data.normalize import union
 from hal.training.preprocess.encoding import get_closest_stick_xy_cluster_v0
 from hal.training.preprocess.encoding import one_hot_2d
 from hal.training.preprocess.encoding import one_hot_from_int
@@ -32,14 +31,20 @@ def preprocess_targets_v0(sample: TensorDict, player: Player) -> TensorDict:
     one_hot_c_stick = one_hot_from_int(c_stick_clusters, len(STICK_XY_CLUSTER_CENTERS_V0))
 
     # Stack buttons and encode one_hot
-    button_a = sample[f"{player}_button_a"]
-    button_b = sample[f"{player}_button_b"]
-    jump = union(sample[f"{player}_button_x"], sample[f"{player}_button_y"])
-    button_z = sample[f"{player}_button_z"]
-    shoulder = union(sample[f"{player}_button_l"], sample[f"{player}_button_r"])
-    no_button = np.zeros_like(button_a)
-    stacked_buttons = np.stack((button_a, button_b, jump, button_z, shoulder, no_button), axis=1)
-    one_hot_buttons = one_hot_2d(stacked_buttons)
+    button_a = sample[f"{player}_button_a"].bool()
+    button_b = sample[f"{player}_button_b"].bool()
+    button_x = sample[f"{player}_button_x"].bool()
+    button_y = sample[f"{player}_button_y"].bool()
+    button_z = sample[f"{player}_button_z"].bool()
+    button_l = sample[f"{player}_button_l"].bool()
+    button_r = sample[f"{player}_button_r"].bool()
+
+    jump = button_x | button_y
+    shoulder = button_l | button_r
+    no_button = ~(button_a | button_b | jump | button_z | shoulder)
+
+    stacked_buttons = torch.stack((button_a, button_b, jump, button_z, shoulder, no_button), dim=-1)
+    one_hot_buttons = one_hot_2d(stacked_buttons.numpy())
 
     return TensorDict(
         {

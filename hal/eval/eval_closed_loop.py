@@ -190,17 +190,27 @@ def cpu_worker(
         try:
             emulator_manager = EmulatorManager(rank=rank, port=port, player=player, replay_dir=replay_dir)
             gamestate_generator = emulator_manager.gamestate_generator()
+            last_controller_inputs = None  # Store previous inputs
+
             for i, gamestate in enumerate(gamestate_generator):
                 if gamestate is None:
                     stop_event.set()
                     break
 
                 preprocess_start = time.perf_counter()
-                # Returns a TensorDict with shape (1,) for single frame
                 gamestate_td = extract_gamestate_as_tensordict(gamestate)
-                # Preprocess single frame
                 data_config = attr.evolve(train_config.data, input_len=1, target_len=0)
                 model_inputs = preprocess_inputs(gamestate_td, data_config, player, stats_by_feature_name)
+
+                if last_controller_inputs is not None:
+                    model_inputs.update(
+                        {
+                            "main_stick": last_controller_inputs["main_stick_onehot"],
+                            "c_stick": last_controller_inputs["c_stick_onehot"],
+                            "buttons": last_controller_inputs["button_onehot"],
+                        }
+                    )
+
                 preprocess_time = time.perf_counter() - preprocess_start
 
                 transfer_start = time.perf_counter()
@@ -221,10 +231,10 @@ def cpu_worker(
                 if stop_event.is_set():
                     break
 
-                # Read the output from shared_batched_model_output
+                # Read the output and store one-hot encodings for next iteration
                 model_output = shared_batched_model_output[rank].clone()
-                controller_inputs = postprocess_outputs(model_output)
-                gamestate_generator.send(controller_inputs)
+                last_controller_inputs = postprocess_outputs(model_output)
+                gamestate_generator.send(last_controller_inputs)
 
                 # Clear the output ready flag for the next iteration
                 model_output_ready_flag.clear()
@@ -340,7 +350,7 @@ def run_closed_loop_evaluation(
         pass
     device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     train_config: TrainConfig = load_config_from_artifact_dir(artifact_dir)
-    seq_len = train_config.data.input_len
+
     preprocess_inputs = InputPreprocessRegistry.get(train_config.embedding.input_preprocessing_fn)
     stats_by_feature_name = load_dataset_stats(train_config.data.stats_path)
     postprocess_fn_name = (
@@ -356,7 +366,12 @@ def run_closed_loop_evaluation(
     stop_events: List[EventType] = [mp.Event() for _ in range(n_workers)]
 
     # Share and pin buffers in CPU memory for transferring model inputs and outputs
-    mock_framedata = mock_framedata_as_tensordict(seq_len)
+    seq_len = train_config.data.input_len
+    # TODO refactor this
+    if train_config.embedding.input_preprocessing_fn == "inputs_v2":
+        mock_framedata = mock_framedata_as_tensordict(seq_len + 1)
+    else:
+        mock_framedata = mock_framedata_as_tensordict(seq_len)
     # Store only a single time step to minimize memory transfer
     mock_model_inputs = preprocess_inputs(mock_framedata, train_config.data, player, stats_by_feature_name)[-1]
     shared_batched_model_input: TensorDict = torch.stack(

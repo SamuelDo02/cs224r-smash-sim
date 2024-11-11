@@ -21,6 +21,7 @@ from hal.data.normalize import normalize_and_embed_fourier
 from hal.data.normalize import standardize
 from hal.data.stats import FeatureStats
 from hal.training.config import DataConfig
+from hal.training.preprocess.preprocess_targets import preprocess_targets_v0
 from hal.training.preprocess.registry import InputPreprocessRegistry
 
 
@@ -165,3 +166,41 @@ def preprocess_inputs_v1(
         normalization_fn_by_feature_name=normalization_fn_by_feature_name,
         batch_size=(trajectory_len,),
     )
+
+
+@InputPreprocessRegistry.register("inputs_v2", num_features=2 * len(PLAYER_NUMERIC_FEATURES_V0) + 48)
+def preprocess_inputs_v2(
+    sample: TensorDict, data_config: DataConfig, ego: Player, stats: Dict[str, FeatureStats]
+) -> TensorDict:
+    player_numeric_feature_names = PLAYER_NUMERIC_FEATURES_V0
+    normalization_fn_by_feature_name: Dict[str, NormalizationFn] = {
+        **dict.fromkeys(STAGE, cast_int32),
+        **dict.fromkeys(PLAYER_INPUT_FEATURES_TO_EMBED, cast_int32),
+        **dict.fromkeys(PLAYER_INPUT_FEATURES_TO_NORMALIZE, normalize),
+        **dict.fromkeys(PLAYER_INPUT_FEATURES_TO_INVERT_AND_NORMALIZE, invert_and_normalize),
+        **dict.fromkeys(PLAYER_POSITION, standardize),
+    }
+
+    # check if sequence length is >1
+    if sample.shape[-1] > 1:
+        preprocessed_inputs = _preprocess_features_by_mapping(
+            sample=sample[1 : data_config.input_len + 1],
+            ego=ego,
+            stats=stats,
+            player_numeric_feature_names=player_numeric_feature_names,
+            normalization_fn_by_feature_name=normalization_fn_by_feature_name,
+            batch_size=(data_config.input_len,),
+        )
+        ego_controller = preprocess_targets_v0(sample=sample[0 : data_config.input_len], player=ego)
+        preprocessed_inputs.update(ego_controller)
+    else:
+        preprocessed_inputs = _preprocess_features_by_mapping(
+            sample=sample,
+            ego=ego,
+            stats=stats,
+            player_numeric_feature_names=player_numeric_feature_names,
+            normalization_fn_by_feature_name=normalization_fn_by_feature_name,
+            batch_size=(data_config.input_len,),
+        )
+
+    return preprocessed_inputs

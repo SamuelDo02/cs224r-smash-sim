@@ -185,7 +185,7 @@ class Trainer(torch.nn.Module, abc.ABC):
         eval_process = mp.Process(
             target=run_closed_loop_evaluation,
             kwargs=dict(
-                model_dir=self.artifact_dir,
+                artifact_dir=self.artifact_dir,
                 n_workers=16,
                 checkpoint_idx=self.samples,
                 eval_stats_queue=eval_stats_queue,
