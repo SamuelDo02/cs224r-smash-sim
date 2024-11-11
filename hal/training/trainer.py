@@ -218,7 +218,7 @@ class Trainer(torch.nn.Module, abc.ABC):
 
         try:
             logger.debug("Waiting for closed loop evaluation")
-            closed_loop_eval_stats: EpisodeStats = eval_stats_queue.get(block=True, timeout=60 * 2)
+            closed_loop_eval_stats: EpisodeStats = eval_stats_queue.get(block=True, timeout=60 * 4)
             loss_dict.update(closed_loop_eval_stats.to_wandb_dict(prefix="closed_loop_eval", player="p1"))
         except Empty:
             logger.warning("Closed loop evaluation stats not available")
