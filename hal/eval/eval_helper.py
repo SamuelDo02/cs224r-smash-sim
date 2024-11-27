@@ -127,7 +127,11 @@ def mock_preds_as_tensordict(embed_config: EmbeddingConfig) -> TensorDict:
 
 
 def share_and_pin_memory(tensordict: TensorDict) -> TensorDict:
-    """Share and pin memory of a tensordict."""
+    """
+    Simultaneously share and pin memory of a tensordict.
+
+    https://github.com/pytorch/pytorch/issues/32167#issuecomment-753551842
+    """
     tensordict.share_memory_()
 
     cudart = torch.cuda.cudart()

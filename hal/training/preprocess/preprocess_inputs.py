@@ -1,6 +1,6 @@
-import random
 from functools import partial
 from typing import Dict
+from typing import Optional
 from typing import Tuple
 
 import torch
@@ -148,12 +148,8 @@ NUMERIC_FEATURES_V1 = tuple(
 
 # extra input dimensions from Fourier embedding
 @InputPreprocessRegistry.register("inputs_v1", num_features=2 * (len(NUMERIC_FEATURES_V1) + 7 * len(PLAYER_POSITION)))
-def preprocess_inputs_v1(
-    sample: TensorDict, data_config: DataConfig, ego: Player, stats: Dict[str, FeatureStats]
-) -> TensorDict:
+def preprocess_inputs_v1(sample: TensorDict, ego: Player, stats: Dict[str, FeatureStats]) -> TensorDict:
     """Slice input sample to the input length."""
-    trajectory_len = data_config.input_len + data_config.target_len
-
     numeric_features = NUMERIC_FEATURES_V1
     normalization_fn_by_feature_name = {
         **dict.fromkeys(STAGE, cast_int32),
@@ -164,7 +160,7 @@ def preprocess_inputs_v1(
     }
 
     return _preprocess_features_by_mapping(
-        sample=sample[:trajectory_len],
+        sample=sample,
         ego=ego,
         stats=stats,
         player_numeric_feature_names=numeric_features,
@@ -242,9 +238,12 @@ class Preprocessor:
         self.input_len = data_config.input_len
         self.target_len = data_config.target_len
 
-        self.preprocess_inputs_fn = InputPreprocessRegistry.get(embedding_config.input_preprocessing_fn)
-        self.preprocess_targets_fn = TargetPreprocessRegistry.get(embedding_config.target_preprocessing_fn)
-        self.postprocess_preds_fn = PredPostprocessingRegistry.get(embedding_config.pred_postprocessing_fn)
+        self.preprocess_inputs_fn = InputPreprocessRegistry.get(self.embedding_config.input_preprocessing_fn)
+        self.preprocess_targets_fn = TargetPreprocessRegistry.get(self.embedding_config.target_preprocessing_fn)
+        self.postprocess_preds_fn = PredPostprocessingRegistry.get(self.embedding_config.pred_postprocessing_fn)
+
+        # Closed loop eval
+        self.last_controller_inputs: Optional[Dict[str, torch.Tensor]] = None
 
     @property
     def numeric_input_shape(self) -> int:
@@ -252,7 +251,7 @@ class Preprocessor:
         return InputPreprocessRegistry.get_num_features(self.embedding_config.input_preprocessing_fn)
 
     @property
-    def categorical_input_shapes(self) -> Dict[str, int]:
+    def categorical_input_shapes(self) -> dict[str, int]:
         return {
             "stage": self.embedding_config.stage_embedding_dim,
             "ego_character": self.embedding_config.character_embedding_dim,
@@ -278,27 +277,11 @@ class Preprocessor:
         """Get the final length of a preprocessed supervised training example / sequence."""
         return self.input_len + self.target_len
 
-    def sample_supervised_example_from_episode(self, episode_L: TensorDict) -> TensorDict:
-        """Randomly slice full .slp episode tensordict into appropriate input/target lengths for supervised training.
-
-        Args:
-            episode_L: TensorDict of shape (episode_len,) containing full episode data
-
-        Returns:
-            TensorDict of shape (sequence_len,) containing sliced data
-        """
-        if len(episode_L.shape) != 1:
-            raise ValueError(f"Expected episode tensordict with 1 dimension, got shape {episode_L.shape}")
-
-        if self.seq_len > episode_L.shape[0]:
-            raise ValueError(f"Episode length {episode_L.shape[0]} is shorter than required length {self.seq_len}")
-
-        start_idx = random.randint(0, episode_L.shape[0] - self.seq_len)
-
-        return episode_L[start_idx : start_idx + self.seq_len]
-
     def preprocess_inputs(self, sample_L: TensorDict, ego: Player) -> TensorDict:
-        return self.preprocess_inputs_fn(sample_L, self.data_config, ego, self.stats)
+        return self.preprocess_inputs_fn(sample_L, ego, self.stats)
+
+    def preprocess_trajectory(self, sample_L: TensorDict, ego: Player) -> TensorDict:
+        return self.preprocess_inputs_fn(sample_L, ego, self.stats)
 
     def preprocess_targets(self, sample_L: TensorDict, ego: Player) -> TensorDict:
         return self.preprocess_targets_fn(sample_L, ego)

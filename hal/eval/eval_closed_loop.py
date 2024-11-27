@@ -4,7 +4,6 @@ import sys
 import time
 from multiprocessing.synchronize import Event as EventType
 from pathlib import Path
-from typing import Dict
 from typing import Generator
 from typing import List
 from typing import Optional
@@ -20,8 +19,6 @@ from hal.constants import PLAYER_1_PORT
 from hal.constants import PLAYER_2_PORT
 from hal.constants import Player
 from hal.constants import get_opponent
-from hal.data.stats import FeatureStats
-from hal.data.stats import load_dataset_stats
 from hal.eval.emulator_helper import console_manager
 from hal.eval.emulator_helper import find_open_udp_ports
 from hal.eval.emulator_helper import get_console_kwargs
@@ -37,10 +34,7 @@ from hal.gamestate_utils import extract_gamestate_as_tensordict
 from hal.training.config import TrainConfig
 from hal.training.io import load_config_from_artifact_dir
 from hal.training.io import load_model_from_artifact_dir
-from hal.training.preprocess.registry import InputPreprocessFn
-from hal.training.preprocess.registry import InputPreprocessRegistry
-from hal.training.preprocess.registry import PredPostprocessFn
-from hal.training.preprocess.registry import PredPostprocessingRegistry
+from hal.training.preprocess.preprocess_inputs import Preprocessor
 
 
 def setup_cpu_logger(debug: bool = False) -> None:
@@ -171,20 +165,18 @@ def cpu_worker(
     port: int,
     player: Player,
     replay_dir: Path,
-    preprocess_inputs: InputPreprocessFn,
-    postprocess_outputs: PredPostprocessFn,
+    preprocessor: Preprocessor,
     model_input_ready_flag: EventType,
     model_output_ready_flag: EventType,
     stop_event: EventType,
     train_config: TrainConfig,
-    stats_by_feature_name: Dict[str, FeatureStats],
     episode_stats_queue: mp.Queue,
     enable_ffw: bool = True,
     debug: bool = False,
 ) -> None:
     """
     CPU worker that preprocesses data, writes it into shared memory,
-    and reads the result after GPU processing.
+    and sends controller inputs to the emulator from model predictions.
     """
     setup_cpu_logger(debug=debug)
 
@@ -354,14 +346,7 @@ def run_closed_loop_evaluation(
         pass
     device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     train_config: TrainConfig = load_config_from_artifact_dir(artifact_dir)
-
-    preprocess_inputs = InputPreprocessRegistry.get(train_config.embedding.input_preprocessing_fn)
-    stats_by_feature_name = load_dataset_stats(train_config.data.stats_path)
-    postprocess_fn_name = (
-        getattr(train_config.embedding, "pred_postprocessing_fn", None)
-        or train_config.embedding.target_preprocessing_fn
-    )  # backwards compatibility, TODO remove
-    postprocess_outputs = PredPostprocessingRegistry.get(postprocess_fn_name)
+    preprocessor = Preprocessor(data_config=train_config.data, embedding_config=train_config.embedding)
 
     # Create events to signal when cpu and gpu workers are ready
     model_input_ready_flags: List[EventType] = [mp.Event() for _ in range(n_workers)]
@@ -370,14 +355,9 @@ def run_closed_loop_evaluation(
     stop_events: List[EventType] = [mp.Event() for _ in range(n_workers)]
 
     # Share and pin buffers in CPU memory for transferring model inputs and outputs
-    seq_len = train_config.data.input_len
-    # TODO refactor this
-    if train_config.embedding.input_preprocessing_fn == "inputs_v2":
-        mock_framedata = mock_framedata_as_tensordict(seq_len + 1)
-    else:
-        mock_framedata = mock_framedata_as_tensordict(seq_len)
-    # Store only a single time step to minimize memory transfer
-    mock_model_inputs = preprocess_inputs(mock_framedata, train_config.data, player, stats_by_feature_name)[-1]
+    mock_framedata = mock_framedata_as_tensordict(preprocessor.trajectory_sampling_len)
+    # Store only a single time step to minimize copying
+    mock_model_inputs = preprocessor.preprocess_inputs(mock_framedata, player)[-1]
     shared_batched_model_input: TensorDict = torch.stack(
         [mock_model_inputs for _ in range(n_workers)], dim=0  # type: ignore
     )
@@ -394,7 +374,7 @@ def run_closed_loop_evaluation(
             "shared_batched_model_output": shared_batched_model_output,
             "model_input_ready_flags": model_input_ready_flags,
             "model_output_ready_flags": model_output_ready_flags,
-            "seq_len": seq_len,
+            "seq_len": preprocessor.seq_len,
             "stop_events": stop_events,
             "artifact_dir": artifact_dir,
             "device": device,
