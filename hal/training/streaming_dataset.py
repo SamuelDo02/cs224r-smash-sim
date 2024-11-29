@@ -4,7 +4,6 @@ from typing import Optional
 from typing import cast
 
 import numpy as np
-import torch
 from streaming import StreamingDataset
 from tensordict import TensorDict
 from training.preprocess.preprocess_inputs import Preprocessor
@@ -36,30 +35,9 @@ class HALStreamingDataset(StreamingDataset):
         self.traj_sampling_len = self.preprocessor.trajectory_sampling_len
         self.seq_len = self.preprocessor.seq_len
 
-    def sample_from_episode(self, ndarrays_by_feature: dict[str, np.ndarray]) -> dict[str, torch.Tensor]:
-        """Randomly slice episode features into input/target sequences for supervised training.
-
-        Args:
-            ndarrays_by_feature: dict of shape (episode_len,) containing full episode data
-
-        Returns:
-            dict of shape (sequence_len,) containing sliced data
-        """
-        frames = ndarrays_by_feature["frame"]
-        assert all(len(ndarray) == len(frames) for ndarray in ndarrays_by_feature.values())
-        episode_len = len(frames)
-        sample_index = random.randint(0, episode_len - self.traj_sampling_len)
-        tensor_slice_by_feature_name = {
-            feature_name: torch.from_numpy(feature_L[sample_index : sample_index + self.traj_sampling_len].copy())
-            for feature_name, feature_L in ndarrays_by_feature.items()
-        }
-        return tensor_slice_by_feature_name
-
     def __getitem__(self, idx: int | slice | list[int] | np.ndarray) -> TensorDict:
         episode_features_by_name = super().__getitem__(idx)
-        sample_td = TensorDict(
-            self.sample_from_episode(episode_features_by_name), batch_size=(self.traj_sampling_len,)
-        )
+        sample_td = self.preprocessor.sample_from_episode(episode_features_by_name)
 
         player_perspective = cast(Player, random.choice(VALID_PLAYERS))
         inputs = self.preprocessor.preprocess_inputs(sample_td, player_perspective)

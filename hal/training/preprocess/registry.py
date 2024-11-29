@@ -8,7 +8,7 @@ from hal.data.stats import FeatureStats
 from hal.training.config import DataConfig
 from hal.training.config import EmbeddingConfig
 
-InputPreprocessFn = Callable[[TensorDict, Player, Dict[str, FeatureStats]], TensorDict]
+InputPreprocessFn = Callable[[TensorDict, DataConfig, Player, Dict[str, FeatureStats]], TensorDict]
 
 
 class InputPreprocessRegistry:

@@ -1,8 +1,10 @@
+import random
 from functools import partial
 from typing import Dict
 from typing import Optional
 from typing import Tuple
 
+import numpy as np
 import torch
 from tensordict import TensorDict
 
@@ -212,7 +214,7 @@ TODO:
 
 Create preprocessor class and preprocessing fn registry
 - class holds on to data config and knows: 
-    - how long example seq len should be
+    - how long training example seq len should be
     - how to slice full episodes into appropriate input/target lens for dataset `__getitem__()`
         - e.g. single frame ahead, warmup frames, prev frame for controller inputs
     - numeric input shape
@@ -277,11 +279,29 @@ class Preprocessor:
         """Get the final length of a preprocessed supervised training example / sequence."""
         return self.input_len + self.target_len
 
-    def preprocess_inputs(self, sample_L: TensorDict, ego: Player) -> TensorDict:
-        return self.preprocess_inputs_fn(sample_L, ego, self.stats)
+    def sample_from_episode(self, ndarrays_by_feature: dict[str, np.ndarray]) -> TensorDict:
+        """Randomly slice episode features into input/target sequences for supervised training.
 
-    def preprocess_trajectory(self, sample_L: TensorDict, ego: Player) -> TensorDict:
-        return self.preprocess_inputs_fn(sample_L, ego, self.stats)
+        Args:
+            ndarrays_by_feature: dict of shape (episode_len,) containing full episode data
+
+        Returns:
+            dict of shape (sequence_len,) containing sliced data
+        """
+        frames = ndarrays_by_feature["frame"]
+        assert all(len(ndarray) == len(frames) for ndarray in ndarrays_by_feature.values())
+        episode_len = len(frames)
+        sample_index = random.randint(0, episode_len - self.trajectory_sampling_len)
+        tensor_slice_by_feature_name = {
+            feature_name: torch.from_numpy(
+                feature_L[sample_index : sample_index + self.trajectory_sampling_len].copy()
+            )
+            for feature_name, feature_L in ndarrays_by_feature.items()
+        }
+        return TensorDict(tensor_slice_by_feature_name, batch_size=(self.trajectory_sampling_len,))
+
+    def preprocess_inputs(self, sample_L: TensorDict, ego: Player) -> TensorDict:
+        return self.preprocess_inputs_fn(sample_L, self.data_config, ego, self.stats)
 
     def preprocess_targets(self, sample_L: TensorDict, ego: Player) -> TensorDict:
         return self.preprocess_targets_fn(sample_L, ego)
