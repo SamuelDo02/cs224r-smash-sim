@@ -19,14 +19,13 @@ from hal.training.preprocess.registry import TargetPreprocessRegistry
 
 class Preprocessor:
     """
-    Converts ndarray dict of gamestate features into supervised training examples.
+    Container object that converts ndarray dicts of gamestate features into supervised training examples.
 
     Class holds on to data config and knows:
     - how to slice full episodes into appropriate input/target shapes
         - e.g. single frame ahead, warmup frames, prev frame for controller inputs
     - how long training example seq_len should be
-    - numeric input shape
-    - categorical input keys & shapes
+    - input shapes by head
     """
 
     def __init__(self, data_config: DataConfig, embedding_config: EmbeddingConfig) -> None:
@@ -42,23 +41,13 @@ class Preprocessor:
         self.preprocess_targets_fn = TargetPreprocessRegistry.get(self.embedding_config.target_preprocessing_fn)
         self.postprocess_preds_fn = PredPostprocessingRegistry.get(self.embedding_config.pred_postprocessing_fn)
 
+        # TODO add interface for getting input shapes by head
+        self.input_preprocess_config = InputPreprocessRegistry.get_config(self.embedding_config.input_preprocessing_fn)
+        self.input_preprocess_config.update_input_shapes_by_head(self.embedding_config)
+        self.input_shapes_by_head = self.input_preprocess_config.input_shapes_by_head
+
         # Closed loop eval
         self.last_controller_inputs: Optional[Dict[str, torch.Tensor]] = None
-
-    @property
-    def numeric_input_shape(self) -> int:
-        """Get the size of the materialized input dimensions from the embedding config."""
-        return InputPreprocessRegistry.get_num_features(self.embedding_config.input_preprocessing_fn)
-
-    @property
-    def categorical_input_shapes(self) -> dict[str, int]:
-        return {
-            "stage": self.embedding_config.stage_embedding_dim,
-            "ego_character": self.embedding_config.character_embedding_dim,
-            "opponent_character": self.embedding_config.character_embedding_dim,
-            "ego_action": self.embedding_config.action_embedding_dim,
-            "opponent_action": self.embedding_config.action_embedding_dim,
-        }
 
     @property
     def trajectory_sampling_len(self) -> int:

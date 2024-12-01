@@ -9,7 +9,6 @@ from torch.nn import functional as F
 
 from hal.training.config import TrainConfig
 from hal.training.models.registry import Arch
-from hal.training.preprocess.registry import get_input_size_from_config
 
 
 @attr.s(auto_attribs=True, frozen=True)
@@ -122,56 +121,11 @@ class Block(nn.Module):
         return x
 
 
-class GPTv1(nn.Module):
-    def __init__(self, config: TrainConfig, gpt_config: GPTConfig) -> None:
+class BaseGPT(nn.Module):
+    def __init__(self, train_config: TrainConfig, gpt_config: GPTConfig) -> None:
         super().__init__()
-        embed_config = config.embedding
-        assert embed_config.num_buttons is not None
-        assert embed_config.num_main_stick_clusters is not None
-        assert embed_config.num_c_stick_clusters is not None
-        self.context_length = config.data.input_len
-        self.input_size = get_input_size_from_config(embed_config)
-        self.n_embd = gpt_config.n_embd
-
-        self.train_config = config
+        self.train_config = train_config
         self.gpt_config = gpt_config
-
-        self.transformer = nn.ModuleDict(
-            dict(
-                stage=nn.Embedding(embed_config.num_stages, embed_config.stage_embedding_dim),
-                character=nn.Embedding(embed_config.num_characters, embed_config.character_embedding_dim),
-                action=nn.Embedding(embed_config.num_actions, embed_config.action_embedding_dim),
-                drop=nn.Dropout(gpt_config.dropout),
-                proj_down=nn.Linear(self.input_size, gpt_config.n_embd),
-                wpe=nn.Embedding(self.context_length, gpt_config.n_embd),
-                h=nn.ModuleList(
-                    [
-                        Block(
-                            n_embd=gpt_config.n_embd,
-                            n_head=gpt_config.n_head,
-                            context_length=self.context_length,
-                            dropout=gpt_config.dropout,
-                            bias=gpt_config.bias,
-                        )
-                        for _ in range(gpt_config.n_layer)
-                    ]
-                ),
-                ln_f=LayerNorm(self.n_embd, bias=gpt_config.bias),
-            )
-        )
-        self.button_head = nn.Linear(self.n_embd, embed_config.num_buttons, bias=False)
-        self.main_stick_head = nn.Linear(self.n_embd, embed_config.num_main_stick_clusters, bias=False)
-        self.c_stick_head = nn.Linear(self.n_embd, embed_config.num_c_stick_clusters, bias=False)
-
-        # TODO investigate weight tying
-        # self.transformer.wte.weight = self.lm_head.weight # https://paperswithcode.com/method/weight-tying
-
-        # init all weights
-        self.apply(self._init_weights)
-        # apply special scaled init to the residual projections, per GPT-2 paper
-        for pn, p in self.named_parameters():
-            if pn.endswith("c_proj.weight"):
-                torch.nn.init.normal_(p, mean=0.0, std=0.02 / math.sqrt(2 * gpt_config.n_layer))
 
     def get_num_params(self, non_embedding=True):
         """
@@ -194,39 +148,7 @@ class GPTv1(nn.Module):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
     def forward(self, inputs: TensorDict):
-        B, T, D = inputs["gamestate"].shape
-        assert (
-            T <= self.context_length
-        ), f"Cannot forward sequence of length {T}, block size is only {self.context_length}"
-        pos = torch.arange(0, T, dtype=torch.long, device=next(self.parameters()).device)  # shape (t)
-
-        combined_inputs = torch.cat(
-            [
-                self.transformer.stage(inputs["stage"]).squeeze(-2),
-                self.transformer.character(inputs["ego_character"]).squeeze(-2),
-                self.transformer.character(inputs["opponent_character"]).squeeze(-2),
-                self.transformer.action(inputs["ego_action"]).squeeze(-2),
-                self.transformer.action(inputs["opponent_action"]).squeeze(-2),
-                inputs["gamestate"],
-            ],
-            dim=-1,
-        )
-        proj_inputs = self.transformer.proj_down(combined_inputs)
-
-        pos_emb = self.transformer.wpe(pos)  # position embeddings of shape (t, n_embd)
-        x = self.transformer.drop(proj_inputs + pos_emb)
-        for block in self.transformer.h:
-            x = block(x)
-        x = self.transformer.ln_f(x)
-
-        return TensorDict(
-            {
-                "buttons": self.button_head(x).squeeze(-2),
-                "main_stick": self.main_stick_head(x).squeeze(-2),
-                "c_stick": self.c_stick_head(x).squeeze(-2),
-            },
-            batch_size=(B, T),
-        )
+        raise NotImplementedError
 
     def crop_block_size(self, block_size) -> None:
         # model surgery to decrease the context window if necessary
@@ -310,6 +232,90 @@ class GPTv1(nn.Module):
             idx = torch.cat((idx, idx_next), dim=1)
 
         return idx
+
+
+class GPTv1(BaseGPT):
+    def __init__(self, train_config: TrainConfig, gpt_config: GPTConfig) -> None:
+        super().__init__(train_config, gpt_config)
+        embed_config = train_config.embedding
+        assert embed_config.num_buttons is not None
+        assert embed_config.num_main_stick_clusters is not None
+        assert embed_config.num_c_stick_clusters is not None
+        self.context_length = train_config.data.input_len
+        self.n_embd = gpt_config.n_embd
+
+        self.transformer = nn.ModuleDict(
+            dict(
+                stage=nn.Embedding(embed_config.num_stages, embed_config.stage_embedding_dim),
+                character=nn.Embedding(embed_config.num_characters, embed_config.character_embedding_dim),
+                action=nn.Embedding(embed_config.num_actions, embed_config.action_embedding_dim),
+                drop=nn.Dropout(gpt_config.dropout),
+                # TODO get input size from preprocess config or preprocessor
+                proj_down=nn.Linear(self.input_size, gpt_config.n_embd),
+                wpe=nn.Embedding(self.context_length, gpt_config.n_embd),
+                h=nn.ModuleList(
+                    [
+                        Block(
+                            n_embd=gpt_config.n_embd,
+                            n_head=gpt_config.n_head,
+                            context_length=self.context_length,
+                            dropout=gpt_config.dropout,
+                            bias=gpt_config.bias,
+                        )
+                        for _ in range(gpt_config.n_layer)
+                    ]
+                ),
+                ln_f=LayerNorm(self.n_embd, bias=gpt_config.bias),
+            )
+        )
+        self.button_head = nn.Linear(self.n_embd, embed_config.num_buttons, bias=False)
+        self.main_stick_head = nn.Linear(self.n_embd, embed_config.num_main_stick_clusters, bias=False)
+        self.c_stick_head = nn.Linear(self.n_embd, embed_config.num_c_stick_clusters, bias=False)
+
+        # TODO investigate weight tying
+        # self.transformer.wte.weight = self.lm_head.weight # https://paperswithcode.com/method/weight-tying
+
+        # init all weights
+        self.apply(self._init_weights)
+        # apply special scaled init to the residual projections, per GPT-2 paper
+        for pn, p in self.named_parameters():
+            if pn.endswith("c_proj.weight"):
+                torch.nn.init.normal_(p, mean=0.0, std=0.02 / math.sqrt(2 * gpt_config.n_layer))
+
+    def forward(self, inputs: TensorDict):
+        B, T, D = inputs["gamestate"].shape
+        assert (
+            T <= self.context_length
+        ), f"Cannot forward sequence of length {T}, block size is only {self.context_length}"
+        pos = torch.arange(0, T, dtype=torch.long, device=next(self.parameters()).device)  # shape (t)
+
+        combined_inputs = torch.cat(
+            [
+                self.transformer.stage(inputs["stage"]).squeeze(-2),
+                self.transformer.character(inputs["ego_character"]).squeeze(-2),
+                self.transformer.character(inputs["opponent_character"]).squeeze(-2),
+                self.transformer.action(inputs["ego_action"]).squeeze(-2),
+                self.transformer.action(inputs["opponent_action"]).squeeze(-2),
+                inputs["gamestate"],
+            ],
+            dim=-1,
+        )
+        proj_inputs = self.transformer.proj_down(combined_inputs)
+
+        pos_emb = self.transformer.wpe(pos)  # position embeddings of shape (t, n_embd)
+        x = self.transformer.drop(proj_inputs + pos_emb)
+        for block in self.transformer.h:
+            x = block(x)
+        x = self.transformer.ln_f(x)
+
+        return TensorDict(
+            {
+                "buttons": self.button_head(x).squeeze(-2),
+                "main_stick": self.main_stick_head(x).squeeze(-2),
+                "c_stick": self.c_stick_head(x).squeeze(-2),
+            },
+            batch_size=(B, T),
+        )
 
 
 class GPTv2(GPTv1):

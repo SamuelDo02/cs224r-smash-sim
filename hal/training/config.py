@@ -62,9 +62,7 @@ class DataworkerConfig:
 
 @attr.s(auto_attribs=True, frozen=True)
 class EmbeddingConfig:
-    # Implicitly controls # numeric features
     input_preprocessing_fn: str = "inputs_v2"
-    # Implicitly determines # categorical target features
     target_preprocessing_fn: str = "targets_v0"
     pred_postprocessing_fn: str = "preds_v2"
 

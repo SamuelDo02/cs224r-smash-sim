@@ -61,7 +61,7 @@ class Trainer(torch.nn.Module, abc.ABC):
         self.artifact_dir = get_artifact_dir(get_exp_name(self.config))
 
         logger.info(f"Initializing model {self.config.arch}")
-        model = Arch.get(self.config.arch, config=self.config)
+        model = Arch.get(self.config.arch, train_config=self.config)
         self.model = maybe_wrap_model_distributed(model)
         self.opt = torch.optim.AdamW(
             self.model.parameters(),

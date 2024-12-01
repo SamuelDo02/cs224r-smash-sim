@@ -5,7 +5,7 @@ from hal.constants import STICK_XY_CLUSTER_CENTERS_V0
 from hal.training.preprocess.registry import PredPostprocessingRegistry
 
 
-@PredPostprocessingRegistry.register("targets_v0")
+@PredPostprocessingRegistry.register("preds_v0")
 def model_predictions_to_controller_inputs_v0(pred_C: TensorDict, temperature: float = 1.0) -> TensorDict:
     """
     Sample using temperature from the predicted distribution.
@@ -36,7 +36,7 @@ def model_predictions_to_controller_inputs_v0(pred_C: TensorDict, temperature: f
     )
 
 
-@PredPostprocessingRegistry.register("targets_v1")
+@PredPostprocessingRegistry.register("preds_v1")
 def model_predictions_to_controller_inputs_v1(pred: TensorDict) -> TensorDict:
     """
     Argmax the main stick and c-stick clusters, and the buttons.

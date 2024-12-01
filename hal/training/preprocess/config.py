@@ -1,4 +1,6 @@
+from typing import Callable
 from typing import Dict
+from typing import Self
 from typing import Tuple
 
 import attr
@@ -8,9 +10,10 @@ from hal.data.normalize import cast_int32
 from hal.data.normalize import invert_and_normalize
 from hal.data.normalize import normalize
 from hal.data.normalize import standardize
+from hal.training.config import EmbeddingConfig
 
 
-@attr.s(auto_attribs=True, frozen=True)
+@attr.s(auto_attribs=True)
 class InputPreprocessConfig:
     """Configuration for preprocessing functions."""
 
@@ -28,6 +31,9 @@ class InputPreprocessConfig:
     # TensorDict does not support differentiated sizes across keys for the same dimension
     input_shapes_by_head: Dict[str, Tuple[int, ...]]
 
+    # Update input shapes by head based on the embedding config at runtime
+    update_input_shapes_by_head: Callable[[Self, EmbeddingConfig], None]
+
     @classmethod
     def v0(cls):
         player_features = (
@@ -43,6 +49,18 @@ class InputPreprocessConfig:
             "position_x",
             "position_y",
         )
+
+        @staticmethod
+        def update_input_shapes_by_head(self, embed_config: EmbeddingConfig) -> None:
+            self.input_shapes_by_head.update(
+                {
+                    "stage": (embed_config.stage_embedding_dim,),
+                    "ego_character": (embed_config.character_embedding_dim,),
+                    "opponent_character": (embed_config.character_embedding_dim,),
+                    "ego_action": (embed_config.action_embedding_dim,),
+                    "opponent_action": (embed_config.action_embedding_dim,),
+                }
+            )
 
         return cls(
             player_features=player_features,
@@ -70,10 +88,6 @@ class InputPreprocessConfig:
             },
             input_shapes_by_head={
                 "gamestate": (2 * len(player_features),),  # 2x for ego and opponent
-                "stage": (1,),
-                "ego_character": (1,),
-                "opponent_character": (1,),
-                "ego_action": (1,),
-                "opponent_action": (1,),
             },
+            update_input_shapes_by_head=update_input_shapes_by_head,
         )
