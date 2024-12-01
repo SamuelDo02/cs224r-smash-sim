@@ -89,6 +89,7 @@ def get_console_kwargs(port: int, enable_ffw: bool = True, replay_dir: Path | No
         "replay_dir": str(replay_dir),
         "blocking_input": True,
         "slippi_port": port,
+        "online_delay": 0,  # 0 frame delay for local evaluation
         **headless_console_kwargs,
     }
     return console_kwargs
