@@ -5,43 +5,28 @@ from typing import Tuple
 from tensordict import TensorDict
 
 from hal.constants import Player
-from hal.data.stats import FeatureStats
-from hal.training.config import DataConfig
 from hal.training.preprocess.config import InputPreprocessConfig
-
-InputPreprocessFn = Callable[[TensorDict, DataConfig, Player, Dict[str, FeatureStats]], TensorDict]
 
 
 class InputPreprocessRegistry:
-    EMBED: Dict[str, InputPreprocessFn] = {}
     CONFIGS: Dict[str, InputPreprocessConfig] = {}
 
     @classmethod
-    def get(cls, name: str) -> InputPreprocessFn:
-        if name in cls.EMBED:
-            return cls.EMBED[name]
-        raise NotImplementedError(f"Preprocessing fn {name} not found. Valid functions: {sorted(cls.EMBED.keys())}.")
-
-    @classmethod
-    def get_config(cls, name: str) -> InputPreprocessConfig:
-        """Get the config class associated with a preprocessing function."""
-        return cls.CONFIGS[name]
+    def get(cls, name: str) -> InputPreprocessConfig:
+        if name in cls.CONFIGS:
+            return cls.CONFIGS[name]
+        raise NotImplementedError(f"Preprocessing fn {name} not found. Valid functions: {sorted(cls.CONFIGS.keys())}.")
 
     @classmethod
     def register(cls, name: str, config: InputPreprocessConfig):
-        """Register a preprocessing function with an optional config class."""
-
-        def decorator(preprocess_fn: InputPreprocessFn):
-            cls.EMBED[name] = preprocess_fn
-            cls.CONFIGS[name] = config
-            return preprocess_fn
-
-        return decorator
+        if name in cls.CONFIGS:
+            raise ValueError(f"InputPreprocessConfig with name '{name}' already registered.")
+        cls.CONFIGS[name] = config
 
     @classmethod
     def get_input_sizes(cls, name: str) -> Dict[str, Tuple[int, ...]]:
         """Get input sizes for all heads from a registered config."""
-        config_cls = cls.get_config(name)
+        config_cls = cls.get(name)
         return config_cls.input_shapes_by_head
 
 

@@ -11,10 +11,9 @@ from hal.data.normalize import NormalizationFn
 from hal.data.stats import load_dataset_stats
 from hal.training.config import DataConfig
 from hal.training.config import EmbeddingConfig
+from hal.training.preprocess.config import update_input_shapes_with_embedding_config
 from hal.training.preprocess.preprocess_inputs import preprocess_inputs_v2
 from hal.training.preprocess.registry import InputPreprocessRegistry
-from hal.training.preprocess.registry import PredPostprocessingRegistry
-from hal.training.preprocess.registry import TargetPreprocessRegistry
 
 
 class Preprocessor:
@@ -33,18 +32,12 @@ class Preprocessor:
         self.embedding_config = embedding_config
         self.stats = load_dataset_stats(data_config.stats_path)
         self.normalization_fn_by_feature_name: Dict[str, NormalizationFn] = {}
+        self.context_len = data_config.context_len
 
-        self.input_len = data_config.input_len
-        self.target_len = data_config.target_len
-
-        self.preprocess_inputs_fn = InputPreprocessRegistry.get(self.embedding_config.input_preprocessing_fn)
-        self.preprocess_targets_fn = TargetPreprocessRegistry.get(self.embedding_config.target_preprocessing_fn)
-        self.postprocess_preds_fn = PredPostprocessingRegistry.get(self.embedding_config.pred_postprocessing_fn)
-
-        # TODO add interface for getting input shapes by head
-        self.input_preprocess_config = InputPreprocessRegistry.get_config(self.embedding_config.input_preprocessing_fn)
-        self.input_preprocess_config.update_input_shapes_by_head(self.embedding_config)
-        self.input_shapes_by_head = self.input_preprocess_config.input_shapes_by_head
+        self.input_preprocess_config = InputPreprocessRegistry.get(self.embedding_config.input_preprocessing_fn)
+        self.input_shapes_by_head = update_input_shapes_with_embedding_config(
+            self.input_preprocess_config.input_shapes_by_head, self.embedding_config
+        )
 
         # Closed loop eval
         self.last_controller_inputs: Optional[Dict[str, torch.Tensor]] = None
@@ -52,10 +45,10 @@ class Preprocessor:
     @property
     def trajectory_sampling_len(self) -> int:
         """Get the number of frames needed from a full episode to preprocess a supervised training example."""
-        trajectory_len = self.input_len + self.target_len
+        trajectory_len = self.context_len
 
         # Handle preprocessing fns that require +1 prev frame for controller inputs
-        if self.preprocess_inputs_fn in (preprocess_inputs_v2,):
+        if self.input_preprocess_config in (preprocess_inputs_v2,):
             trajectory_len += 1
         # Other conditions here
 
@@ -88,7 +81,7 @@ class Preprocessor:
         return TensorDict(tensor_slice_by_feature_name, batch_size=(self.trajectory_sampling_len,))
 
     def preprocess_inputs(self, sample_L: TensorDict, ego: Player) -> TensorDict:
-        return self.preprocess_inputs_fn(sample_L, self.data_config, ego, self.stats)
+        return self.input_preprocess_config(sample_L, self.data_config, ego, self.stats)
 
     def preprocess_targets(self, sample_L: TensorDict, ego: Player) -> TensorDict:
         return self.preprocess_targets_fn(sample_L, ego)

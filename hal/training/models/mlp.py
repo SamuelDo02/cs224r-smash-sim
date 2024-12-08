@@ -20,14 +20,14 @@ class MLPBC(nn.Module):
         assert embed_config.num_main_stick_clusters is not None
         assert embed_config.num_c_stick_clusters is not None
         self.n_embd = get_input_size_from_config(embed_config)
-        self.max_length = data_config.input_len
+        self.context_len = data_config.context_len
 
         self.modules_by_name = nn.ModuleDict(
             dict(
                 stage=nn.Embedding(embed_config.num_stages, embed_config.stage_embedding_dim),
                 character=nn.Embedding(embed_config.num_characters, embed_config.character_embedding_dim),
                 action=nn.Embedding(embed_config.num_actions, embed_config.action_embedding_dim),
-                proj_in=nn.Linear(self.max_length * self.n_embd, hidden_size),
+                proj_in=nn.Linear(self.context_len * self.n_embd, hidden_size),
                 mlp=nn.Sequential(
                     *[
                         layer

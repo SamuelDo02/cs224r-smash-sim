@@ -13,6 +13,23 @@ from hal.data.normalize import standardize
 from hal.training.config import EmbeddingConfig
 
 
+# TODO what if we want to add or remove heads?
+def update_input_shapes_with_embedding_config(
+    input_shapes_by_head: Dict[str, Tuple[int, ...]], embedding_config: EmbeddingConfig
+) -> Dict[str, Tuple[int, ...]]:
+    new_input_shapes_by_head = input_shapes_by_head.copy()
+    new_input_shapes_by_head.update(
+        {
+            "stage": (embedding_config.stage_embedding_dim,),
+            "ego_character": (embedding_config.character_embedding_dim,),
+            "opponent_character": (embedding_config.character_embedding_dim,),
+            "ego_action": (embedding_config.action_embedding_dim,),
+            "opponent_action": (embedding_config.action_embedding_dim,),
+        }
+    )
+    return new_input_shapes_by_head
+
+
 @attr.s(auto_attribs=True)
 class InputPreprocessConfig:
     """Configuration for preprocessing functions."""
@@ -50,18 +67,6 @@ class InputPreprocessConfig:
             "position_y",
         )
 
-        @staticmethod
-        def update_input_shapes_by_head(self, embed_config: EmbeddingConfig) -> None:
-            self.input_shapes_by_head.update(
-                {
-                    "stage": (embed_config.stage_embedding_dim,),
-                    "ego_character": (embed_config.character_embedding_dim,),
-                    "opponent_character": (embed_config.character_embedding_dim,),
-                    "ego_action": (embed_config.action_embedding_dim,),
-                    "opponent_action": (embed_config.action_embedding_dim,),
-                }
-            )
-
         return cls(
             player_features=player_features,
             normalization_mapping={
@@ -89,5 +94,5 @@ class InputPreprocessConfig:
             input_shapes_by_head={
                 "gamestate": (2 * len(player_features),),  # 2x for ego and opponent
             },
-            update_input_shapes_by_head=update_input_shapes_by_head,
+            update_input_shapes_by_head=update_input_shapes_with_embedding_config,
         )

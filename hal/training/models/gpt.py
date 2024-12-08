@@ -241,7 +241,7 @@ class GPTv1(BaseGPT):
         assert embed_config.num_buttons is not None
         assert embed_config.num_main_stick_clusters is not None
         assert embed_config.num_c_stick_clusters is not None
-        self.context_length = train_config.data.input_len
+        self.context_len = train_config.data.context_len
         self.n_embd = gpt_config.n_embd
 
         self.transformer = nn.ModuleDict(
@@ -252,13 +252,13 @@ class GPTv1(BaseGPT):
                 drop=nn.Dropout(gpt_config.dropout),
                 # TODO get input size from preprocess config or preprocessor
                 proj_down=nn.Linear(self.input_size, gpt_config.n_embd),
-                wpe=nn.Embedding(self.context_length, gpt_config.n_embd),
+                wpe=nn.Embedding(self.context_len, gpt_config.n_embd),
                 h=nn.ModuleList(
                     [
                         Block(
                             n_embd=gpt_config.n_embd,
                             n_head=gpt_config.n_head,
-                            context_length=self.context_length,
+                            context_length=self.context_len,
                             dropout=gpt_config.dropout,
                             bias=gpt_config.bias,
                         )
@@ -285,8 +285,8 @@ class GPTv1(BaseGPT):
     def forward(self, inputs: TensorDict):
         B, T, D = inputs["gamestate"].shape
         assert (
-            T <= self.context_length
-        ), f"Cannot forward sequence of length {T}, block size is only {self.context_length}"
+            T <= self.context_len
+        ), f"Cannot forward sequence of length {T}, block size is only {self.context_len}"
         pos = torch.arange(0, T, dtype=torch.long, device=next(self.parameters()).device)  # shape (t)
 
         combined_inputs = torch.cat(
@@ -323,8 +323,8 @@ class GPTv2(GPTv1):
     def forward(self, inputs: TensorDict):
         B, T, D = inputs["gamestate"].shape
         assert (
-            T <= self.context_length
-        ), f"Cannot forward sequence of length {T}, block size is only {self.context_length}"
+            T <= self.context_len
+        ), f"Cannot forward sequence of length {T}, block size is only {self.context_len}"
         pos = torch.arange(0, T, dtype=torch.long, device=next(self.parameters()).device)  # shape (t)
 
         combined_inputs = torch.cat(
