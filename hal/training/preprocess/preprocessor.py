@@ -15,7 +15,6 @@ from hal.training.config import DataConfig
 from hal.training.config import EmbeddingConfig
 from hal.training.preprocess.config import InputPreprocessConfig
 from hal.training.preprocess.config import update_input_shapes_with_embedding_config
-from hal.training.preprocess.preprocess_inputs import preprocess_inputs_v2
 from hal.training.preprocess.registry import InputPreprocessRegistry
 
 
@@ -24,17 +23,21 @@ def preprocess_input_features(
     ego: Player,
     config: InputPreprocessConfig,
     stats: Dict[str, FeatureStats],
-) -> Dict[str, torch.Tensor]:
-    """Preprocess input features for a given sample."""
+) -> TensorDict:
+    """Applies preprocessing functions to player and non-player input features for a given sample.
+
+    Does not slice or shift any features.
+    """
     opponent = get_opponent(ego)
     normalization_fn_by_feature_name = config.normalization_fn_by_feature_name
     processed_features: Dict[str, torch.Tensor] = {}
 
     # Process player features
-    for player in [ego, opponent]:
+    for player in (ego, opponent):
+        perspective = "ego" if player == ego else "opponent"
         for feature_name in config.player_features:
             preprocess_fn = normalization_fn_by_feature_name[feature_name]
-            player_feature_name = f"{player}_{feature_name}"
+            player_feature_name = f"{perspective}_{feature_name}"
             processed_features[player_feature_name] = preprocess_fn(
                 sample[player_feature_name], stats[player_feature_name]
             )
@@ -49,7 +52,7 @@ def preprocess_input_features(
     # Concatenate processed features by head
     concatenated_features_by_head_name: Dict[str, torch.Tensor] = {}
     seen_feature_names: Set[str] = set()
-    for head_name, feature_names in config.separate_feature_names_by_head.items():
+    for head_name, feature_names in config.grouped_feature_names_by_head.items():
         features_to_concatenate = [processed_features[feature_name] for feature_name in feature_names]
         concatenated_features_by_head_name[head_name] = torch.cat(features_to_concatenate, dim=-1)
         seen_feature_names.update(feature_names)
@@ -62,7 +65,7 @@ def preprocess_input_features(
             unseen_feature_tensors.append(feature_tensor)
     concatenated_features_by_head_name[DEFAULT_HEAD_NAME] = torch.cat(unseen_feature_tensors, dim=-1)
 
-    return concatenated_features_by_head_name
+    return TensorDict(concatenated_features_by_head_name, batch_size=sample.batch_size)
 
 
 class Preprocessor:
@@ -71,9 +74,9 @@ class Preprocessor:
 
     Class holds on to data config and knows:
     - how to slice full episodes into appropriate input/target shapes
-        - e.g. single frame ahead, warmup frames, prev frame for controller inputs
-    - how long training example seq_len should be
-    - input shapes by head
+    - how many frames to offset features
+        - e.g. warmup frames, prev frame for controller inputs, multiple frames ahead for multi-step predictions
+    - hidden dim sizes by input embedding head at runtime
     """
 
     def __init__(self, data_config: DataConfig, embedding_config: EmbeddingConfig) -> None:
@@ -88,6 +91,10 @@ class Preprocessor:
             self.input_preprocess_config.input_shapes_by_head, self.embedding_config
         )
 
+        self.frame_offsets_by_feature = self.input_preprocess_config.frame_offsets_by_feature
+        self.max_abs_offset = max((abs(offset) for offset in self.frame_offsets_by_feature.values()), default=0)
+        self.min_offset = min((offset for offset in self.frame_offsets_by_feature.values()), default=0)
+
         # Closed loop eval
         # self.last_controller_inputs: Optional[Dict[str, torch.Tensor]] = None
 
@@ -95,22 +102,19 @@ class Preprocessor:
     def trajectory_sampling_len(self) -> int:
         """Get the number of frames needed from a full episode to preprocess a supervised training example."""
         trajectory_len = self.seq_len
-
-        # Handle preprocessing fns that require +1 prev frame for controller inputs
-        if self.input_preprocess_config in (preprocess_inputs_v2,):
-            trajectory_len += 1
-        # Other conditions here
-
+        trajectory_len += self.max_abs_offset
         return trajectory_len
 
     def sample_from_episode(self, ndarrays_by_feature: dict[str, np.ndarray]) -> TensorDict:
-        """Randomly slice episode features into input/target sequences for supervised training.
+        """Randomly slice input/target features into trajectory_sampling_len sequences for supervised training.
+
+        Can be substituted with feature buffer at eval / runtime.
 
         Args:
             ndarrays_by_feature: dict of shape (episode_len,) containing full episode data
 
         Returns:
-            dict of shape (sequence_len,) containing sliced data
+            TensorDict of shape (trajectory_sampling_len,)
         """
         frames = ndarrays_by_feature["frame"]
         assert all(len(ndarray) == len(frames) for ndarray in ndarrays_by_feature.values())
@@ -124,8 +128,34 @@ class Preprocessor:
         }
         return TensorDict(tensor_slice_by_feature_name, batch_size=(self.trajectory_sampling_len,))
 
-    def preprocess_inputs(self, sample_L: TensorDict, ego: Player) -> TensorDict:
-        return self.input_preprocess_config(sample_L, self.data_config, ego, self.stats)
+    def offset_features(self, sample_T: TensorDict) -> TensorDict:
+        """Offset & slice features to training-ready sequence length.
+
+        Args:
+            sample_T: TensorDict of shape (trajectory_sampling_len,) containing features
+
+        Returns:
+            TensorDict of shape (seq_len,) with features offset according to config
+        """
+        reference_frame_idx = abs(min(0, self.min_offset))
+        offset_features = {}
+
+        for feature_name, tensor in sample_T.items():
+            offset = self.frame_offsets_by_feature.get(feature_name, 0)
+            start_idx = reference_frame_idx + offset
+            end_idx = start_idx + self.seq_len
+            offset_features[feature_name] = tensor[start_idx:end_idx]
+
+        return TensorDict(offset_features, batch_size=(self.seq_len,))
+
+    def preprocess_inputs(self, sample_T: TensorDict, ego: Player) -> TensorDict:
+        offset_features = self.offset_features(sample_T)
+        return preprocess_input_features(
+            sample=offset_features,
+            ego=ego,
+            config=self.input_preprocess_config,
+            stats=self.stats,
+        )
 
     def preprocess_targets(self, sample_L: TensorDict, ego: Player) -> TensorDict:
         return self.preprocess_targets_fn(sample_L, ego)

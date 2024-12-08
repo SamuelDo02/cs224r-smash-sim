@@ -40,11 +40,12 @@ class InputPreprocessConfig:
 
     # Mapping from feature name to frame offset relative to sampled index
     # e.g. to include controller inputs from prev frame with current frame gamestate, set p1_button_a = -1, etc.
-    offsets_by_feature: Dict[str, int]
+    frame_offsets_by_feature: Dict[str, int]
 
     # Mapping from head name to features to be fed to that head
-    # All unlisted features are fed to the default "gamestate" head
-    separate_feature_names_by_head: Dict[str, Tuple[str, ...]]
+    # Usually for int categorical features
+    # All unlisted features are concatenated to the default "gamestate" head
+    grouped_feature_names_by_head: Dict[str, Tuple[str, ...]]
 
     # Input dimensions (D,) of concatenated features after preprocessing
     # TensorDict does not support differentiated sizes across keys for the same dimension
@@ -68,7 +69,7 @@ class InputPreprocessConfig:
 
         return cls(
             player_features=player_features,
-            normalization_mapping={
+            normalization_fn_by_feature_name={
                 "frame": cast_int32,
                 "stage": cast_int32,
                 "character": cast_int32,
@@ -84,7 +85,7 @@ class InputPreprocessConfig:
                 "position_y": standardize,
             },
             offsets_by_feature={},
-            separate_feature_names_by_head={
+            grouped_feature_names_by_head={
                 "stage": ("stage",),
                 "ego_character": ("ego_character",),
                 "opponent_character": ("opponent_character",),
