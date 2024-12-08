@@ -8,7 +8,6 @@ from tensordict import TensorDict
 
 from hal.constants import Player
 from hal.constants import get_opponent
-from hal.data.normalize import NormalizationFn
 from hal.data.stats import FeatureStats
 from hal.data.stats import load_dataset_stats
 from hal.training.config import DataConfig
@@ -16,6 +15,7 @@ from hal.training.config import EmbeddingConfig
 from hal.training.preprocess.config import InputPreprocessConfig
 from hal.training.preprocess.config import update_input_shapes_with_embedding_config
 from hal.training.preprocess.registry import InputPreprocessRegistry
+from hal.training.preprocess.transform import Transformation
 
 
 def preprocess_input_features(
@@ -83,7 +83,7 @@ class Preprocessor:
         self.data_config = data_config
         self.embedding_config = embedding_config
         self.stats = load_dataset_stats(data_config.stats_path)
-        self.normalization_fn_by_feature_name: Dict[str, NormalizationFn] = {}
+        self.normalization_fn_by_feature_name: Dict[str, Transformation] = {}
         self.seq_len = data_config.seq_len
 
         self.input_preprocess_config = InputPreprocessRegistry.get(self.embedding_config.input_preprocessing_fn)

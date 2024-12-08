@@ -3,12 +3,12 @@ from typing import Tuple
 
 import attr
 
-from hal.data.normalize import NormalizationFn
-from hal.data.normalize import cast_int32
-from hal.data.normalize import invert_and_normalize
-from hal.data.normalize import normalize
-from hal.data.normalize import standardize
 from hal.training.config import EmbeddingConfig
+from hal.training.preprocess.transform import Transformation
+from hal.training.preprocess.transform import cast_int32
+from hal.training.preprocess.transform import invert_and_normalize
+from hal.training.preprocess.transform import normalize
+from hal.training.preprocess.transform import standardize
 
 
 # TODO what if we want to add or remove heads?
@@ -36,7 +36,7 @@ class InputPreprocessConfig:
     player_features: Tuple[str, ...]
 
     # Mapping from feature name to normalization function
-    normalization_fn_by_feature_name: Dict[str, NormalizationFn]
+    normalization_fn_by_feature_name: Dict[str, Transformation]
 
     # Mapping from feature name to frame offset relative to sampled index
     # e.g. to include controller inputs from prev frame with current frame gamestate, set p1_button_a = -1, etc.

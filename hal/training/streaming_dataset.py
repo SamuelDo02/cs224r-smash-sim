@@ -6,13 +6,13 @@ from typing import cast
 import numpy as np
 from streaming import StreamingDataset
 from tensordict import TensorDict
-from training.preprocess.preprocessor import Preprocessor
 
 from hal.constants import Player
 from hal.constants import VALID_PLAYERS
 from hal.data.stats import load_dataset_stats
 from hal.training.config import DataConfig
 from hal.training.config import EmbeddingConfig
+from hal.training.preprocess.preprocessor import Preprocessor
 
 
 class HALStreamingDataset(StreamingDataset):

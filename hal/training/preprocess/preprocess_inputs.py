@@ -11,18 +11,17 @@ from hal.constants import Player
 from hal.constants import STAGE
 from hal.constants import STICK_XY_CLUSTER_CENTERS_V0
 from hal.constants import TARGET_FEATURES_TO_ONE_HOT_ENCODE
-from hal.data.normalize import NormalizationFn
-from hal.data.normalize import cast_int32
-from hal.data.normalize import invert_and_normalize
-from hal.data.normalize import normalize
-from hal.data.normalize import normalize_and_embed_fourier
-from hal.data.normalize import standardize
 from hal.data.stats import FeatureStats
 from hal.training.config import DataConfig
-from hal.training.preprocess.base import preprocess_input_features
 from hal.training.preprocess.config import InputPreprocessConfig
 from hal.training.preprocess.preprocess_targets import preprocess_targets_v0
 from hal.training.preprocess.registry import InputPreprocessRegistry
+from hal.training.preprocess.transform import Transformation
+from hal.training.preprocess.transform import cast_int32
+from hal.training.preprocess.transform import invert_and_normalize
+from hal.training.preprocess.transform import normalize
+from hal.training.preprocess.transform import normalize_and_embed_fourier
+from hal.training.preprocess.transform import standardize
 
 
 @InputPreprocessRegistry.register("inputs_v0", InputPreprocessConfig.v0())
@@ -60,7 +59,7 @@ def preprocess_inputs_v1(
     trajectory_len = data_config.input_len + data_config.target_len
 
     numeric_features = NUMERIC_FEATURES_V1
-    normalization_fn_by_feature_name: Dict[str, NormalizationFn] = {
+    normalization_fn_by_feature_name: Dict[str, Transformation] = {
         **dict.fromkeys(STAGE, cast_int32),
         **dict.fromkeys(PLAYER_INPUT_FEATURES_TO_EMBED, cast_int32),
         **dict.fromkeys(PLAYER_INPUT_FEATURES_TO_NORMALIZE, normalize),
@@ -87,7 +86,7 @@ def preprocess_inputs_v2(
     sample: TensorDict, data_config: DataConfig, ego: Player, stats: Dict[str, FeatureStats]
 ) -> TensorDict:
     player_numeric_feature_names = PLAYER_NUMERIC_FEATURES_V0
-    normalization_fn_by_feature_name: Dict[str, NormalizationFn] = {
+    normalization_fn_by_feature_name: Dict[str, Transformation] = {
         **dict.fromkeys(STAGE, cast_int32),
         **dict.fromkeys(PLAYER_INPUT_FEATURES_TO_EMBED, cast_int32),
         **dict.fromkeys(PLAYER_INPUT_FEATURES_TO_NORMALIZE, normalize),

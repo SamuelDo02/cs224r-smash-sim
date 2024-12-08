@@ -4,7 +4,7 @@ import torch
 
 from hal.data.stats import FeatureStats
 
-NormalizationFn = Callable[[torch.Tensor, FeatureStats], torch.Tensor]
+Transformation = Callable[[torch.Tensor, FeatureStats], torch.Tensor]
 
 
 def cast_int32(array: torch.Tensor, stats: FeatureStats) -> torch.Tensor:
