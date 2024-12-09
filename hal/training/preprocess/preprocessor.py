@@ -102,10 +102,9 @@ class Preprocessor:
 
         return TensorDict(offset_features, batch_size=(self.seq_len,))
 
-    def preprocess_inputs(self, sample_T: TensorDict, ego: Player) -> TensorDict:
-        offset_features = self.offset_features(sample_T)
+    def preprocess_inputs(self, sample_L: TensorDict, ego: Player) -> TensorDict:
         return preprocess_input_features(
-            sample=offset_features,
+            sample=sample_L,
             ego=ego,
             config=self.input_preprocess_config,
             stats=self.stats,

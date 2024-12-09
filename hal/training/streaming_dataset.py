@@ -30,11 +30,12 @@ class HALStreamingDataset(StreamingDataset):
     def __getitem__(self, idx: int | slice | list[int] | np.ndarray) -> TensorDict:
         """Expects episode features to match data/schema.py."""
         episode_features_by_name = super().__getitem__(idx)
-        sample_td = self.preprocessor.sample_from_episode(episode_features_by_name)
+        sample_T = self.preprocessor.sample_from_episode(episode_features_by_name)
+        sample_L = self.preprocessor.offset_features(sample_T)
 
         player_perspective = cast(Player, random.choice(VALID_PLAYERS))
-        inputs = self.preprocessor.preprocess_inputs(sample_td, player_perspective)
-        targets = self.preprocessor.preprocess_targets(sample_td, player_perspective)
+        inputs = self.preprocessor.preprocess_inputs(sample_L, player_perspective)
+        targets = self.preprocessor.preprocess_targets(sample_L, player_perspective)
 
         return TensorDict(
             {
