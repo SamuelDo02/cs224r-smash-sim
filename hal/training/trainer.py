@@ -228,12 +228,12 @@ class Trainer(torch.nn.Module, abc.ABC):
                 loss_dict.update(closed_loop_eval_stats.to_wandb_dict(prefix="closed_loop_eval", player="p1"))
             except Empty:
                 logger.warning("Closed loop evaluation stats not available")
+            finally:
+                eval_process.join(timeout=1.0)
+                if eval_process.is_alive():
+                    eval_process.kill()
 
         writer.log(loss_dict, step=step, commit=False)
-
-        eval_process.join(timeout=1.0)
-        if eval_process.is_alive():
-            eval_process.kill()
 
 
 class CategoricalBCTrainer(Trainer, abc.ABC):
