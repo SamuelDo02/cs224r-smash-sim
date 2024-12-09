@@ -1,6 +1,5 @@
 from typing import Callable
 from typing import Dict
-from typing import Tuple
 
 from tensordict import TensorDict
 
@@ -18,16 +17,8 @@ class InputPreprocessRegistry:
         raise NotImplementedError(f"Preprocessing fn {name} not found. Valid functions: {sorted(cls.CONFIGS.keys())}.")
 
     @classmethod
-    def register(cls, name: str, config: InputPreprocessConfig):
-        if name in cls.CONFIGS:
-            raise ValueError(f"InputPreprocessConfig with name '{name}' already registered.")
+    def register(cls, name: str, config: InputPreprocessConfig) -> None:
         cls.CONFIGS[name] = config
-
-    @classmethod
-    def get_input_sizes(cls, name: str) -> Dict[str, Tuple[int, ...]]:
-        """Get input sizes for all heads from a registered config."""
-        config_cls = cls.get(name)
-        return config_cls.input_shapes_by_head
 
 
 TargetPreprocessFn = Callable[[TensorDict, Player], TensorDict]

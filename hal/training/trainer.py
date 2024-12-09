@@ -31,6 +31,7 @@ from hal.training.io import get_exp_name
 from hal.training.io import get_log_dir
 from hal.training.io import log_if_master
 from hal.training.models.registry import Arch
+from hal.training.preprocess.preprocessor import Preprocessor
 from hal.training.utils import repeater
 from hal.training.utils import report_module_weights
 from hal.training.utils import time_format
@@ -57,11 +58,13 @@ class Trainer(torch.nn.Module, abc.ABC):
         self.val_loader = val_loader
         assert self.config.report_len % self.config.local_batch_size == 0
         assert self.config.n_samples % self.config.report_len == 0
+
+        self.preprocessor = Preprocessor(data_config=config.data, embedding_config=config.embedding)
         self.samples = 0
         self.artifact_dir = get_artifact_dir(get_exp_name(self.config))
 
         logger.info(f"Initializing model {self.config.arch}")
-        model = Arch.get(self.config.arch, train_config=self.config)
+        model = Arch.get(self.config.arch, preprocessor=self.preprocessor)
         self.model = maybe_wrap_model_distributed(model)
         self.opt = torch.optim.AdamW(
             self.model.parameters(),

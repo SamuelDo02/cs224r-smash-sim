@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 from tensordict import TensorDict
 from torch.nn import functional as F
+from training.preprocess.preprocessor import Preprocessor
 
 from hal.training.config import TrainConfig
 from hal.training.models.registry import Arch
@@ -122,9 +123,9 @@ class Block(nn.Module):
 
 
 class BaseGPT(nn.Module):
-    def __init__(self, train_config: TrainConfig, gpt_config: GPTConfig) -> None:
+    def __init__(self, preprocessor: Preprocessor, gpt_config: GPTConfig) -> None:
         super().__init__()
-        self.train_config = train_config
+        self.preprocessor = preprocessor
         self.gpt_config = gpt_config
 
     def get_num_params(self, non_embedding=True):
@@ -235,14 +236,16 @@ class BaseGPT(nn.Module):
 
 
 class GPTv1(BaseGPT):
-    def __init__(self, train_config: TrainConfig, gpt_config: GPTConfig) -> None:
-        super().__init__(train_config, gpt_config)
-        embed_config = train_config.embedding
+    def __init__(self, preprocessor: Preprocessor, gpt_config: GPTConfig) -> None:
+        super().__init__(preprocessor, gpt_config)
+        self.context_len = self.preprocessor.seq_len
+        self.input_size = self.preprocessor.input_size
+        self.n_embd = gpt_config.n_embd
+
+        embed_config = self.preprocessor.embedding_config
         assert embed_config.num_buttons is not None
         assert embed_config.num_main_stick_clusters is not None
         assert embed_config.num_c_stick_clusters is not None
-        self.context_len = train_config.data.seq_len
-        self.n_embd = gpt_config.n_embd
 
         self.transformer = nn.ModuleDict(
             dict(

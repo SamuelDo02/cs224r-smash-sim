@@ -55,6 +55,10 @@ class Preprocessor:
         trajectory_len += self.max_abs_offset
         return trajectory_len
 
+    @property
+    def input_size(self) -> int:
+        return sum(shape[0] for shape in self.input_shapes_by_head.values())
+
     def sample_from_episode(self, ndarrays_by_feature: dict[str, np.ndarray]) -> TensorDict:
         """Randomly slice input/target features into trajectory_sampling_len sequences for supervised training.
 

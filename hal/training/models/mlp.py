@@ -4,7 +4,6 @@ from tensordict import TensorDict
 
 from hal.training.config import TrainConfig
 from hal.training.models.registry import Arch
-from hal.training.preprocess.registry import get_input_size_from_config
 
 
 class MLPBC(nn.Module):
@@ -19,6 +18,7 @@ class MLPBC(nn.Module):
         assert embed_config.num_buttons is not None
         assert embed_config.num_main_stick_clusters is not None
         assert embed_config.num_c_stick_clusters is not None
+        # TODO fix
         self.n_embd = get_input_size_from_config(embed_config)
         self.context_len = data_config.seq_len
 
