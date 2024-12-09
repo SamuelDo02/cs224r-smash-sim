@@ -196,15 +196,15 @@ def cpu_worker(
                 gamestate_td = extract_gamestate_as_tensordict(gamestate)
                 model_inputs = preprocessor.preprocess_inputs(gamestate_td, player)
 
-                # TODO refactor this into preprocessor
-                if last_controller_inputs is not None:
-                    model_inputs.update(
-                        {
-                            "main_stick": last_controller_inputs["main_stick_onehot"],
-                            "c_stick": last_controller_inputs["c_stick_onehot"],
-                            "buttons": last_controller_inputs["button_onehot"],
-                        }
-                    )
+                # # TODO refactor this into preprocessor
+                # if last_controller_inputs is not None:
+                #     model_inputs.update(
+                #         {
+                #             "main_stick": last_controller_inputs["main_stick_onehot"],
+                #             "c_stick": last_controller_inputs["c_stick_onehot"],
+                #             "buttons": last_controller_inputs["button_onehot"],
+                #         }
+                #     )
 
                 preprocess_time = time.perf_counter() - preprocess_start
 
