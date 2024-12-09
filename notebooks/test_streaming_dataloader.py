@@ -26,7 +26,7 @@ x = super(HALStreamingDataset, ds).__getitem__(0)
 x
 
 # %%
-x = ds[3]["inputs"]["gamestate"]
+x = ds[3]["targets"]["main_stick"]
 x
 
 # %%

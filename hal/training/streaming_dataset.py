@@ -34,12 +34,12 @@ class HALStreamingDataset(StreamingDataset):
 
         player_perspective = cast(Player, random.choice(VALID_PLAYERS))
         inputs = self.preprocessor.preprocess_inputs(sample_td, player_perspective)
-        # targets = self.preprocessor.preprocess_targets(sample_td, player_perspective)
+        targets = self.preprocessor.preprocess_targets(sample_td, player_perspective)
 
         return TensorDict(
             {
                 "inputs": inputs,
-                # "targets": targets,  # type: ignore
+                "targets": targets,  # type: ignore
             },
             batch_size=(self.seq_len,),
         )

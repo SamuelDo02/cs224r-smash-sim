@@ -169,7 +169,6 @@ def cpu_worker(
     model_input_ready_flag: EventType,
     model_output_ready_flag: EventType,
     stop_event: EventType,
-    train_config: TrainConfig,
     episode_stats_queue: mp.Queue,
     enable_ffw: bool = True,
     debug: bool = False,
@@ -195,9 +194,9 @@ def cpu_worker(
 
                 preprocess_start = time.perf_counter()
                 gamestate_td = extract_gamestate_as_tensordict(gamestate)
-                data_config = attr.evolve(train_config.data, input_len=1, target_len=0)
-                model_inputs = preprocess_inputs(gamestate_td, data_config, player, stats_by_feature_name)
+                model_inputs = preprocessor.preprocess_inputs(gamestate_td, player)
 
+                # TODO refactor this into preprocessor
                 if last_controller_inputs is not None:
                     model_inputs.update(
                         {
@@ -229,7 +228,8 @@ def cpu_worker(
 
                 # Read the output and store one-hot encodings for next iteration
                 model_output = shared_batched_model_output[rank].clone()
-                last_controller_inputs = postprocess_outputs(model_output)
+                # TODO refactor this into some eval helper class
+                last_controller_inputs = preprocessor.postprocess_preds(model_output)
                 gamestate_generator.send(last_controller_inputs)
 
                 # Clear the output ready flag for the next iteration
@@ -355,6 +355,7 @@ def run_closed_loop_evaluation(
     stop_events: List[EventType] = [mp.Event() for _ in range(n_workers)]
 
     # Share and pin buffers in CPU memory for transferring model inputs and outputs
+    # TODO: figure out padding for start of episode
     mock_framedata = mock_framedata_as_tensordict(preprocessor.trajectory_sampling_len)
     # Store only a single time step to minimize copying
     mock_model_inputs = preprocessor.preprocess_inputs(mock_framedata, player)[-1]
@@ -396,15 +397,12 @@ def run_closed_loop_evaluation(
                 "shared_batched_model_output": shared_batched_model_output,
                 "rank": i,
                 "port": ports[i],
-                "replay_dir": replay_dir,
                 "player": player,
-                "preprocess_inputs": preprocess_inputs,
-                "postprocess_outputs": postprocess_outputs,
+                "replay_dir": replay_dir,
+                "preprocessor": preprocessor,
                 "model_input_ready_flag": model_input_ready_flags[i],
                 "model_output_ready_flag": model_output_ready_flags[i],
                 "stop_event": stop_events[i],
-                "train_config": train_config,
-                "stats_by_feature_name": stats_by_feature_name,
                 "episode_stats_queue": episode_stats_queue,
                 "enable_ffw": False,  # disable for evaluation stability
             },

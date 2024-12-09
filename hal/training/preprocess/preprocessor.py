@@ -11,6 +11,8 @@ from hal.training.config import DataConfig
 from hal.training.config import EmbeddingConfig
 from hal.training.preprocess.preprocess_inputs import preprocess_input_features
 from hal.training.preprocess.registry import InputPreprocessRegistry
+from hal.training.preprocess.registry import PredPostprocessingRegistry
+from hal.training.preprocess.registry import TargetPreprocessRegistry
 from hal.training.preprocess.transform import Transformation
 
 
@@ -36,6 +38,8 @@ class Preprocessor:
         self.input_shapes_by_head = self.input_preprocess_config.update_input_shapes_with_embedding_config(
             self.embedding_config
         )
+        self.preprocess_targets_fn = TargetPreprocessRegistry.get(self.embedding_config.target_preprocessing_fn)
+        self.postprocess_preds_fn = PredPostprocessingRegistry.get(self.embedding_config.pred_postprocessing_fn)
 
         self.frame_offsets_by_feature = self.input_preprocess_config.frame_offsets_by_feature
         self.max_abs_offset = max((abs(offset) for offset in self.frame_offsets_by_feature.values()), default=0)
