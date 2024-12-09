@@ -63,7 +63,7 @@ def inputs_v0() -> InputPreprocessConfig:
             "opponent_action": ("opponent_action",),
         },
         input_shapes_by_head={
-            "gamestate": (2 * len(player_features),),  # 2x for ego and opponent
+            "gamestate": (2 * 9 + 1,),  # 2x for ego and opponent
         },
     )
 
@@ -102,6 +102,7 @@ def preprocess_input_features(
         feature_name for feature_name in normalization_fn_by_feature_name if feature_name not in config.player_features
     ]
     for feature_name in non_player_features:
+        preprocess_fn = normalization_fn_by_feature_name[feature_name]
         processed_features[feature_name] = preprocess_fn(sample[feature_name], stats[feature_name])
 
     # Concatenate processed features by head

@@ -26,8 +26,11 @@ x = super(HALStreamingDataset, ds).__getitem__(0)
 x
 
 # %%
-x = ds[3]["targets"]["main_stick"]
+x = ds[3]["inputs"]
 x
+
+# %%
+ds.preprocessor.input_shapes_by_head
 
 # %%
 pd.DataFrame(x.numpy()).describe()
