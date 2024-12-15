@@ -7,6 +7,7 @@ import sys
 import melee
 
 from hal.eval.emulator_helper import get_console_kwargs
+from hal.eval.emulator_helper import self_play_menu_helper
 from hal.eval.emulator_paths import REMOTE_CISO_PATH
 
 # This example program demonstrates how to use the Melee API to run a console,
@@ -47,6 +48,7 @@ if args.debug:
 #       bot can actually "see" what's happening in the game
 console_kwargs = get_console_kwargs(enable_ffw=False)
 console = melee.Console(**console_kwargs)
+print(f"Saving replay to {console_kwargs['replay_dir']}")
 
 # Create our Controller object
 #   The controller is the second primary object your bot will interact with
@@ -54,7 +56,7 @@ console = melee.Console(**console_kwargs)
 #   virtual or physical.
 controller = melee.Controller(console=console, port=args.port, type=melee.ControllerType.STANDARD)
 
-controller_opponent = melee.Controller(console=console, port=args.opponent, type=melee.ControllerType.GCN_ADAPTER)
+controller_opponent = melee.Controller(console=console, port=args.opponent, type=melee.ControllerType.STANDARD)
 
 
 # This isn't necessary, but makes it so that Dolphin will get killed when you ^C
@@ -94,11 +96,16 @@ costume = 0
 framedata = melee.framedata.FrameData()
 
 # Main loop
+i = 0
+match_started = False
 while True:
     # "step" to the next frame
     gamestate = console.step()
     if gamestate is None:
+        print("Gamestate is None")
         continue
+
+    print(f"{gamestate.menu_state=}")
 
     # The console object keeps track of how long your bot is taking to process frames
     #   And can warn you if it's taking too long
@@ -107,6 +114,9 @@ while True:
 
     # What menu are we in?
     if gamestate.menu_state in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
+        if not match_started:
+            print("Match started")
+            match_started = True
         # Slippi Online matches assign you a random port once you're in game that's different
         #   than the one you're physically plugged into. This helper will autodiscover what
         #   port we actually are.
@@ -126,16 +136,21 @@ while True:
         if log:
             log.logframe(gamestate)
             log.writeframe()
+
+        i += 1
+        if i % 60 == 0:
+            print(f"Frame {i}")
+        if i > 3600:
+            break
+
     else:
-        melee.MenuHelper.menu_helper_simple(
+        self_play_menu_helper(
             gamestate,
             controller,
+            controller_opponent,
             melee.Character.FOX,
-            melee.Stage.YOSHIS_STORY,
-            args.connect_code,
-            costume=costume,
-            autostart=True,
-            swag=False,
+            melee.Character.FOX,
+            melee.Stage.BATTLEFIELD,
         )
 
         # If we're not in game, don't log the frame
