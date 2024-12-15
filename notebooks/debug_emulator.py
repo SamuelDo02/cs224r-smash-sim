@@ -7,14 +7,13 @@ from hal.eval.emulator_helper import console_manager
 from hal.eval.emulator_helper import get_console_kwargs
 from hal.eval.emulator_helper import self_play_menu_helper
 from hal.eval.emulator_paths import REMOTE_CISO_PATH
-from hal.eval.emulator_paths import REMOTE_DOLPHIN_HOME_PATH
 
 PLAYER_1_PORT = 1
 PLAYER_2_PORT = 2
 
 
 def run_episode(rank: int, port: int, max_steps: int = 8 * 60 * 60) -> None:
-    console_kwargs = get_console_kwargs(rank=rank, port=port)
+    console_kwargs = get_console_kwargs(rank=rank, udp_port=port)
     console = melee.Console(**console_kwargs)
     logger.info(f"Worker {rank}: slippi address {console.slippi_address}, port {console.slippi_port}")
 

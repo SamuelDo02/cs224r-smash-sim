@@ -52,7 +52,7 @@ def setup_cpu_logger(debug: bool = False) -> None:
 @attr.s(auto_attribs=True)
 class EmulatorManager:
     rank: int
-    port: int
+    udp_port: int
     player: Player
     replay_dir: Path | None = None
     episode_stats: EpisodeStats = EpisodeStats()
@@ -60,6 +60,7 @@ class EmulatorManager:
     latency_warning_threshold: float = 14.0
     console_timeout: float = 5.0
     enable_ffw: bool = True
+    debug: bool = False
 
     def gamestate_generator(self) -> Generator[Optional[melee.GameState], TensorDict, None]:
         """Generator that yields gamestates and receives controller inputs.
@@ -70,7 +71,13 @@ class EmulatorManager:
         Sends:
             TensorDict: Controller inputs to be applied to the game
         """
-        console_kwargs = get_console_kwargs(port=self.port, enable_ffw=self.enable_ffw, replay_dir=self.replay_dir)
+        console_logger = melee.Logger() if self.debug else None
+        console_kwargs = get_console_kwargs(
+            enable_ffw=self.enable_ffw,
+            udp_port=self.udp_port,
+            replay_dir=self.replay_dir,
+            console_logger=console_logger,
+        )
         console = melee.Console(**console_kwargs)
 
         def _get_port(player: Player) -> int:
@@ -110,7 +117,8 @@ class EmulatorManager:
         i = 0
         match_started = False
 
-        #
+        # Wrap console manager inside a thread for timeouts
+        # Important that console manager context goes second to gracefully handle keyboard interrupts, timeouts, and all other exceptions
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor, console_manager(console):
             logger.debug("Starting episode")
             while i < self.max_steps:
@@ -182,7 +190,7 @@ def cpu_worker(
     with logger.contextualize(rank=rank):
         try:
             emulator_manager = EmulatorManager(
-                rank=rank, port=port, player=player, replay_dir=replay_dir, enable_ffw=enable_ffw
+                rank=rank, udp_port=port, player=player, replay_dir=replay_dir, enable_ffw=enable_ffw
             )
             gamestate_generator = emulator_manager.gamestate_generator()
             last_controller_inputs = None  # Store previous inputs
@@ -247,8 +255,8 @@ def cpu_worker(
 
 
 def gpu_worker(
-    shared_batched_model_input: TensorDict,  # (n_workers,)
-    shared_batched_model_output: TensorDict,  # (n_workers,)
+    shared_batched_model_input_B: TensorDict,  # (n_workers,)
+    shared_batched_model_output_B: TensorDict,  # (n_workers,)
     model_input_ready_flags: List[EventType],
     model_output_ready_flags: List[EventType],
     seq_len: int,
@@ -269,14 +277,14 @@ def gpu_worker(
 
     # Stack along time dimension
     # shape: (n_workers, seq_len)
-    context_window: TensorDict = torch.stack([shared_batched_model_input for _ in range(seq_len)], dim=-1).to(device)  # type: ignore
-    logger.info(f"Context window shape: {context_window.shape}, device: {context_window.device}")
+    context_window_BL: TensorDict = torch.stack([shared_batched_model_input_B for _ in range(seq_len)], dim=-1).to(device)  # type: ignore
+    logger.info(f"Context window shape: {context_window_BL.shape}, device: {context_window_BL.device}")
 
     # Warmup CUDA graphs with dummy inputs
     logger.info("Compiling model...")
     model = torch.compile(model, mode="default")
     with torch.no_grad():
-        model(context_window)
+        model(context_window_BL)
     logger.info("Warmup step finished")
 
     iteration = 0
@@ -298,18 +306,18 @@ def gpu_worker(
 
         # Update the context window by rolling and adding new data
         transfer_start = time.perf_counter()
-        context_window[:, :-1].copy_(context_window[:, 1:].clone())
-        context_window[:, -1].copy_(shared_batched_model_input, non_blocking=True)
+        context_window_BL[:, :-1].copy_(context_window_BL[:, 1:].clone())
+        context_window_BL[:, -1].copy_(shared_batched_model_input_B, non_blocking=True)
         transfer_time = time.perf_counter() - transfer_start
 
         inference_start = time.perf_counter()
         with torch.no_grad():
-            outputs: TensorDict = model(context_window)[:, -1]  # (n_workers,)
+            outputs_B: TensorDict = model(context_window_BL)[:, -1]  # (n_workers,)
         inference_time = time.perf_counter() - inference_start
 
         writeback_start = time.perf_counter()
         # Write the output to shared_batched_model_output
-        shared_batched_model_output.copy_(outputs)
+        shared_batched_model_output_B.copy_(outputs_B)
         writeback_time = time.perf_counter() - writeback_start
 
         total_time = time.perf_counter() - iteration_start
@@ -356,23 +364,24 @@ def run_closed_loop_evaluation(
 
     # Share and pin buffers in CPU memory for transferring model inputs and outputs
     # TODO: figure out padding for start of episode
-    mock_framedata = mock_framedata_as_tensordict(preprocessor.trajectory_sampling_len)
+    mock_framedata_L = mock_framedata_as_tensordict(preprocessor.trajectory_sampling_len)
     # Store only a single time step to minimize copying
-    mock_model_inputs = preprocessor.preprocess_inputs(mock_framedata, player)[-1]
-    shared_batched_model_input: TensorDict = torch.stack(
-        [mock_model_inputs for _ in range(n_workers)], dim=0  # type: ignore
+    mock_model_inputs_ = preprocessor.preprocess_inputs(mock_framedata_L, player)[-1]
+    # batch_size == n_workers
+    shared_batched_model_input_B: TensorDict = torch.stack(
+        [mock_model_inputs_ for _ in range(n_workers)], dim=0  # type: ignore
     )
-    shared_batched_model_input = share_and_pin_memory(shared_batched_model_input)
-    shared_batched_model_output: TensorDict = torch.stack(
+    shared_batched_model_input_B = share_and_pin_memory(shared_batched_model_input_B)
+    shared_batched_model_output_B: TensorDict = torch.stack(
         [mock_preds_as_tensordict(train_config.embedding) for _ in range(n_workers)], dim=0  # type: ignore
     )
-    shared_batched_model_output = share_and_pin_memory(shared_batched_model_output)
+    shared_batched_model_output_B = share_and_pin_memory(shared_batched_model_output_B)
 
     gpu_process: mp.Process = mp.Process(
         target=gpu_worker,
         kwargs={
-            "shared_batched_model_input": shared_batched_model_input,
-            "shared_batched_model_output": shared_batched_model_output,
+            "shared_batched_model_input_B": shared_batched_model_input_B,
+            "shared_batched_model_output_B": shared_batched_model_output_B,
             "model_input_ready_flags": model_input_ready_flags,
             "model_output_ready_flags": model_output_ready_flags,
             "seq_len": preprocessor.seq_len,
@@ -393,8 +402,8 @@ def run_closed_loop_evaluation(
         p: mp.Process = mp.Process(
             target=cpu_worker,
             kwargs={
-                "shared_batched_model_input": shared_batched_model_input,
-                "shared_batched_model_output": shared_batched_model_output,
+                "shared_batched_model_input": shared_batched_model_input_B,
+                "shared_batched_model_output": shared_batched_model_output_B,
                 "rank": i,
                 "port": ports[i],
                 "player": player,

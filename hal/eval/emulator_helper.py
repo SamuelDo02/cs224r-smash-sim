@@ -70,7 +70,12 @@ def get_replay_dir(artifact_dir: Path | None = None, step: int | None = None) ->
     return replay_dir
 
 
-def get_console_kwargs(port: int, enable_ffw: bool = True, replay_dir: Path | None = None) -> Dict[str, Any]:
+def get_console_kwargs(
+    enable_ffw: bool = True,
+    udp_port: int | None = None,
+    replay_dir: Path | None = None,
+    console_logger: melee.Logger | None = None,
+) -> Dict[str, Any]:
     headless_console_kwargs = {
         "gfx_backend": "Null",
         "disable_audio": True,
@@ -81,6 +86,8 @@ def get_console_kwargs(port: int, enable_ffw: bool = True, replay_dir: Path | No
     if replay_dir is None:
         replay_dir = get_replay_dir()
     replay_dir.mkdir(exist_ok=True, parents=True)
+    if udp_port is None:
+        udp_port = find_open_udp_ports(1)[0]
     console_kwargs = {
         "path": emulator_path,
         "is_dolphin": True,
@@ -88,8 +95,9 @@ def get_console_kwargs(port: int, enable_ffw: bool = True, replay_dir: Path | No
         "copy_home_directory": False,
         "replay_dir": str(replay_dir),
         "blocking_input": True,
-        "slippi_port": port,
+        "slippi_port": udp_port,
         "online_delay": 0,  # 0 frame delay for local evaluation
+        "logger": console_logger,
         **headless_console_kwargs,
     }
     return console_kwargs
