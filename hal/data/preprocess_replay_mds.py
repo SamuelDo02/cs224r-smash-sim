@@ -43,6 +43,8 @@ def process_replay(replay_path: str, check_damage: bool = True) -> Optional[Dict
         while next_gamestate is not None:
             curr_gamestate = next_gamestate
             next_gamestate = console.step()
+            if next_gamestate is None:
+                break
 
             frame_data = extract_and_append_gamestate_inplace(
                 frame_data_by_field=frame_data,
