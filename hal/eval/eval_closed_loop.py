@@ -49,11 +49,16 @@ def setup_cpu_logger(debug: bool = False) -> None:
     logger.add(sys.stderr, format=logger_format, level="DEBUG" if debug else "INFO")
 
 
+def _get_port(player: Player) -> int:
+    return PLAYER_1_PORT if player == "p1" else PLAYER_2_PORT
+
+
 @attr.s(auto_attribs=True)
 class EmulatorManager:
     rank: int
     udp_port: int
     player: Player
+    opponent_cpu_level: int = 9
     replay_dir: Path | None = None
     episode_stats: EpisodeStats = EpisodeStats()
     max_steps: int = 8 * 60 * 60
@@ -61,8 +66,25 @@ class EmulatorManager:
     console_timeout: float = 5.0
     enable_ffw: bool = True
     debug: bool = False
+    console_logger: Optional[melee.Logger] = None
 
-    def gamestate_generator(self) -> Generator[Optional[melee.GameState], TensorDict, None]:
+    def __attrs_post_init__(self) -> None:
+        self.console_logger = melee.Logger() if self.debug else None
+        console_kwargs = get_console_kwargs(
+            enable_ffw=self.enable_ffw,
+            udp_port=self.udp_port,
+            replay_dir=self.replay_dir,
+            console_logger=self.console_logger,
+        )
+        self.console = melee.Console(**console_kwargs)
+        self.ego_controller = melee.Controller(
+            console=self.console, port=_get_port(self.player), type=melee.ControllerType.STANDARD
+        )
+        self.opponent_controller = melee.Controller(
+            console=self.console, port=_get_port(get_opponent(self.player)), type=melee.ControllerType.STANDARD
+        )
+
+    def gamestate_generator(self) -> Generator[melee.GameState, TensorDict, None]:
         """Generator that yields gamestates and receives controller inputs.
 
         Yields:
@@ -71,30 +93,11 @@ class EmulatorManager:
         Sends:
             TensorDict: Controller inputs to be applied to the game
         """
-        console_logger = melee.Logger() if self.debug else None
-        console_kwargs = get_console_kwargs(
-            enable_ffw=self.enable_ffw,
-            udp_port=self.udp_port,
-            replay_dir=self.replay_dir,
-            console_logger=console_logger,
-        )
-        console = melee.Console(**console_kwargs)
-
-        def _get_port(player: Player) -> int:
-            return PLAYER_1_PORT if player == "p1" else PLAYER_2_PORT
-
-        ego_controller = melee.Controller(
-            console=console, port=_get_port(self.player), type=melee.ControllerType.STANDARD
-        )
-        opponent_controller = melee.Controller(
-            console=console, port=_get_port(get_opponent(self.player)), type=melee.ControllerType.STANDARD
-        )
-
         # Run the console
-        console.run(iso_path=REMOTE_CISO_PATH)  # Do not pass dolphin_user_path to avoid overwriting init kwargs
+        self.console.run(iso_path=REMOTE_CISO_PATH)  # Do not pass dolphin_user_path to avoid overwriting init kwargs
         # Connect to the console
         logger.debug("Connecting to console...")
-        if not console.connect():
+        if not self.console.connect():
             logger.debug("ERROR: Failed to connect to the console.")
             sys.exit(-1)
         logger.debug("Console connected")
@@ -104,12 +107,12 @@ class EmulatorManager:
         #   NOTE: If you're loading a movie file, don't connect the controller,
         #   dolphin will hang waiting for input and never receive it
         logger.debug("Connecting controller 1 to console...")
-        if not ego_controller.connect():
+        if not self.ego_controller.connect():
             logger.debug("ERROR: Failed to connect the controller.")
             sys.exit(-1)
         logger.debug("Controller 1 connected")
         logger.debug("Connecting controller 2 to console...")
-        if not opponent_controller.connect():
+        if not self.opponent_controller.connect():
             logger.debug("ERROR: Failed to connect the controller.")
             sys.exit(-1)
         logger.debug("Controller 2 connected")
@@ -120,12 +123,12 @@ class EmulatorManager:
         # Wrap console manager inside a thread for timeouts
         # Important that console manager context goes second to gracefully handle keyboard interrupts, timeouts, and all other exceptions
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor, console_manager(
-            console=console, console_logger=console_logger
+            console=self.console, console_logger=self.console_logger
         ):
             logger.debug("Starting episode")
             while i < self.max_steps:
                 # Wrap `console.step()` in a thread with timeout
-                future = executor.submit(console.step)
+                future = executor.submit(self.console.step)
                 try:
                     gamestate = future.result(timeout=self.console_timeout)
                 except concurrent.futures.TimeoutError:
@@ -136,8 +139,8 @@ class EmulatorManager:
                     logger.info("Gamestate is None")
                     break
 
-                if console.processingtime * 1000 > self.latency_warning_threshold:
-                    logger.debug("Last frame took " + str(console.processingtime * 1000) + "ms to process.")
+                if self.console.processingtime * 1000 > self.latency_warning_threshold:
+                    logger.debug("Last frame took " + str(self.console.processingtime * 1000) + "ms to process.")
 
                 if gamestate.menu_state not in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
                     if match_started:
@@ -145,12 +148,13 @@ class EmulatorManager:
 
                     self_play_menu_helper(
                         gamestate=gamestate,
-                        controller_1=ego_controller,
-                        controller_2=opponent_controller,
+                        controller_1=self.ego_controller,
+                        controller_2=self.opponent_controller,
                         # TODO: select characters programmatically
                         character_1=melee.Character.FOX,
                         character_2=melee.Character.FOX,
                         stage_selected=melee.Stage.BATTLEFIELD,
+                        opponent_cpu_level=self.opponent_cpu_level,
                     )
                 else:
                     if not match_started:
@@ -158,13 +162,18 @@ class EmulatorManager:
                         logger.debug("Match started")
 
                     # Yield gamestate and receive controller inputs
+                    logger.debug(f"Yielding gamestate {i}")
                     controller_inputs = yield gamestate
-                    if controller_inputs is not None:
-                        send_controller_inputs(ego_controller, controller_inputs)
+                    logger.debug(f"Controller inputs: {controller_inputs}")
+                    if controller_inputs is None:
+                        logger.error("Controller inputs are None")
+                    else:
+                        logger.debug("Sending controller inputs")
+                        send_controller_inputs(self.ego_controller, controller_inputs)
 
                     self.episode_stats.update(gamestate)
-                    if console_logger is not None:
-                        console_logger.writeframe()
+                    if self.console_logger is not None:
+                        self.console_logger.writeframe()
                     i += 1
 
         yield None
