@@ -83,6 +83,7 @@ class EmulatorManager:
         self.opponent_controller = melee.Controller(
             console=self.console, port=_get_port(get_opponent(self.player)), type=melee.ControllerType.STANDARD
         )
+        logger.info(f"Emu manager initialized for {attr.asdict(self)}")
 
     def gamestate_generator(self) -> Generator[melee.GameState, TensorDict, None]:
         """Generator that yields gamestates and receives controller inputs.
@@ -141,8 +142,10 @@ class EmulatorManager:
 
                 if self.console.processingtime * 1000 > self.latency_warning_threshold:
                     logger.debug("Last frame took " + str(self.console.processingtime * 1000) + "ms to process.")
+                # logger.debug(f"Got gamestate for frame {gamestate.frame if gamestate else 'None'}")
 
                 if gamestate.menu_state not in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
+                    # logger.debug(f"Not in game, menu_state: {gamestate.menu_state}")
                     if match_started:
                         break
 
@@ -162,13 +165,13 @@ class EmulatorManager:
                         logger.debug("Match started")
 
                     # Yield gamestate and receive controller inputs
-                    logger.debug(f"Yielding gamestate {i}")
+                    # logger.debug(f"Yielding gamestate {i}")
                     controller_inputs = yield gamestate
-                    logger.debug(f"Controller inputs: {controller_inputs}")
+                    # logger.debug(f"Controller inputs: {controller_inputs}")
                     if controller_inputs is None:
                         logger.error("Controller inputs are None")
                     else:
-                        logger.debug("Sending controller inputs")
+                        # logger.debug("Sending controller inputs")
                         send_controller_inputs(self.ego_controller, controller_inputs)
 
                     self.episode_stats.update(gamestate)

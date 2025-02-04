@@ -101,7 +101,7 @@ def send_controller_inputs(controller: melee.Controller, inputs: TensorDict, idx
     if button_name != "NO_BUTTON":
         button = getattr(melee.Button, button_name.upper())
         controller.press_button(button)
-        # logger.debug(f"Pressed {button_name}")
+        logger.debug(f"Pressed {button_name}")
     controller.flush()
 
 

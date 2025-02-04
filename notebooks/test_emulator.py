@@ -1,4 +1,5 @@
 # %%
+from collections import defaultdict
 from pathlib import Path
 
 import melee
@@ -68,28 +69,30 @@ emulator_manager = EmulatorManager(
     udp_port=port[0],
     player="p1",
     replay_dir=Path("/tmp/slippi_replays"),
-    max_steps=1000,
+    max_steps=30000,
     enable_ffw=False,
     debug=True,
     opponent_cpu_level=0,
 )
 ego_controller = emulator_manager.ego_controller
 gamestate_generator = emulator_manager.gamestate_generator()
-
-for i, gamestate in enumerate(gamestate_generator):
-    if gamestate is None:
-        print("Gamestate is None")
-        continue
+gamestate = next(gamestate_generator)
+gamestate = next(gamestate_generator)
+i = 0
+while gamestate is not None:
     # td = extract_gamestate_as_tensordict(gamestate)
-    logger.debug(f"Outer loop {i}")
     controller_inputs = multishine(ai_state=gamestate.players[1])
-    if controller_inputs is None:
-        logger.error("multishine returned None")
-    gamestate_generator.send(controller_inputs)
+    if i % 60 == 0:
+        logger.debug(f"Outer loop {i}")
+    # if controller_inputs is None:
+    #     logger.error("multishine returned None")
+    gamestate = gamestate_generator.send(controller_inputs)
+    i += 1
 
 # %%
-replay_path = "/tmp/slippi_replays/Game_20250201T164201.slp"
+replay_path = "/tmp/slippi_replays/Game_20250203T162044.slp"
 replay_uuid = hash(replay_path)
+frame_data = defaultdict(list)
 console = melee.Console(path=replay_path, is_dolphin=False, allow_old_version=True)
 console.connect()
 next_gamestate = console.step()
@@ -111,6 +114,9 @@ except Exception as e:
 finally:
     console.stop()
 
+
+# %%
+frame_data["p1_action"]
 
 # # %%
 # def multishine(ai_state: melee.PlayerState, controller: melee.Controller) -> None:
