@@ -4,6 +4,7 @@ import random
 import shutil
 import sys
 from collections import defaultdict
+from functools import partial
 from pathlib import Path
 from typing import Any
 from typing import Dict
@@ -91,6 +92,7 @@ def process_replays(
     max_replays: int = -1,
     max_parallelism: int = 32,
     overwrite_existing: bool = True,
+    check_damage: bool = True,
 ) -> None:
     replay_paths = list(Path(replay_dir).rglob("*.slp"))
     if max_replays > 0:
@@ -100,6 +102,8 @@ def process_replays(
     splits = split_train_val_test(input_paths=tuple(map(str, replay_paths)))
 
     Path(output_dir).mkdir(parents=True, exist_ok=True)
+
+    process_replay_partial = partial(process_replay, check_damage=check_damage)
 
     for split, split_replay_paths in splits.items():
         split_output_dir = Path(output_dir) / f"{split}"
@@ -111,7 +115,7 @@ def process_replays(
             out=str(split_output_dir), columns=NP_DTYPE_STR_BY_COLUMN, compression="zstd", size_limit=1 << 30
         ) as out:
             with mp.Pool(max_parallelism) as pool:
-                samples = pool.imap_unordered(process_replay, split_replay_paths)
+                samples = pool.imap_unordered(process_replay_partial, split_replay_paths)
                 for sample in tqdm(samples, total=len(split_replay_paths), desc=f"Processing {split} split"):
                     if sample is not None:
                         out.write(sample)
@@ -146,6 +150,7 @@ if __name__ == "__main__":
         "--max_parallelism", type=int, default=32, help="Maximum number of workers to process replays in parallel"
     )
     parser.add_argument("--debug", action="store_true", help="Enable debug mode")
+    parser.add_argument("--disable_check_damage", action="store_true", help="Disable damage check in replays")
     args = parser.parse_args()
 
     setup_logger(output_dir=args.output_dir)
@@ -161,4 +166,5 @@ if __name__ == "__main__":
         seed=args.seed,
         max_replays=args.max_replays,
         max_parallelism=args.max_parallelism,
+        check_damage=not args.disable_check_damage,
     )
