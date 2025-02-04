@@ -55,7 +55,6 @@ def _get_port(player: Player) -> int:
 
 @attr.s(auto_attribs=True)
 class EmulatorManager:
-    rank: int
     udp_port: int
     player: Player
     opponent_cpu_level: int = 9
@@ -63,10 +62,9 @@ class EmulatorManager:
     episode_stats: EpisodeStats = EpisodeStats()
     max_steps: int = 8 * 60 * 60
     latency_warning_threshold: float = 14.0
-    console_timeout: float = 5.0
+    console_timeout: float = 2.0
     enable_ffw: bool = True
     debug: bool = False
-    console_logger: Optional[melee.Logger] = None
 
     def __attrs_post_init__(self) -> None:
         self.console_logger = melee.Logger() if self.debug else None
@@ -145,8 +143,8 @@ class EmulatorManager:
                 # logger.debug(f"Got gamestate for frame {gamestate.frame if gamestate else 'None'}")
 
                 if gamestate.menu_state not in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
-                    # logger.debug(f"Not in game, menu_state: {gamestate.menu_state}")
                     if match_started:
+                        logger.debug("Match ended")
                         break
 
                     self_play_menu_helper(
@@ -178,8 +176,6 @@ class EmulatorManager:
                     if self.console_logger is not None:
                         self.console_logger.writeframe()
                     i += 1
-
-        yield None
 
 
 def cpu_worker(

@@ -70,7 +70,7 @@ emulator_manager = EmulatorManager(
     player="p1",
     replay_dir=Path("/tmp/slippi_replays"),
     max_steps=30000,
-    enable_ffw=False,
+    enable_ffw=True,
     debug=True,
     opponent_cpu_level=9,
 )
