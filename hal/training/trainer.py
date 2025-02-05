@@ -183,7 +183,7 @@ class Trainer(torch.nn.Module, abc.ABC):
     ) -> None:
         self.eval()
 
-        should_closed_loop_eval = step % self.config.closed_loop_eval_every_n == 0
+        should_closed_loop_eval = step % self.config.eval.closed_loop_eval_every_n == 0
         if should_closed_loop_eval:
             logger.debug("Starting closed loop evaluation")
             eval_stats_queue: mp.Queue = mp.Queue()
@@ -191,7 +191,7 @@ class Trainer(torch.nn.Module, abc.ABC):
                 target=run_closed_loop_evaluation,
                 kwargs=dict(
                     artifact_dir=self.artifact_dir,
-                    n_workers=16,
+                    n_workers=self.config.eval.n_workers,
                     checkpoint_idx=step,
                     eval_stats_queue=eval_stats_queue,
                     player="p1",

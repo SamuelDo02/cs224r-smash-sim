@@ -1,6 +1,7 @@
 import argparse
 import sys
 import time
+import traceback
 from multiprocessing.synchronize import Event as EventType
 from pathlib import Path
 from typing import List
@@ -120,7 +121,9 @@ def cpu_worker(
         except StopIteration:
             logger.success(f"CPU worker {rank} episode complete.")
         except Exception as e:
-            logger.error(f"CPU worker {rank} encountered an error: {e}")
+            logger.error(
+                f"CPU worker {rank} encountered an error: {e}\nTraceback:\n{''.join(traceback.format_tb(e.__traceback__))}"
+            )
         finally:
             model_input_ready_flag.set()
             stop_event.set()

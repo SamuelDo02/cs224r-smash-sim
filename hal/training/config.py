@@ -85,6 +85,12 @@ class EmbeddingConfig:
 
 
 @attr.s(auto_attribs=True, frozen=True)
+class EvalConfig:
+    n_workers: int = 16
+    closed_loop_eval_every_n: int = 2**16
+
+
+@attr.s(auto_attribs=True, frozen=True)
 class BaseConfig:
     n_gpus: int
     debug: bool
@@ -100,6 +106,9 @@ class TrainConfig(BaseConfig):
     embedding: EmbeddingConfig = EmbeddingConfig()
     dataworker: DataworkerConfig = DataworkerConfig()
     seed: int = 42
+
+    # Eval
+    eval: EvalConfig = EvalConfig()
 
     # Hyperparams
     loss_fn: str = "ce"
