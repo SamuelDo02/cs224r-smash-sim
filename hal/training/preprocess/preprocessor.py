@@ -85,17 +85,21 @@ class Preprocessor:
     def offset_features(self, sample_T: TensorDict) -> TensorDict:
         """Offset & slice features to training-ready sequence length.
 
+        This is useful for features like controller inputs, where we want to include the next frame's with the current frame's gamestate.
+
         Args:
             sample_T: TensorDict of shape (trajectory_sampling_len,) containing features
 
         Returns:
             TensorDict of shape (seq_len,) with features offset according to config
         """
+        # What frame the training sequence starts on
         reference_frame_idx = abs(min(0, self.min_offset))
         offset_features = {}
 
         for feature_name, tensor in sample_T.items():
             offset = self.frame_offsets_by_feature.get(feature_name, 0)
+            # What frame this feature is sampled from / to
             start_idx = reference_frame_idx + offset
             end_idx = start_idx + self.seq_len
             offset_features[feature_name] = tensor[start_idx:end_idx]

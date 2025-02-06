@@ -14,6 +14,8 @@ from hal.training.preprocess.transform import invert_and_normalize
 from hal.training.preprocess.transform import normalize
 from hal.training.preprocess.transform import standardize
 
+DEFAULT_HEAD_NAME = "gamestate"
+
 
 def inputs_v0() -> InputPreprocessConfig:
     """
@@ -114,7 +116,6 @@ def preprocess_input_features(
         seen_feature_names.update(feature_names)
 
     # Add features that are not associated with any head to default `gamestate` head
-    DEFAULT_HEAD_NAME = "gamestate"
     unseen_feature_tensors = []
     for feature_name, feature_tensor in processed_features.items():
         if feature_name not in seen_feature_names:
