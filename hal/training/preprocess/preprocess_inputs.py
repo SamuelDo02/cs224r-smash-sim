@@ -4,6 +4,7 @@ from typing import Set
 import torch
 from tensordict import TensorDict
 
+from hal.constants import INCLUDED_BUTTONS
 from hal.constants import Player
 from hal.constants import STICK_XY_CLUSTER_CENTERS_V0
 from hal.constants import get_opponent
@@ -70,8 +71,10 @@ def preprocess_input_features(
     unseen_feature_tensors = []
     for feature_name, feature_tensor in processed_features.items():
         if feature_name not in seen_feature_names:
+            if feature_tensor.ndim == 1:
+                feature_tensor = feature_tensor.unsqueeze(-1)
             unseen_feature_tensors.append(feature_tensor)
-    concatenated_features_by_head_name[DEFAULT_HEAD_NAME] = torch.stack(unseen_feature_tensors, dim=-1)
+    concatenated_features_by_head_name[DEFAULT_HEAD_NAME] = torch.cat(unseen_feature_tensors, dim=-1)
 
     return TensorDict(concatenated_features_by_head_name, batch_size=sample.batch_size)
 
@@ -182,11 +185,9 @@ def inputs_v1() -> InputPreprocessConfig:
             "opponent_character": ("opponent_character",),
             "ego_action": ("ego_action",),
             "opponent_action": ("opponent_action",),
-            # New head for controller inputs
-            "controller": ("main_stick", "c_stick", "buttons"),
         },
         input_shapes_by_head={
-            "gamestate": (2 * 9 + 2 * len(STICK_XY_CLUSTER_CENTERS_V0) + 6,),
+            "gamestate": (2 * 9 + 2 * len(STICK_XY_CLUSTER_CENTERS_V0) + len(INCLUDED_BUTTONS),),
         },
     )
 
