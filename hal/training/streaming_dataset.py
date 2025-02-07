@@ -31,16 +31,18 @@ class HALStreamingDataset(StreamingDataset):
         """Expects episode features to match data/schema.py."""
         episode_features_by_name = super().__getitem__(idx)
         sample_T = self.preprocessor.sample_from_episode(episode_features_by_name)
-        sample_L = self.preprocessor.offset_features(sample_T)
 
         player_perspective = cast(Player, random.choice(VALID_PLAYERS))
-        inputs = self.preprocessor.preprocess_inputs(sample_L, player_perspective)
-        targets = self.preprocessor.preprocess_targets(sample_L, player_perspective)
+        inputs_T = self.preprocessor.preprocess_inputs(sample_T, player_perspective)
+        targets_T = self.preprocessor.preprocess_targets(sample_T, player_perspective)
+
+        inputs_L = self.preprocessor.offset_features(inputs_T)
+        targets_L = self.preprocessor.offset_features(targets_T)
 
         return TensorDict(
             {
-                "inputs": inputs,
-                "targets": targets,  # type: ignore
+                "inputs": inputs_L,
+                "targets": targets_L,  # type: ignore
             },
             batch_size=(self.seq_len,),
         )
