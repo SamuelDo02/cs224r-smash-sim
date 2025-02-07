@@ -16,7 +16,6 @@ FrameData = DefaultDict[str, MutableSequence[Any]]
 
 
 def extract_gamestate_as_tensordict(gamestate: melee.GameState) -> TensorDict:
-    # TODO: make this faster / more direct
     frame_data: FrameData = defaultdict(list)
     extract_and_append_gamestate_inplace(frame_data, gamestate)
     return TensorDict({k: torch.tensor(v) for k, v in frame_data.items()}, batch_size=(1,))
@@ -33,12 +32,14 @@ def extract_and_append_gamestate_inplace(
 
     Groups values for each field across frames.
 
-    Skips controller data if `next_gamestate` is None.
+    **Test time behavior**
+    If `next_gamestate` is None, extracts controller data from `curr_gamestate`
 
-    Controller state is stored in GameState objects with resultant gamestate
-    from sending that controller input. We need to read next gamestate to
-    correctly pair controller inputs with current gamestate for sequential
-    modeling, i.e. what buttons to press next *given the current frame*.
+    Controller state is stored in `melee.GameState` objects, where gamestate is
+    resultant from sending that controller input. We need to read next
+    gamestate in order to correctly pair controller inputs with curr gamestate
+    for sequential modeling, i.e. what buttons to press next *given the current
+    frame*.
     """
     players = sorted(curr_gamestate.players.items())
     assert len(players) == 2, f"Expected 2 players, got {len(players)}"
@@ -85,7 +86,9 @@ def extract_and_append_gamestate_inplace(
         for player_state_field, value in player_data.items():
             frame_data_by_field[f"{player_name}_{player_state_field}"].append(value)
 
-    if next_gamestate is not None:
+    if next_gamestate is None:
+        extract_controller_inputs_inplace(frame_data_by_field=frame_data_by_field, gamestate=curr_gamestate)
+    else:
         extract_controller_inputs_inplace(frame_data_by_field=frame_data_by_field, gamestate=next_gamestate)
 
     return frame_data_by_field

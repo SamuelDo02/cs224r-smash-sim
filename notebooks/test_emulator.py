@@ -73,7 +73,10 @@ emulator_manager = EmulatorManager(
     debug=True,
     opponent_cpu_level=9,
 )
-ego_controller = emulator_manager.ego_controller
+replay_path = "/tmp/slippi_replays/Game_20250203T162044.slp"
+replay_uuid = hash(replay_path)
+frame_data = defaultdict(list)
+
 gamestate_generator = emulator_manager.run_game()
 gamestate = next(gamestate_generator)
 i = 0
@@ -86,10 +89,22 @@ while gamestate is not None:
     # if controller_inputs is None:
     #     logger.error("multishine returned None")
     try:
+        prev_gamestate = gamestate
         gamestate = gamestate_generator.send(controller_inputs)
     except StopIteration:
         break
+    frame_data = extract_and_append_gamestate_inplace(
+        frame_data_by_field=frame_data,
+        curr_gamestate=gamestate,
+        replay_uuid=replay_uuid,
+    )
     i += 1
+
+# %%
+
+# %%
+for button_b, action in zip(frame_data["p1_button_b"], frame_data["p1_action"]):
+    print(f"{button_b=} {action=}")
 
 # %%
 replay_path = "/tmp/slippi_replays/Game_20250203T162044.slp"

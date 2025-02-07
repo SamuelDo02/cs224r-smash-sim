@@ -68,29 +68,16 @@ def cpu_worker(
                 replay_dir=replay_dir,
                 enable_ffw=enable_ffw,
                 debug=debug,
-                opponent_cpu_level=9,
+                opponent_cpu_level=0,  # debugging multishine; TODO remove
             )
             gamestate_generator = emulator_manager.run_game()
             gamestate = next(gamestate_generator)
 
-            last_controller_inputs = None  # Store previous inputs
             i = 0
-
             while gamestate is not None:
                 preprocess_start = time.perf_counter()
                 gamestate_td = extract_gamestate_as_tensordict(gamestate)
                 model_inputs = preprocessor.preprocess_inputs(gamestate_td, player)
-
-                # # TODO refactor this into preprocessor
-                # if last_controller_inputs is not None:
-                #     model_inputs.update(
-                #         {
-                #             "main_stick": last_controller_inputs["main_stick_onehot"],
-                #             "c_stick": last_controller_inputs["c_stick_onehot"],
-                #             "buttons": last_controller_inputs["button_onehot"],
-                #         }
-                #     )
-
                 preprocess_time = time.perf_counter() - preprocess_start
 
                 transfer_start = time.perf_counter()
@@ -115,6 +102,9 @@ def cpu_worker(
                 model_output = shared_batched_model_output[rank].clone()
                 # TODO refactor this into some eval helper class
                 last_controller_inputs = preprocessor.postprocess_preds(model_output)
+
+                # Send controller inputs to emulator, update gamestate
+                prev_gamestate = gamestate
                 gamestate = gamestate_generator.send(last_controller_inputs)
 
                 # Clear the output ready flag for the next iteration
