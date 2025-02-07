@@ -15,7 +15,57 @@ torch.set_printoptions(threshold=torch.inf)
 # %%
 ACTION_BY_IDX
 
+
 # %%
+# Feb 6, inputs_v1
+artifact_dir = Path("/opt/projects/hal2/runs/2025-02-06_17-33-37/arch@GPTv1-4-4_local_batch_size@32_n_samples@262144/")
+model, config = load_model_from_artifact_dir(artifact_dir)
+
+mds_dir = Path("/opt/projects/hal2/data/multishine/train")
+data_config = DataConfig(
+    data_dir="/opt/projects/hal2/data/multishine",
+    seq_len=256,
+)
+train_dataset = HALStreamingDataset(
+    local=str(mds_dir),
+    remote=None,
+    batch_size=1,
+    shuffle=False,
+    data_config=data_config,
+    embedding_config=config.embedding,
+)
+# %%
+x_train = train_dataset[0]["inputs"].unsqueeze(0)
+x_train["ego_action"]
+# %%
+y_train = train_dataset[0]["targets"].unsqueeze(0)
+y_train["buttons"][0].argmax(dim=-1)
+# %%
+y_hat = model(x_train)
+y_hat["buttons"][0].argmax(dim=-1)
+# %%
+y_hat["buttons"][0].argmax(dim=-1) == y_train["buttons"][0].argmax(dim=-1)
+# %%
+y_hat["main_stick"][0].argmax(dim=-1) == y_train["main_stick"][0].argmax(dim=-1)
+# %%
+x_test = TensorDict.load("/tmp/multishine_debugging/model_inputs_000255/")
+# %%
+x_test["ego_action"][0, :103]
+# %%
+x_train["ego_action"][0, :103]
+# %%
+x_test["gamestate"][0, :, :103]
+# %%
+y_hat_test = model(x_test)
+y_hat_test["buttons"][0].argmax(dim=-1)
+# %%
+for key in x_train.keys():
+    for i, (train_val, test_val) in enumerate(zip(x_train[key][0].tolist(), x_test[key][0].tolist())):
+        print(f"{key} frame {i:03d}: {train_val} - {test_val}")
+# %%
+
+# %%
+# Feb 5
 artifact_dir = Path("/opt/projects/hal2/runs/2025-02-04_13-53-10/arch@GPTv1-4-4_local_batch_size@32_n_samples@262144/")
 model, config = load_model_from_artifact_dir(artifact_dir)
 

@@ -72,6 +72,10 @@ def cpu_worker(
             )
             gamestate_generator = emulator_manager.run_game()
             gamestate = next(gamestate_generator)
+            # Skip first N frames to match starting frame offset from training sequence sampling
+            logger.debug(f"Skipping {abs(preprocessor.min_offset)} starting frames to match training distribution")
+            for _ in range(abs(preprocessor.min_offset)):
+                gamestate = next(gamestate_generator)
 
             i = 0
             while gamestate is not None:
@@ -104,7 +108,6 @@ def cpu_worker(
                 last_controller_inputs = preprocessor.postprocess_preds(model_output)
 
                 # Send controller inputs to emulator, update gamestate
-                prev_gamestate = gamestate
                 gamestate = gamestate_generator.send(last_controller_inputs)
 
                 # Clear the output ready flag for the next iteration
@@ -182,6 +185,7 @@ def gpu_worker(
             # Update the context window by rolling frame data left and adding new data on the right
             context_window_BL[:, :-1].copy_(context_window_BL[:, 1:].clone())
             context_window_BL[:, -1].copy_(shared_batched_model_input_B, non_blocking=True)
+        # context_window_BL.save(f"/tmp/multishine_debugging/model_inputs_{iteration:06d}")
         transfer_time = time.perf_counter() - transfer_start
 
         inference_start = time.perf_counter()
