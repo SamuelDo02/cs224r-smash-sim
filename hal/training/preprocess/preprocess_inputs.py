@@ -4,9 +4,7 @@ from typing import Set
 import torch
 from tensordict import TensorDict
 
-from hal.constants import INCLUDED_BUTTONS
 from hal.constants import Player
-from hal.constants import STICK_XY_CLUSTER_CENTERS_V0
 from hal.constants import get_opponent
 from hal.data.stats import FeatureStats
 from hal.training.preprocess.input_preprocess_config import InputPreprocessConfig
@@ -177,7 +175,7 @@ def inputs_v1() -> InputPreprocessConfig:
             "controller": preprocess_controller_inputs_concat,
         },
         frame_offsets_by_feature={
-            "controller": 0,  # Do not offset, already offset in data preprocessing
+            "controller": -1,
         },
         grouped_feature_names_by_head={
             "stage": ("stage",),
@@ -185,9 +183,10 @@ def inputs_v1() -> InputPreprocessConfig:
             "opponent_character": ("opponent_character",),
             "ego_action": ("ego_action",),
             "opponent_action": ("opponent_action",),
+            "controller": ("controller",),
         },
         input_shapes_by_head={
-            "gamestate": (2 * 9 + 2 * len(STICK_XY_CLUSTER_CENTERS_V0) + len(INCLUDED_BUTTONS),),
+            "gamestate": (2 * 9,),
         },
     )
 

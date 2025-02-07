@@ -385,6 +385,7 @@ class GPTv2(BaseGPT):
                 self.transformer.action(inputs["ego_action"]).squeeze(-2),
                 self.transformer.action(inputs["opponent_action"]).squeeze(-2),
                 inputs["gamestate"],
+                inputs["controller"],
             ],
             dim=-1,
         )
@@ -408,6 +409,12 @@ class GPTv2(BaseGPT):
             },
             batch_size=(B, T),
         )
+
+
+class GPTv2_ResHead(GPTv2):
+    def __init__(self, preprocessor: Preprocessor, gpt_config: GPTConfig) -> None:
+        super().__init__(preprocessor, gpt_config)
+        ...
 
 
 @attr.s(auto_attribs=True, frozen=True)

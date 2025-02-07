@@ -18,13 +18,18 @@ ACTION_BY_IDX
 
 # %%
 # Feb 6, inputs_v1
-artifact_dir = Path("/opt/projects/hal2/runs/2025-02-06_17-33-37/arch@GPTv1-4-4_local_batch_size@32_n_samples@262144/")
+# artifact_dir = Path("/opt/projects/hal2/runs/2025-02-06_17-33-37/arch@GPTv1-4-4_local_batch_size@32_n_samples@262144/")
+artifact_dir = Path("/opt/projects/hal2/runs/2025-02-06_21-28-14/arch@GPTv2-4-4_local_batch_size@32_n_samples@131072/")
 model, config = load_model_from_artifact_dir(artifact_dir)
 
+# %%
 mds_dir = Path("/opt/projects/hal2/data/multishine/train")
 data_config = DataConfig(
     data_dir="/opt/projects/hal2/data/multishine",
     seq_len=256,
+)
+embedding_config = EmbeddingConfig(
+    input_preprocessing_fn="inputs_v1",
 )
 train_dataset = HALStreamingDataset(
     local=str(mds_dir),
@@ -32,22 +37,24 @@ train_dataset = HALStreamingDataset(
     batch_size=1,
     shuffle=False,
     data_config=data_config,
-    embedding_config=config.embedding,
+    embedding_config=embedding_config,
     debug=True,
 )
 # %%
+
+# %%
 x_train = train_dataset[0]["inputs"].unsqueeze(0)
-x_train["ego_action"]
+# x_train["ego_action"]
 # %%
 y_train = train_dataset[0]["targets"].unsqueeze(0)
 y_train["buttons"][0].argmax(dim=-1)
 # %%
 y_hat = model(x_train)
 y_hat["buttons"][0].argmax(dim=-1)
-# %%
-y_hat["buttons"][0].argmax(dim=-1) == y_train["buttons"][0].argmax(dim=-1)
-# %%
-y_hat["main_stick"][0].argmax(dim=-1) == y_train["main_stick"][0].argmax(dim=-1)
+# # %%
+# y_hat["buttons"][0].argmax(dim=-1) == y_train["buttons"][0].argmax(dim=-1)
+# # %%
+# y_hat["main_stick"][0].argmax(dim=-1) == y_train["main_stick"][0].argmax(dim=-1)
 # %%
 x_test = TensorDict.load("/tmp/multishine_debugging/model_inputs_000255/")
 y_test = TensorDict.load("/tmp/multishine_debugging/model_outputs_000255/")
@@ -55,10 +62,25 @@ y_test = TensorDict.load("/tmp/multishine_debugging/model_outputs_000255/")
 for i in torch.argwhere(x_train["ego_action"][0, :105] != x_test["ego_action"][0, :105]):
     print(f"Frame {i[0]}: train={x_train['ego_action'][0, i[0]].item()} test={x_test['ego_action'][0, i[0]].item()}")
 # %%
+y_test["buttons"][0, :105]
+# %%
+y_hat["buttons"][0, :105]
+# %%
+torch.argwhere(x_train["gamestate"] != x_test["gamestate"])
+# %%
+x_train[:103] == x_test[:103]
+# %%
 y_train["buttons"][0, 102]
 # %%
-for k, v in (x_train == x_test).items():
-    print(k, v[0, :103])
+x_train[0, 103]["gamestate"]
+# %%
+x_test[0, 103]["gamestate"]
+# %%
+y_train["buttons"][0, 103]
+# %%
+for k, v in (x_train[0, :104] == x_test[0, :104]).items():
+    print(k, torch.all(v, dim=-1))
+
 
 # %%
 x_train["gamestate"][0, 102, 18:]
