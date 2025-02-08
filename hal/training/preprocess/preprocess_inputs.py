@@ -136,7 +136,7 @@ def inputs_v0() -> InputPreprocessConfig:
 
 def inputs_v0_controller() -> InputPreprocessConfig:
     """
-    Baseline input features + controller inputs concatenated to gamestate.
+    Baseline input features, controller inputs.
 
     Separate embedding heads for stage, character, & action.
     No platforms, no projectiles.
@@ -252,7 +252,7 @@ def inputs_v1() -> InputPreprocessConfig:
 
 def inputs_v1_controller() -> InputPreprocessConfig:
     """
-    Baseline input features + action frame + controller inputs concatenated to gamestate.
+    Baseline input features + action frame, controller inputs.
 
     Separate embedding heads for stage, character, & action.
     No platforms, no projectiles.
