@@ -746,9 +746,15 @@ Arch.register(
     gpt_config=GPTConfig(block_size=1024, n_embd=512, n_layer=12, n_head=4, dropout=0.1),
 )
 
-Arch.register("GPTv2-256-4-4", GPTv2Controller, gpt_config=GPTConfig(block_size=1024, n_embd=256, n_layer=4, n_head=4))
 Arch.register(
-    "GPTv2-256-12-4-dropout",
+    "GPTv1Controller-256-4-4", GPTv1Controller, gpt_config=GPTConfig(block_size=1024, n_embd=256, n_layer=4, n_head=4)
+)
+
+Arch.register(
+    "GPTv2Controller-256-4-4", GPTv2Controller, gpt_config=GPTConfig(block_size=1024, n_embd=256, n_layer=4, n_head=4)
+)
+Arch.register(
+    "GPTv2Controller-256-12-4-dropout",
     GPTv2Controller,
     gpt_config=GPTConfig(block_size=1024, n_embd=256, n_layer=12, n_head=4, dropout=0.1),
 )

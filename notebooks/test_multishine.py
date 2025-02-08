@@ -325,3 +325,19 @@ prev_buttons = x_train["gamestate"][0, :-48].tolist()
 buttons = y_train["buttons"][0].argmax(dim=-1).tolist()
 for i, (prev_button, button) in enumerate(zip(prev_buttons, buttons)):
     print(f"{i:03d}: {prev_button:03d} -> {button:03d}")
+
+
+# %%
+import melee
+
+replay_path = "/opt/projects/hal2/runs/2025-02-07_15-06-29/arch@GPTv3-256-4-4_local_batch_size@32_n_samples@131072/replays/000000065536/Game_20250207T151913.slp"
+console = melee.Console(path=replay_path, is_dolphin=False, allow_old_version=True)
+console.connect()
+
+gamestate = console.step()
+while gamestate is not None:
+    p1 = gamestate.players[1]
+    if p1.character == melee.Character.FOX and p1.action == melee.Action.DOWN_B_GROUND_START and p1.action_frame == 1:
+        print(f"Shine at frame {gamestate.frame}")
+    gamestate = console.step()
+# %%

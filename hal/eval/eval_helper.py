@@ -45,7 +45,7 @@ class EpisodeStats:
         return self.__add__(other)
 
     def __str__(self) -> str:
-        return f"EpisodeStats({self.episodes=}, {self.p1_damage=}, {self.p2_damage=}, {self.p1_stocks_lost=}, {self.p2_stocks_lost=}, {self.frames=})"
+        return f"EpisodeStats({self.episodes=}, {self.p1_damage=}, {self.p2_damage=}, {self.p1_stocks_lost=}, {self.p2_stocks_lost=}, {self.num_shines=}, {self.frames=})"
 
     def update(self, gamestate: melee.GameState) -> None:
         if gamestate.menu_state not in (melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH):
