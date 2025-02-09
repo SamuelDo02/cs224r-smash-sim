@@ -4,7 +4,7 @@ import melee
 from loguru import logger
 
 from hal.emulator_helper import console_manager
-from hal.emulator_helper import get_console_kwargs
+from hal.emulator_helper import get_headless_console_kwargs
 from hal.emulator_helper import self_play_menu_helper
 from hal.emulator_paths import REMOTE_CISO_PATH
 
@@ -13,7 +13,7 @@ PLAYER_2_PORT = 2
 
 
 def run_episode(rank: int, port: int, max_steps: int = 8 * 60 * 60) -> None:
-    console_kwargs = get_console_kwargs(rank=rank, udp_port=port)
+    console_kwargs = get_headless_console_kwargs(rank=rank, udp_port=port)
     console = melee.Console(**console_kwargs)
     logger.info(f"Worker {rank}: slippi address {console.slippi_address}, port {console.slippi_port}")
 

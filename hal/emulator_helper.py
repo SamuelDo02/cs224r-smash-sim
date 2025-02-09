@@ -11,6 +11,7 @@ from typing import Any
 from typing import Dict
 from typing import Generator
 from typing import List
+from typing import Optional
 
 import attr
 import melee
@@ -84,7 +85,7 @@ def get_replay_dir(artifact_dir: Path | None = None, step: int | None = None) ->
     return replay_dir
 
 
-def get_console_kwargs(
+def get_headless_console_kwargs(
     enable_ffw: bool = True,
     udp_port: int | None = None,
     replay_dir: Path | None = None,
@@ -117,15 +118,54 @@ def get_console_kwargs(
     return console_kwargs
 
 
+def get_gui_console_kwargs(
+    emulator_path: str,
+    enable_ffw: bool = False,
+    udp_port: int | None = None,
+    replay_dir: Path | None = None,
+    console_logger: melee.Logger | None = None,
+) -> Dict[str, Any]:
+    """Get console kwargs for GUI-enabled emulator."""
+    gui_console_kwargs = {
+        "gfx_backend": "",
+        "disable_audio": False,
+        "use_exi_inputs": enable_ffw,
+        "enable_ffw": enable_ffw,
+    }
+    if replay_dir is None:
+        replay_dir = get_replay_dir()
+    replay_dir.mkdir(exist_ok=True, parents=True)
+    if udp_port is None:
+        udp_port = find_open_udp_ports(1)[0]
+    console_kwargs = {
+        "path": emulator_path,
+        "is_dolphin": True,
+        "tmp_home_directory": False,
+        "copy_home_directory": False,
+        "replay_dir": str(replay_dir),
+        "blocking_input": False,
+        "slippi_port": udp_port,
+        "online_delay": 0,  # 0 frame delay for local evaluation
+        "logger": console_logger,
+        **gui_console_kwargs,
+    }
+    return console_kwargs
+
+
 def self_play_menu_helper(
     gamestate: melee.GameState,
     controller_1: melee.Controller,
     controller_2: melee.Controller,
     character_1: melee.Character,
-    character_2: melee.Character,
-    stage_selected: melee.Stage,
+    character_2: Optional[melee.Character],
+    stage_selected: Optional[melee.Stage],
     opponent_cpu_level: int = 9,
 ) -> None:
+    """
+    Helper function to handle menu state logic.
+
+    If character_2 or stage_selected is None, the function will wait for human user.
+    """
     if gamestate.menu_state == enums.Menu.MAIN_MENU:
         MenuHelper.choose_versus_mode(gamestate=gamestate, controller=controller_1)
     # If we're at the character select screen, choose our character
@@ -144,6 +184,9 @@ def self_play_menu_helper(
                 start=False,
             )
         else:
+            # Early return if human player
+            if character_2 is None:
+                return
             MenuHelper.choose_character(
                 character=character_2,
                 gamestate=gamestate,
@@ -155,6 +198,8 @@ def self_play_menu_helper(
             )
     # If we're at the stage select screen, choose a stage
     elif gamestate.menu_state == enums.Menu.STAGE_SELECT:
+        if stage_selected is None:
+            return
         MenuHelper.choose_stage(
             stage=stage_selected, gamestate=gamestate, controller=controller_1, character=character_1
         )
@@ -203,7 +248,7 @@ class EmulatorManager:
 
     def __attrs_post_init__(self) -> None:
         self.console_logger = melee.Logger() if self.debug else None
-        console_kwargs = get_console_kwargs(
+        console_kwargs = get_headless_console_kwargs(
             enable_ffw=self.enable_ffw,
             udp_port=self.udp_port,
             replay_dir=self.replay_dir,

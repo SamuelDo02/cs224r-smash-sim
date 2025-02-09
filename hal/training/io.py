@@ -14,12 +14,12 @@ from typing import Type
 import attr
 import torch
 import torch.nn
-import wandb
 from loguru import logger
 from tensordict import TensorDict
 from yasoo import deserialize
 from yasoo import serialize
 
+import wandb
 from hal.training.config import BaseConfig
 from hal.training.config import TrainConfig
 from hal.training.distributed import is_master
@@ -88,7 +88,7 @@ def load_config_from_artifact_dir(artifact_dir: Path) -> TrainConfig:
 
 
 def load_model_from_artifact_dir(
-    artifact_dir: Path, idx: Optional[int] = None, device: str = "cpu"
+    artifact_dir: Path, idx: Optional[int] = None, device: str | torch.device = "cpu"
 ) -> Tuple[torch.nn.Module, TrainConfig]:
     config = load_config_from_artifact_dir(artifact_dir)
     preprocessor = Preprocessor(data_config=config.data, embedding_config=config.embedding)
@@ -115,7 +115,7 @@ class Checkpoint:
     artifact_dir: Path
     keep_ckpts: int
 
-    def restore(self, idx: Optional[int] = None, device: str = "cpu") -> Tuple[int, Optional[Path]]:
+    def restore(self, idx: Optional[int] = None, device: str | torch.device = "cpu") -> Tuple[int, Optional[Path]]:
         if idx is None:
             idx = find_latest_idx(self.artifact_dir)
             if idx == 0:

@@ -8,7 +8,7 @@ import sys
 import melee
 
 from hal.emulator_helper import console_manager
-from hal.emulator_helper import get_console_kwargs
+from hal.emulator_helper import get_headless_console_kwargs
 from hal.emulator_helper import self_play_menu_helper
 from hal.emulator_paths import REMOTE_CISO_PATH
 
@@ -48,7 +48,7 @@ if args.debug:
 #   The Console represents the virtual or hardware system Melee is playing on.
 #   Through this object, we can get "GameState" objects per-frame so that your
 #       bot can actually "see" what's happening in the game
-console_kwargs = get_console_kwargs(enable_ffw=False)
+console_kwargs = get_headless_console_kwargs(enable_ffw=False)
 console = melee.Console(**console_kwargs)
 print(f"Saving replay to {console_kwargs['replay_dir']}")
 
