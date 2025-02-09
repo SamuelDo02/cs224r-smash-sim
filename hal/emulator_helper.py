@@ -197,7 +197,7 @@ class EmulatorManager:
     episode_stats: EpisodeStats = EpisodeStats()
     max_steps: int = 99999
     latency_warning_threshold: float = 14.0
-    console_timeout: float = 2.0
+    console_timeout: float = 5.0
     enable_ffw: bool = True
     debug: bool = False
 
