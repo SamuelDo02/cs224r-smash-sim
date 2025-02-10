@@ -247,11 +247,17 @@ class CategoricalBCTrainer(Trainer, abc.ABC):
 
     def loss(self, pred: TensorDict, target: TensorDict) -> TensorDict:
         loss_dict: TensorDict = TensorDict({})
-        loss_fns = {"buttons": F.cross_entropy, "main_stick": F.cross_entropy, "c_stick": F.cross_entropy}
+        loss_fns = {
+            "buttons": F.cross_entropy,
+            "main_stick": F.cross_entropy,
+            "c_stick": F.cross_entropy,
+            "shoulder": F.cross_entropy,
+        }
 
-        for control, loss_fn in loss_fns.items():
-            frame_losses = loss_fn(pred[control], target[control])
-            loss_dict[f"loss_{control}"] = frame_losses
+        for target_feature, loss_fn in loss_fns.items():
+            if target_feature in pred and target_feature in target:
+                frame_losses = loss_fn(pred[target_feature], target[target_feature])
+                loss_dict[f"loss_{target_feature}"] = frame_losses
 
         return loss_dict
 
