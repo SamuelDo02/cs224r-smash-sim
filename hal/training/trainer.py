@@ -17,7 +17,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader
 from training.distributed import log_if_master
 
-from hal.eval.eval_closed_loop import run_closed_loop_evaluation
+from hal.eval.eval import run_closed_loop_evaluation
 from hal.eval.eval_helper import EpisodeStats
 from hal.training.config import TrainConfig
 from hal.training.distributed import get_world_size

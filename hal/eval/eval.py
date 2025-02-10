@@ -1,3 +1,6 @@
+"""
+Run closed loop evaluation of a model in the emulator.
+"""
 import argparse
 import sys
 import time
