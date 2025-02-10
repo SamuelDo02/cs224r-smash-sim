@@ -729,7 +729,7 @@ class GPTv5Controller(GPTv4Controller):
         button_input_size = self.n_embd + shoulder_output_size + c_stick_output_size + main_stick_output_size
         button_output_size = self.emb_config.num_buttons
 
-        # Put shoulder and c-stick first because they override other inputs, other heads are more critical
+        # Put shoulder and c-stick first because they are less complex and they modify/override other inputs
         self.shoulder_head = nn.Sequential(
             nn.LayerNorm(self.n_embd, bias=gpt_config.bias),
             nn.Linear(self.n_embd, self.n_embd // 2),
@@ -769,7 +769,7 @@ class GPTv5Controller(GPTv4Controller):
         B, L, _ = inputs["gamestate"].shape
         assert L <= self.block_size, f"Cannot forward sequence of length {L}, block size is only {self.block_size}"
 
-        # concatenate embeddings and numerical inputs -> project down
+        # Concatenate embeddings and numerical inputs -> project down
         combined_inputs_BLG = self._embed_inputs(inputs)
         proj_inputs_BLD = self.transformer.proj_down(combined_inputs_BLG)
 
@@ -778,10 +778,15 @@ class GPTv5Controller(GPTv4Controller):
             x_BLD = block(x_BLD)
         x_BLD = self.transformer.ln_f(x_BLD)
 
-        shoulder = self.shoulder_head(x_BLD)
-        c_stick = self.c_stick_head(torch.cat((x_BLD, shoulder), dim=-1))
-        main_stick = self.main_stick_head(torch.cat((x_BLD, shoulder, c_stick), dim=-1))
-        button = self.button_head(torch.cat((x_BLD, shoulder, c_stick, main_stick), dim=-1))
+        # Detach to avoid multiplying gradient flow through earlier heads
+        shoulder: torch.Tensor = self.shoulder_head(x_BLD)
+        c_stick: torch.Tensor = self.c_stick_head(torch.cat((x_BLD, shoulder.detach()), dim=-1))
+        main_stick: torch.Tensor = self.main_stick_head(
+            torch.cat((x_BLD, shoulder.detach(), c_stick.detach()), dim=-1)
+        )
+        button: torch.Tensor = self.button_head(
+            torch.cat((x_BLD, shoulder.detach(), c_stick.detach(), main_stick.detach()), dim=-1)
+        )
 
         return TensorDict(
             {
