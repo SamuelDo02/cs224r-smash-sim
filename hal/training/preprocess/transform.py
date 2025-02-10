@@ -105,9 +105,17 @@ def encode_buttons_one_hot(buttons_LD: np.ndarray) -> np.ndarray:
 def get_closest_1D_cluster(x: np.ndarray, cluster_centers: np.ndarray) -> np.ndarray:
     """
     Calculate the closest point in cluster_centers for given x values.
+
+    Args:
+        x (np.ndarray): (L,) Input values
+        cluster_centers (np.ndarray): (C,) Cluster center values
+
+    Returns:
+        np.ndarray: (L,) Indices of the closest cluster centers
     """
-    distances = np.sum((cluster_centers - x[:, np.newaxis]) ** 2, axis=-1)
-    return np.argmin(distances, axis=-1)
+    x_reshaped = x.reshape(-1, 1)  # Shape: (L, 1)
+    distances = (cluster_centers - x_reshaped) ** 2  # Shape: (L, C)
+    return np.argmin(distances, axis=1)  # Shape: (L,)
 
 
 def get_closest_2D_cluster(x: np.ndarray, y: np.ndarray, cluster_centers: np.ndarray) -> np.ndarray:

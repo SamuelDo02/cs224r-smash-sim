@@ -6,7 +6,9 @@ from tensordict import TensorDict
 
 from hal.constants import INCLUDED_BUTTONS
 from hal.constants import Player
+from hal.constants import SHOULDER_CLUSTER_CENTERS_V0
 from hal.constants import STICK_XY_CLUSTER_CENTERS_V0
+from hal.constants import STICK_XY_CLUSTER_CENTERS_V1
 from hal.constants import get_opponent
 from hal.data.stats import FeatureStats
 from hal.training.preprocess.input_preprocess_config import InputPreprocessConfig
@@ -368,7 +370,12 @@ def inputs_v2_controller() -> InputPreprocessConfig:
             "controller": ("controller",),
         },
         input_shapes_by_head={
-            "gamestate": (2 * 10 + 2 * len(STICK_XY_CLUSTER_CENTERS_V0) + len(INCLUDED_BUTTONS),),
+            "gamestate": (
+                2 * 9
+                + 2 * len(STICK_XY_CLUSTER_CENTERS_V1)
+                + len(INCLUDED_BUTTONS)
+                + len(SHOULDER_CLUSTER_CENTERS_V0),
+            ),
         },
     )
 
@@ -377,3 +384,4 @@ InputPreprocessRegistry.register("inputs_v0", inputs_v0())
 InputPreprocessRegistry.register("inputs_v0_controller", inputs_v0_controller())
 InputPreprocessRegistry.register("inputs_v1", inputs_v1())
 InputPreprocessRegistry.register("inputs_v1_controller", inputs_v1_controller())
+InputPreprocessRegistry.register("inputs_v2_controller", inputs_v2_controller())

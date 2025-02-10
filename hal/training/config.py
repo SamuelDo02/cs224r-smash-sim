@@ -77,13 +77,14 @@ class EmbeddingConfig:
     num_shoulder_clusters: Optional[int] = None
 
     def __attrs_post_init__(self) -> None:
-        from hal.training.preprocess.preprocess_targets import TARGETS_EMBEDDING_SIZES
+        from hal.training.preprocess.target_embedding_sizes import TARGETS_EMBEDDING_SIZES
 
         target_sizes = TARGETS_EMBEDDING_SIZES[self.target_preprocessing_fn]
-        object.__setattr__(self, "num_buttons", target_sizes["buttons"])
-        object.__setattr__(self, "num_main_stick_clusters", target_sizes["main_stick"])
-        object.__setattr__(self, "num_c_stick_clusters", target_sizes["c_stick"])
-        object.__setattr__(self, "num_shoulder_clusters", target_sizes["shoulder"])
+        object.__setattr__(self, "num_buttons", target_sizes.get("buttons", None))
+        object.__setattr__(self, "num_main_stick_clusters", target_sizes.get("main_stick", None))
+        object.__setattr__(self, "num_c_stick_clusters", target_sizes.get("c_stick", None))
+        object.__setattr__(self, "num_shoulder_clusters", target_sizes.get("shoulder", None))
+
 
 @attr.s(auto_attribs=True, frozen=True)
 class EvalConfig:

@@ -693,22 +693,77 @@ class GPTv4Controller(BaseGPT):
 class GPTv5Controller(GPTv4Controller):
     def __init__(self, preprocessor: Preprocessor, gpt_config: GPTConfig) -> None:
         super().__init__(preprocessor, gpt_config)
+        # Numeric + embedded feature sizes defined programmatically in InputPreprocessConfig
+        self.input_size = self.preprocessor.input_size  # G
+        self.n_embd = gpt_config.n_embd  # D
 
-        main_stick_size = self.emb_config.num_main_stick_clusters
-        button_size = self.emb_config.num_buttons
-        c_stick_size = self.emb_config.num_c_stick_clusters
-        # Skip assertions, parent class already checks for None
-        shoulder_input_size: int = self.n_embd + main_stick_size + c_stick_size + button_size  # type: ignore
-        shoulder_output_size = self.emb_config.num_shoulder_clusters
-        assert shoulder_output_size is not None
+        self.emb_config = self.preprocessor.embedding_config
+        assert self.emb_config.num_buttons is not None
+        assert self.emb_config.num_main_stick_clusters is not None
+        assert self.emb_config.num_c_stick_clusters is not None
+        assert self.emb_config.num_shoulder_clusters is not None
 
-        self.shoulder_head = nn.Sequential(
-            nn.LayerNorm(shoulder_input_size, bias=gpt_config.bias),
-            nn.Linear(shoulder_input_size, shoulder_input_size // 2),
-            nn.GELU(),
-            nn.Linear(shoulder_input_size // 2, shoulder_output_size),
+        # Categorical input embeddings
+        self.stage_emb = nn.Embedding(self.emb_config.num_stages, self.emb_config.stage_embedding_dim)
+        self.character_emb = nn.Embedding(self.emb_config.num_characters, self.emb_config.character_embedding_dim)
+        self.action_emb = nn.Embedding(self.emb_config.num_actions, self.emb_config.action_embedding_dim)
+
+        self.transformer = nn.ModuleDict(
+            dict(
+                proj_down=nn.Linear(self.input_size, gpt_config.n_embd),  # G -> D
+                drop=nn.Dropout(gpt_config.dropout),
+                h=nn.ModuleList([BlockRelativePosition(gpt_config) for _ in range(gpt_config.n_layer)]),
+                ln_f=nn.LayerNorm(self.n_embd, bias=gpt_config.bias),
+            )
         )
-        self._init_weights(self.shoulder_head)
+
+        # Output heads
+        shoulder_output_size = self.emb_config.num_shoulder_clusters
+
+        c_stick_input_size = self.n_embd + shoulder_output_size
+        c_stick_output_size = self.emb_config.num_c_stick_clusters
+
+        main_stick_input_size = self.n_embd + shoulder_output_size + c_stick_output_size
+        main_stick_output_size = self.emb_config.num_main_stick_clusters
+
+        button_input_size = self.n_embd + shoulder_output_size + c_stick_output_size + main_stick_output_size
+        button_output_size = self.emb_config.num_buttons
+
+        # Put shoulder and c-stick first because they override other inputs, other heads are more critical
+        self.shoulder_head = nn.Sequential(
+            nn.LayerNorm(self.n_embd, bias=gpt_config.bias),
+            nn.Linear(self.n_embd, self.n_embd // 2),
+            nn.GELU(),
+            nn.Linear(self.n_embd // 2, shoulder_output_size),
+        )
+
+        self.c_stick_head = nn.Sequential(
+            nn.LayerNorm(c_stick_input_size, bias=gpt_config.bias),
+            nn.Linear(c_stick_input_size, c_stick_input_size // 2),
+            nn.GELU(),
+            nn.Linear(c_stick_input_size // 2, c_stick_output_size),
+        )
+
+        self.main_stick_head = nn.Sequential(
+            nn.LayerNorm(main_stick_input_size, bias=gpt_config.bias),
+            nn.Linear(main_stick_input_size, main_stick_input_size // 2),
+            nn.GELU(),
+            nn.Linear(main_stick_input_size // 2, main_stick_output_size),
+        )
+
+        self.button_head = nn.Sequential(
+            nn.LayerNorm(button_input_size, bias=gpt_config.bias),
+            nn.Linear(button_input_size, button_input_size // 2),
+            nn.GELU(),
+            nn.Linear(button_input_size // 2, button_output_size),
+        )
+
+        # init all weights
+        self.apply(self._init_weights)
+        # apply special scaled init to the residual projections, per GPT-2 paper
+        for pn, p in self.named_parameters():
+            if pn.endswith("c_proj.weight"):
+                torch.nn.init.normal_(p, mean=0.0, std=0.02 / math.sqrt(2 * gpt_config.n_layer))
 
     def forward(self, inputs: TensorDict) -> TensorDict:
         B, L, _ = inputs["gamestate"].shape
@@ -723,10 +778,10 @@ class GPTv5Controller(GPTv4Controller):
             x_BLD = block(x_BLD)
         x_BLD = self.transformer.ln_f(x_BLD)
 
-        c_stick = self.c_stick_head(x_BLD)
-        main_stick = self.main_stick_head(torch.cat((x_BLD, c_stick), dim=-1))
-        button = self.button_head(torch.cat((x_BLD, c_stick, main_stick), dim=-1))
-        shoulder = self.shoulder_head(torch.cat((x_BLD, c_stick, main_stick, button), dim=-1))
+        shoulder = self.shoulder_head(x_BLD)
+        c_stick = self.c_stick_head(torch.cat((x_BLD, shoulder), dim=-1))
+        main_stick = self.main_stick_head(torch.cat((x_BLD, shoulder, c_stick), dim=-1))
+        button = self.button_head(torch.cat((x_BLD, shoulder, c_stick, main_stick), dim=-1))
 
         return TensorDict(
             {
