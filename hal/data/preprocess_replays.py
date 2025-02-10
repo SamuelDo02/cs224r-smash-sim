@@ -17,6 +17,7 @@ from loguru import logger
 from streaming import MDSWriter
 from tqdm import tqdm
 
+from hal.data.calculate_stats import calculate_statistics_for_mds
 from hal.data.schema import NP_DTYPE_STR_BY_COLUMN
 from hal.data.schema import PYARROW_DTYPE_BY_COLUMN
 from hal.gamestate_utils import FrameData
@@ -168,3 +169,7 @@ if __name__ == "__main__":
         max_parallelism=args.max_parallelism,
         check_damage=not args.disable_check_damage,
     )
+
+    # Calculate stats
+    stats_path = Path(args.output_dir) / "stats.json"
+    calculate_statistics_for_mds(args.output_dir, str(stats_path))
