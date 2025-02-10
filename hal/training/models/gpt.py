@@ -690,6 +690,55 @@ class GPTv4Controller(BaseGPT):
         )
 
 
+class GPTv5Controller(GPTv4Controller):
+    def __init__(self, preprocessor: Preprocessor, gpt_config: GPTConfig) -> None:
+        super().__init__(preprocessor, gpt_config)
+
+        main_stick_size = self.emb_config.num_main_stick_clusters
+        button_size = self.emb_config.num_buttons
+        c_stick_size = self.emb_config.num_c_stick_clusters
+        # Skip assertions, parent class already checks for None
+        shoulder_input_size: int = self.n_embd + main_stick_size + c_stick_size + button_size  # type: ignore
+        shoulder_output_size = self.emb_config.num_shoulder_clusters
+        assert shoulder_output_size is not None
+
+        self.shoulder_head = nn.Sequential(
+            nn.LayerNorm(shoulder_input_size, bias=gpt_config.bias),
+            nn.Linear(shoulder_input_size, shoulder_input_size // 2),
+            nn.GELU(),
+            nn.Linear(shoulder_input_size // 2, shoulder_output_size),
+        )
+        self._init_weights(self.shoulder_head)
+
+    def forward(self, inputs: TensorDict) -> TensorDict:
+        B, L, _ = inputs["gamestate"].shape
+        assert L <= self.block_size, f"Cannot forward sequence of length {L}, block size is only {self.block_size}"
+
+        # concatenate embeddings and numerical inputs -> project down
+        combined_inputs_BLG = self._embed_inputs(inputs)
+        proj_inputs_BLD = self.transformer.proj_down(combined_inputs_BLG)
+
+        x_BLD = self.transformer.drop(proj_inputs_BLD)
+        for block in self.transformer.h:
+            x_BLD = block(x_BLD)
+        x_BLD = self.transformer.ln_f(x_BLD)
+
+        c_stick = self.c_stick_head(x_BLD)
+        main_stick = self.main_stick_head(torch.cat((x_BLD, c_stick), dim=-1))
+        button = self.button_head(torch.cat((x_BLD, c_stick, main_stick), dim=-1))
+        shoulder = self.shoulder_head(torch.cat((x_BLD, c_stick, main_stick, button), dim=-1))
+
+        return TensorDict(
+            {
+                "buttons": button,
+                "main_stick": main_stick,
+                "c_stick": c_stick,
+                "shoulder": shoulder,
+            },
+            batch_size=(B, L),
+        )
+
+
 @attr.s(auto_attribs=True, frozen=True)
 class MultiTokenGPTConfig(GPTConfig):
     n_lookahead: int = 4
@@ -835,4 +884,8 @@ Arch.register(
     "GPTv4Controller-256-8-4-dropout",
     GPTv4Controller,
     gpt_config=GPTConfig(block_size=1024, n_embd=256, n_layer=8, n_head=4, dropout=0.2),
+)
+
+Arch.register(
+    "GPTv5Controller-256-4-4", GPTv5Controller, gpt_config=GPTConfig(block_size=1024, n_embd=256, n_layer=4, n_head=4)
 )

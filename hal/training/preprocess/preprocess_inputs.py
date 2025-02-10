@@ -14,7 +14,8 @@ from hal.training.preprocess.registry import InputPreprocessRegistry
 from hal.training.preprocess.transform import cast_int32
 from hal.training.preprocess.transform import invert_and_normalize
 from hal.training.preprocess.transform import normalize
-from hal.training.preprocess.transform import preprocess_controller_inputs_concat
+from hal.training.preprocess.transform import preprocess_controller_inputs_v0_concat
+from hal.training.preprocess.transform import preprocess_controller_inputs_v1_concat
 from hal.training.preprocess.transform import standardize
 
 DEFAULT_HEAD_NAME = "gamestate"
@@ -174,7 +175,7 @@ def inputs_v0_controller() -> InputPreprocessConfig:
             "position_x": standardize,
             "position_y": standardize,
             # Ego controller inputs
-            "controller": preprocess_controller_inputs_concat,
+            "controller": preprocess_controller_inputs_v0_concat,
         },
         frame_offsets_by_feature={
             "controller": -1,
@@ -292,7 +293,68 @@ def inputs_v1_controller() -> InputPreprocessConfig:
             "position_y": standardize,
             "action_frame": normalize,
             # Ego controller inputs
-            "controller": preprocess_controller_inputs_concat,
+            "controller": preprocess_controller_inputs_v0_concat,
+        },
+        frame_offsets_by_feature={
+            "controller": -1,
+        },
+        grouped_feature_names_by_head={
+            "stage": ("stage",),
+            "ego_character": ("ego_character",),
+            "opponent_character": ("opponent_character",),
+            "ego_action": ("ego_action",),
+            "opponent_action": ("opponent_action",),
+            "controller": ("controller",),
+        },
+        input_shapes_by_head={
+            "gamestate": (2 * 10 + 2 * len(STICK_XY_CLUSTER_CENTERS_V0) + len(INCLUDED_BUTTONS),),
+        },
+    )
+
+
+def inputs_v2_controller() -> InputPreprocessConfig:
+    """
+    Baseline input features, controller inputs.
+
+    Predicting analog shoulder presses.
+
+    Separate embedding heads for stage, character, & action.
+    No platforms, no projectiles.
+    """
+
+    player_features = (
+        "character",
+        "action",
+        "percent",
+        "stock",
+        "facing",
+        "invulnerable",
+        "jumps_left",
+        "on_ground",
+        "shield_strength",
+        "position_x",
+        "position_y",
+    )
+
+    return InputPreprocessConfig(
+        player_features=player_features,
+        normalization_fn_by_feature_name={
+            # Shared/embedded features are passed unchanged, to be embedded by model
+            "stage": cast_int32,
+            "character": cast_int32,
+            "action": cast_int32,
+            # Normalized player features
+            "percent": normalize,
+            "stock": normalize,
+            "facing": normalize,
+            "invulnerable": normalize,
+            "jumps_left": normalize,
+            "on_ground": normalize,
+            "shield_strength": invert_and_normalize,
+            "position_x": standardize,
+            "position_y": standardize,
+            # Ego controller inputs
+            "controller": preprocess_controller_inputs_v1_concat,
         },
         frame_offsets_by_feature={
             "controller": -1,

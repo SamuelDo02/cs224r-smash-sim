@@ -3,6 +3,8 @@ import torch
 import pandas as pd
 from pathlib import Path
 
+from streaming import StreamingDataset
+from hal.training.preprocess.preprocess_targets import preprocess_targets_v1
 from hal.training.config import DataConfig
 from hal.training.config import EmbeddingConfig
 from hal.training.config import TrainConfig
@@ -10,6 +12,13 @@ from hal.training.streaming_dataloader import get_dataloaders
 from hal.training.streaming_dataset import HALStreamingDataset
 
 torch.set_printoptions(precision=4, sci_mode=False, linewidth=120)
+
+# %%
+mds_path = "/opt/projects/hal2/data/ranked/train"
+ds = StreamingDataset(local=mds_path, batch_size=1, shuffle=True)
+
+# %%
+x = ds[0]
 
 # %%
 ds = HALStreamingDataset(

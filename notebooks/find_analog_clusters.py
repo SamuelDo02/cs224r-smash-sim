@@ -116,9 +116,14 @@ mang0_ds = StreamingDataset(local=mds_path, batch_size=1, shuffle=True)
 len(mang0_ds)
 
 # %%
+x = mang0_ds[0]
+for k in x.keys():
+    print(k)
+# %%
 mds_path = "/opt/projects/hal2/data/ranked/train"
 ds = StreamingDataset(local=mds_path, batch_size=1, shuffle=True)
 
+# %%
 main_stick_x_tensors = []
 main_stick_y_tensors = []
 c_stick_x_tensors = []
@@ -359,3 +364,40 @@ deduped_new_pts_y
 # Sort points by x and y coordinates while keeping rows together
 sorted_points = deduped_new_pts_y[np.lexsort((deduped_new_pts_y[:, 1], deduped_new_pts_y[:, 0]))]
 sorted_points
+
+# %%
+# Visualize l_shoulder and r_shoulder
+l_shoulder_tensors = []
+r_shoulder_tensors = []
+
+for i, sample in enumerate(ds):
+    if i > 10000:
+        break
+    if i % 100 == 0:
+        print(f"Processing sample {i}")
+    for player in ["p1", "p2"]:
+        l_shoulder_tensors.append(sample[f"{player}_l_shoulder"])
+        r_shoulder_tensors.append(sample[f"{player}_r_shoulder"])
+# %%
+l_shoulder = np.concatenate(l_shoulder_tensors)
+r_shoulder = np.concatenate(r_shoulder_tensors)
+# %%
+l_shoulder = l_shoulder[np.random.choice(len(l_shoulder), size=10000, replace=False)]
+r_shoulder = r_shoulder[np.random.choice(len(r_shoulder), size=10000, replace=False)]
+# %%
+# %%
+# histogram
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+
+ax1.hist(l_shoulder, bins=100)
+ax1.set_yscale("log")
+ax1.set_title("Analog L shoulder presses")
+
+ax2.hist(r_shoulder, bins=100)
+ax2.set_yscale("log") 
+ax2.set_title("Analog R shoulder presses")
+
+plt.tight_layout()
+plt.show()
+# %%
+
