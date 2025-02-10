@@ -137,7 +137,7 @@ TARGET_FEATURES_TO_ONE_HOT_ENCODE: Tuple[str, ...] = (
     "no_button",
 )
 
-SHOULDER_CLUSTER_CENTERS_V0: np.ndarray = np.array([0.0, 0.4, 0.6, 0.8, 1.0])
+SHOULDER_CLUSTER_CENTERS_V0: np.ndarray = np.array([0.0, 0.5, 1.0])
 SHOULDER_CLUSTER_CENTERS_V0.flags.writeable = False
 
 STICK_XY_CLUSTER_CENTERS_V0: np.ndarray = np.array(
