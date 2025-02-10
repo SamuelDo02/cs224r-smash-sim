@@ -1,7 +1,9 @@
 import torch
 from tensordict import TensorDict
 
+from hal.constants import SHOULDER_CLUSTER_CENTERS_V0
 from hal.constants import STICK_XY_CLUSTER_CENTERS_V0
+from hal.constants import STICK_XY_CLUSTER_CENTERS_V1
 from hal.training.preprocess.registry import PredPostprocessingRegistry
 
 
@@ -36,8 +38,8 @@ def model_predictions_to_controller_inputs_v0(pred_C: TensorDict, temperature: f
     )
 
 
-@PredPostprocessingRegistry.register("preds_v1")
-def model_predictions_to_controller_inputs_v1(pred: TensorDict) -> TensorDict:
+@PredPostprocessingRegistry.register("preds_v0_greedy")
+def model_predictions_to_controller_inputs_v0_greedy(pred: TensorDict) -> TensorDict:
     """
     Argmax the main stick and c-stick clusters, and the buttons.
     """
@@ -65,36 +67,30 @@ def model_predictions_to_controller_inputs_v1(pred: TensorDict) -> TensorDict:
     )
 
 
-@PredPostprocessingRegistry.register("preds_v2")
-def model_predictions_to_controller_inputs_v2(pred: TensorDict, temperature: float = 1.0) -> TensorDict:
+@PredPostprocessingRegistry.register("preds_v1")
+def model_predictions_to_controller_inputs_v1(pred_C: TensorDict, temperature: float = 1.0) -> TensorDict:
     """
-    Sample using temperature from the predicted distribution and return both raw inputs and one-hot encodings.
+    Analog shoulder presses.
     """
     # Decode x, y from joint categorical distribution
-    main_stick_probs = torch.softmax(pred["main_stick"] / temperature, dim=-1)
+    main_stick_probs = torch.softmax(pred_C["main_stick"] / temperature, dim=-1)
     main_stick_cluster_idx = torch.multinomial(main_stick_probs, num_samples=1)
     main_stick_x, main_stick_y = torch.split(
-        torch.tensor(STICK_XY_CLUSTER_CENTERS_V0[main_stick_cluster_idx]), 1, dim=-1
+        torch.tensor(STICK_XY_CLUSTER_CENTERS_V1[main_stick_cluster_idx]), 1, dim=-1
     )
-    # Create one-hot for main stick
-    main_stick_onehot = torch.zeros_like(main_stick_probs)
-    main_stick_onehot.scatter_(-1, main_stick_cluster_idx, 1)
-    main_stick_onehot = main_stick_onehot.unsqueeze(0)
 
-    c_stick_probs = torch.softmax(pred["c_stick"] / temperature, dim=-1)
+    c_stick_probs = torch.softmax(pred_C["c_stick"] / temperature, dim=-1)
     c_stick_cluster_idx = torch.multinomial(c_stick_probs, num_samples=1)
-    c_stick_x, c_stick_y = torch.split(torch.tensor(STICK_XY_CLUSTER_CENTERS_V0[c_stick_cluster_idx]), 1, dim=-1)
-    # Create one-hot for c stick
-    c_stick_onehot = torch.zeros_like(c_stick_probs)
-    c_stick_onehot.scatter_(-1, c_stick_cluster_idx, 1)
-    c_stick_onehot = c_stick_onehot.unsqueeze(0)
+    c_stick_x, c_stick_y = torch.split(torch.tensor(STICK_XY_CLUSTER_CENTERS_V1[c_stick_cluster_idx]), 1, dim=-1)
+
     # Decode buttons
-    button_probs = torch.softmax(pred["buttons"] / temperature, dim=-1)
+    button_probs = torch.softmax(pred_C["buttons"] / temperature, dim=-1)
     button_idx = torch.multinomial(button_probs, num_samples=1)
-    # Create one-hot for buttons
-    button_onehot = torch.zeros_like(button_probs)
-    button_onehot.scatter_(-1, button_idx, 1)
-    button_onehot = button_onehot.unsqueeze(0)
+
+    # Decode shoulder
+    shoulder_probs = torch.softmax(pred_C["shoulder"] / temperature, dim=-1)
+    shoulder_idx = torch.multinomial(shoulder_probs, num_samples=1)
+    shoulder_x = torch.tensor(SHOULDER_CLUSTER_CENTERS_V0[shoulder_idx])
 
     return TensorDict(
         {
@@ -103,9 +99,6 @@ def model_predictions_to_controller_inputs_v2(pred: TensorDict, temperature: flo
             "c_stick_x": c_stick_x,
             "c_stick_y": c_stick_y,
             "button": button_idx,
-            # Add one-hot encodings
-            "main_stick_onehot": main_stick_onehot,
-            "c_stick_onehot": c_stick_onehot,
-            "button_onehot": button_onehot,
+            "shoulder": shoulder_x,
         }
     )

@@ -106,6 +106,11 @@ def send_controller_inputs(controller: melee.Controller, inputs: TensorDict, idx
         inputs["c_stick_x"][idx].item(),
         inputs["c_stick_y"][idx].item(),
     )
+    if "shoulder" in inputs:
+        controller.press_shoulder(
+            melee.Button.BUTTON_L,
+            inputs["shoulder"][idx].item(),
+        )
 
     button_idx = inputs["button"][idx].item()
     for i, button in enumerate(INCLUDED_BUTTONS):
@@ -130,11 +135,13 @@ def mock_preds_as_tensordict(embed_config: EmbeddingConfig) -> TensorDict:
     assert embed_config.num_buttons is not None
     assert embed_config.num_main_stick_clusters is not None
     assert embed_config.num_c_stick_clusters is not None
+    assert embed_config.num_shoulder_clusters is not None
     return TensorDict(
         {
             "buttons": torch.zeros(embed_config.num_buttons),
             "main_stick": torch.zeros(embed_config.num_main_stick_clusters),
             "c_stick": torch.zeros(embed_config.num_c_stick_clusters),
+            "shoulder": torch.zeros(embed_config.num_shoulder_clusters),
         },
         batch_size=(),
     )

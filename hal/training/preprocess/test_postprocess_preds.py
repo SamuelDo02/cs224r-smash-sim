@@ -3,7 +3,7 @@ import torch
 from tensordict import TensorDict
 
 from hal.constants import STICK_XY_CLUSTER_CENTERS_V0
-from hal.training.preprocess.postprocess_preds import model_predictions_to_controller_inputs_v0
+from hal.training.preprocess.postprocess_preds import model_predictions_to_controller_inputs_v0_temp
 
 
 @pytest.fixture
@@ -27,7 +27,7 @@ def mock_predictions():
 
 
 def test_model_predictions_to_controller_inputs(mock_predictions) -> None:
-    result = model_predictions_to_controller_inputs_v0(mock_predictions)
+    result = model_predictions_to_controller_inputs_v0_temp(mock_predictions)
 
     # Check if all expected keys are present
     expected_keys = [
