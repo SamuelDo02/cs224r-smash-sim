@@ -61,13 +61,18 @@ class EpisodeStats:
         self._prev_p2_stock = p2.stock
         self.frames += 1
 
-    def to_wandb_dict(self, player: Player, prefix: str = "val/closed_loop") -> Dict[str, float]:
+    def to_wandb_dict(self, player: Player, prefix: str = "closed_loop_eval") -> Dict[str, float]:
+        # Calculate stock win rate as stocks taken / (stocks taken + stocks lost)
+        stocks_taken = self.p2_stocks_lost if player == "p1" else self.p1_stocks_lost
+        stocks_lost = self.p1_stocks_lost if player == "p1" else self.p2_stocks_lost
+        stock_win_rate = stocks_taken / (stocks_taken + stocks_lost) if (stocks_taken + stocks_lost) > 0 else 0.0
         return {
             f"{prefix}/episodes": self.episodes,
             f"{prefix}/damage_inflicted": self.p2_damage if player == "p1" else self.p1_damage,
             f"{prefix}/damage_received": self.p1_damage if player == "p1" else self.p2_damage,
-            f"{prefix}/stocks_taken": self.p2_stocks_lost if player == "p1" else self.p1_stocks_lost,
-            f"{prefix}/stocks_lost": self.p1_stocks_lost if player == "p1" else self.p2_stocks_lost,
+            f"{prefix}/stocks_taken": stocks_taken,
+            f"{prefix}/stocks_lost": stocks_lost,
+            f"{prefix}/stock_win_rate": stock_win_rate,
             f"{prefix}/frames": self.frames,
         }
 
