@@ -16,7 +16,7 @@ from hal.preprocess.input_configs import DEFAULT_HEAD_NAME
 from hal.preprocess.registry import InputConfigRegistry
 from hal.preprocess.registry import PredPostprocessingRegistry
 from hal.preprocess.registry import TargetPreprocessRegistry
-from hal.preprocess.transform import Transformation
+from hal.preprocess.transformations import Transformation
 from hal.training.config import DataConfig
 
 

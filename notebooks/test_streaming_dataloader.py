@@ -10,7 +10,7 @@ from hal.training.config import DataConfig
 from hal.training.config import DataConfig
 from hal.training.config import TrainConfig
 from hal.training.streaming_dataloader import get_dataloaders
-from hal.preprocess.transform import preprocess_controller_inputs_fine_shoulder
+from hal.preprocess.transformations import preprocess_controller_inputs_fine_shoulder
 from hal.training.streaming_dataset import HALStreamingDataset
 
 torch.set_printoptions(precision=4, sci_mode=False, linewidth=120, threshold=torch.inf)

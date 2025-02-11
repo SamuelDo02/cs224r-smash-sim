@@ -3,8 +3,8 @@ from tensordict import TensorDict
 from hal.constants import Player
 from hal.constants import VALID_PLAYERS
 from hal.preprocess.registry import TargetPreprocessRegistry
-from hal.preprocess.transform import preprocess_controller_inputs_coarse
-from hal.preprocess.transform import preprocess_controller_inputs_fine_shoulder
+from hal.preprocess.transformations import preprocess_controller_inputs_coarse
+from hal.preprocess.transformations import preprocess_controller_inputs_fine_shoulder
 
 
 @TargetPreprocessRegistry.register("targets_v0")

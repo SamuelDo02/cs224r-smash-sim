@@ -3,12 +3,12 @@ from typing import Tuple
 
 import attr
 
-from hal.preprocess.transform import Transformation
+from hal.preprocess.transformations import Transformation
 
 
 @attr.s(auto_attribs=True)
 class InputConfig:
-    """Configuration for preprocessing functions."""
+    """Configuration for how we structure input features, offsets, and grouping into heads."""
 
     # Features to preprocess twice, specific to player state
     player_features: Tuple[str, ...]

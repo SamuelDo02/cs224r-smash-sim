@@ -4,13 +4,13 @@ from hal.constants import STICK_XY_CLUSTER_CENTERS_V0
 from hal.constants import STICK_XY_CLUSTER_CENTERS_V1
 from hal.preprocess.input_config import InputConfig
 from hal.preprocess.registry import InputConfigRegistry
-from hal.preprocess.transform import cast_int32
-from hal.preprocess.transform import concat_controller_inputs_coarse
-from hal.preprocess.transform import concat_controller_inputs_fine
-from hal.preprocess.transform import concat_controller_inputs_fine_shoulder
-from hal.preprocess.transform import invert_and_normalize
-from hal.preprocess.transform import normalize
-from hal.preprocess.transform import standardize
+from hal.preprocess.transformations import cast_int32
+from hal.preprocess.transformations import concat_controller_inputs_coarse
+from hal.preprocess.transformations import concat_controller_inputs_fine
+from hal.preprocess.transformations import concat_controller_inputs_fine_shoulder
+from hal.preprocess.transformations import invert_and_normalize
+from hal.preprocess.transformations import normalize
+from hal.preprocess.transformations import standardize
 
 DEFAULT_HEAD_NAME = "gamestate"
 
