@@ -66,12 +66,18 @@ class EpisodeStats:
         stocks_taken = self.p2_stocks_lost if player == "p1" else self.p1_stocks_lost
         stocks_lost = self.p1_stocks_lost if player == "p1" else self.p2_stocks_lost
         stock_win_rate = stocks_taken / (stocks_taken + stocks_lost) if (stocks_taken + stocks_lost) > 0 else 0.0
+        damage_inflicted = self.p2_damage if player == "p1" else self.p1_damage
+        damage_received = self.p1_damage if player == "p1" else self.p2_damage
         return {
             f"{prefix}/episodes": self.episodes,
-            f"{prefix}/damage_inflicted": self.p2_damage if player == "p1" else self.p1_damage,
-            f"{prefix}/damage_received": self.p1_damage if player == "p1" else self.p2_damage,
+            f"{prefix}/damage_inflicted": damage_inflicted,
+            f"{prefix}/damage_received": damage_received,
+            f"{prefix}/damage_inflicted_per_episode": damage_inflicted / self.episodes,
+            f"{prefix}/damage_received_per_episode": damage_received / self.episodes,
             f"{prefix}/stocks_taken": stocks_taken,
             f"{prefix}/stocks_lost": stocks_lost,
+            f"{prefix}/stocks_taken_per_episode": stocks_taken / self.episodes,
+            f"{prefix}/stocks_lost_per_episode": stocks_lost / self.episodes,
             f"{prefix}/stock_win_rate": stock_win_rate,
             f"{prefix}/frames": self.frames,
         }
