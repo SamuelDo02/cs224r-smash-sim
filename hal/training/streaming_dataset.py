@@ -36,13 +36,8 @@ class HALStreamingDataset(StreamingDataset):
         inputs_T = self.preprocessor.preprocess_inputs(sample_T, player_perspective)
         targets_T = self.preprocessor.preprocess_targets(sample_T, player_perspective)
 
-        feature_names = set(inputs_T.keys()) | set(targets_T.keys())  # type: ignore
-        offset_keys = set(self.preprocessor.frame_offsets_by_feature.keys())
-        assert all(
-            feature in feature_names for feature in offset_keys
-        ), f"Features with offsets must exist in sample. Missing: {offset_keys - feature_names}\nAvailable: {feature_names}"
-        inputs_L = self.preprocessor.offset_features(inputs_T)
-        targets_L = self.preprocessor.offset_features(targets_T)
+        inputs_L = self.preprocessor.offset_inputs(inputs_T)
+        targets_L = self.preprocessor.offset_targets(targets_T)
 
         return TensorDict(
             {

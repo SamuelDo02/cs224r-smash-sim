@@ -36,7 +36,7 @@ model = ckpt.model
 traj_len = preprocessor.trajectory_sampling_len
 for i in range(len(episode_td) - traj_len):
     trajectory_td = episode_td[i : i + traj_len]
-    offset_td = preprocessor.offset_features(trajectory_td)
+    offset_td = preprocessor.offset_inputs(trajectory_td)
     inputs = preprocessor.preprocess_inputs(offset_td, "p1")
     inputs = inputs.unsqueeze(0)
     preds = model(inputs)

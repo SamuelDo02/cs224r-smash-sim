@@ -5,6 +5,7 @@ from tensordict import TensorDict
 
 from hal.constants import Player
 from hal.preprocess.input_config import InputConfig
+from hal.preprocess.target_config import TargetConfig
 
 
 class InputConfigRegistry:
@@ -14,7 +15,7 @@ class InputConfigRegistry:
     def get(cls, name: str) -> InputConfig:
         if name in cls.CONFIGS:
             return cls.CONFIGS[name]
-        raise NotImplementedError(f"Preprocessing fn {name} not found. Valid functions: {sorted(cls.CONFIGS.keys())}.")
+        raise NotImplementedError(f"Config {name} not found. Valid configs: {sorted(cls.CONFIGS.keys())}.")
 
     @classmethod
     def register(cls, name: str, config: InputConfig) -> None:
@@ -24,22 +25,18 @@ class InputConfigRegistry:
 TargetPreprocessFn = Callable[[TensorDict, Player], TensorDict]
 
 
-class TargetPreprocessRegistry:
-    EMBED: Dict[str, TargetPreprocessFn] = {}
+class TargetConfigRegistry:
+    CONFIGS: Dict[str, TargetConfig] = {}
 
     @classmethod
-    def get(cls, name: str) -> TargetPreprocessFn:
-        if name in cls.EMBED:
-            return cls.EMBED[name]
-        raise NotImplementedError(f"Embedding fn {name} not found." f"Valid functions: {sorted(cls.EMBED.keys())}.")
+    def get(cls, name: str) -> TargetConfig:
+        if name in cls.CONFIGS:
+            return cls.CONFIGS[name]
+        raise NotImplementedError(f"Config {name} not found. Valid configs: {sorted(cls.CONFIGS.keys())}.")
 
     @classmethod
-    def register(cls, name: str):
-        def decorator(embed_fn: TargetPreprocessFn):
-            cls.EMBED[name] = embed_fn
-            return embed_fn
-
-        return decorator
+    def register(cls, name: str, config: TargetConfig) -> None:
+        cls.CONFIGS[name] = config
 
 
 PredPostprocessFn = Callable[[TensorDict], TensorDict]

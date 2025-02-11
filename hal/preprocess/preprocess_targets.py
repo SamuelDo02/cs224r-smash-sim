@@ -2,12 +2,12 @@ from tensordict import TensorDict
 
 from hal.constants import Player
 from hal.constants import VALID_PLAYERS
-from hal.preprocess.registry import TargetPreprocessRegistry
+from hal.preprocess.registry import TargetConfigRegistry
 from hal.preprocess.transformations import preprocess_controller_inputs_coarse
 from hal.preprocess.transformations import preprocess_controller_inputs_fine_shoulder
 
 
-@TargetPreprocessRegistry.register("targets_v0")
+@TargetConfigRegistry.register("targets_v0")
 def preprocess_targets_v0(sample: TensorDict, player: Player) -> TensorDict:
     """
     One-hot encode buttons and discretize main and c-stick x, y values for a given player.
@@ -18,7 +18,7 @@ def preprocess_targets_v0(sample: TensorDict, player: Player) -> TensorDict:
     return TensorDict(controller_features, batch_size=(batch_size,))
 
 
-@TargetPreprocessRegistry.register("targets_v1")
+@TargetConfigRegistry.register("targets_v1")
 def preprocess_targets_v1(sample: TensorDict, player: Player) -> TensorDict:
     """
     One-hot encode buttons and discretize main, c-stick x, y values and analog shoulder presses for a given player.

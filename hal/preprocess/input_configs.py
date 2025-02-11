@@ -56,7 +56,7 @@ def inputs_v0() -> InputConfig:
             "position_x": standardize,
             "position_y": standardize,
         },
-        frame_offsets_by_feature={},
+        frame_offsets_by_input={},
         grouped_feature_names_by_head={
             "stage": ("stage",),
             "ego_character": ("ego_character",),
@@ -112,7 +112,7 @@ def inputs_v0_controller() -> InputConfig:
             # Ego controller inputs
             "controller": concat_controller_inputs_coarse,
         },
-        frame_offsets_by_feature={
+        frame_offsets_by_input={
             "controller": -1,
         },
         grouped_feature_names_by_head={
@@ -172,7 +172,7 @@ def inputs_v1() -> InputConfig:
             "position_y": standardize,
             "action_frame": normalize,
         },
-        frame_offsets_by_feature={},
+        frame_offsets_by_input={},
         grouped_feature_names_by_head={
             "stage": ("stage",),
             "ego_character": ("ego_character",),
@@ -230,7 +230,7 @@ def inputs_v1_controller() -> InputConfig:
             # Ego controller inputs
             "controller": concat_controller_inputs_coarse,
         },
-        frame_offsets_by_feature={
+        frame_offsets_by_input={
             "controller": -1,
         },
         grouped_feature_names_by_head={
@@ -289,7 +289,7 @@ def inputs_v2_controller() -> InputConfig:
             # Ego controller inputs
             "controller": concat_controller_inputs_fine,
         },
-        frame_offsets_by_feature={
+        frame_offsets_by_input={
             "controller": -1,
         },
         grouped_feature_names_by_head={
@@ -350,7 +350,7 @@ def inputs_v3_controller() -> InputConfig:
             # Ego controller inputs
             "controller": concat_controller_inputs_fine_shoulder,
         },
-        frame_offsets_by_feature={
+        frame_offsets_by_input={
             "controller": -1,
         },
         grouped_feature_names_by_head={
