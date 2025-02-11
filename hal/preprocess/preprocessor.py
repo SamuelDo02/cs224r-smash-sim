@@ -119,60 +119,22 @@ class Preprocessor:
         )
 
     def offset_inputs(self, inputs_T: TensorDict) -> TensorDict:
-        """Offset & slice features to training-ready sequence length.
-
-        Args:
-            inputs_T: TensorDict of shape (trajectory_sampling_len,) containing preprocessed input features
-
-        Returns:
-            TensorDict of shape (seq_len,) with features offset according to config
-        """
-        input_features: set[str] = set(inputs_T.keys())  # type: ignore
-        offset_keys = set(self.frame_offsets_by_input.keys())
-        assert all(
-            feature in input_features for feature in offset_keys
-        ), f"Features with offsets must exist in sample. Missing: {offset_keys - input_features}\nAvailable: {input_features}"
-
-        # What frame the training sequence starts on
-        reference_frame_idx = abs(min(0, self.min_offset))
-        offset_features = {}
-
-        for feature_name, tensor in inputs_T.items():
-            offset = self.frame_offsets_by_input.get(feature_name, 0)
-            # What frame this feature is sampled from / to
-            start_idx = reference_frame_idx + offset
-            end_idx = start_idx + self.seq_len
-            offset_features[feature_name] = tensor[start_idx:end_idx]
-
-        return TensorDict(offset_features, batch_size=(self.seq_len,))
+        """Offset & slice input features to training-ready sequence length."""
+        return _offset_features(
+            tensor_dict=inputs_T,
+            frame_offsets=self.frame_offsets_by_input,
+            min_offset=self.min_offset,
+            seq_len=self.seq_len,
+        )
 
     def offset_targets(self, targets_T: TensorDict) -> TensorDict:
-        """Offset & slice features to training-ready sequence length.
-
-        Args:
-            targets_T: TensorDict of shape (trajectory_sampling_len,) containing preprocessed target features
-
-        Returns:
-            TensorDict of shape (seq_len,) with features offset according to config
-        """
-        target_features: set[str] = set(targets_T.keys())  # type: ignore
-        offset_keys = set(self.frame_offsets_by_target.keys())
-        assert all(
-            feature in target_features for feature in offset_keys
-        ), f"Features with offsets must exist in sample. Missing: {offset_keys - target_features}\nAvailable: {target_features}"
-
-        # What frame the training sequence starts on
-        reference_frame_idx = abs(min(0, self.min_offset))
-        offset_features = {}
-
-        for feature_name, tensor in targets_T.items():
-            offset = self.frame_offsets_by_target.get(feature_name, 0)
-            # What frame this feature is sampled from / to
-            start_idx = reference_frame_idx + offset
-            end_idx = start_idx + self.seq_len
-            offset_features[feature_name] = tensor[start_idx:end_idx]
-
-        return TensorDict(offset_features, batch_size=(self.seq_len,))
+        """Offset & slice target features to training-ready sequence length."""
+        return _offset_features(
+            tensor_dict=targets_T,
+            frame_offsets=self.frame_offsets_by_target,
+            min_offset=self.min_offset,
+            seq_len=self.seq_len,
+        )
 
     def postprocess_preds(self, preds_C: TensorDict) -> TensorDict:
         return self.postprocess_preds_fn(preds_C)
@@ -283,3 +245,39 @@ def preprocess_input_features(
     concatenated_features_by_head_name[DEFAULT_HEAD_NAME] = torch.cat(unseen_feature_tensors, dim=-1)
 
     return TensorDict(concatenated_features_by_head_name, batch_size=sample_T.batch_size)
+
+
+def _offset_features(
+    tensor_dict: TensorDict, frame_offsets: dict[str, int], min_offset: int, seq_len: int
+) -> TensorDict:
+    """
+    Helper function that offsets and slices features from a TensorDict
+    to produce a training-ready sequence of length `seq_len`.
+
+    Args:
+        tensor_dict: TensorDict of shape (trajectory_sampling_len,) containing features.
+        frame_offsets: Dict mapping feature names to their frame offsets.
+        min_offset: The minimum offset across the features.
+        seq_len: The desired sequence length.
+
+    Returns:
+        TensorDict of shape (seq_len,) with offset features.
+    """
+    available_features: set[str] = set(tensor_dict.keys())  # type: ignore
+    offset_keys = set(frame_offsets.keys())
+    assert all(
+        feature in available_features for feature in offset_keys
+    ), f"Features with offsets must exist in sample. Missing: {offset_keys - available_features}\nAvailable: {available_features}"
+
+    # What frame the training sequence starts on
+    reference_frame_idx = abs(min(0, min_offset))
+    offset_features = {}
+
+    for feature_name, tensor in tensor_dict.items():
+        offset = frame_offsets.get(feature_name, 0)
+        # Define the slice from the shifted start index
+        start_idx = reference_frame_idx + offset
+        end_idx = start_idx + seq_len
+        offset_features[feature_name] = tensor[start_idx:end_idx]
+
+    return TensorDict(offset_features, batch_size=(seq_len,))

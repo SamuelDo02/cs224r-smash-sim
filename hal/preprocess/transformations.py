@@ -3,7 +3,6 @@ from typing import Dict
 
 import numpy as np
 import torch
-from preprocess.target_config import TargetConfig
 from tensordict import TensorDict
 
 from hal.constants import Player
@@ -11,6 +10,7 @@ from hal.constants import SHOULDER_CLUSTER_CENTERS_V0
 from hal.constants import STICK_XY_CLUSTER_CENTERS_V0
 from hal.constants import STICK_XY_CLUSTER_CENTERS_V1
 from hal.data.stats import FeatureStats
+from hal.preprocess.target_config import TargetConfig
 
 Transformation = Callable[..., torch.Tensor]
 
