@@ -4,11 +4,10 @@ from typing import Tuple
 import attr
 
 from hal.preprocess.transform import Transformation
-from hal.training.config import DataConfig
 
 
 @attr.s(auto_attribs=True)
-class InputPreprocessConfig:
+class InputConfig:
     """Configuration for preprocessing functions."""
 
     # Features to preprocess twice, specific to player state
@@ -32,18 +31,3 @@ class InputPreprocessConfig:
     # Input dimensions (D,) of concatenated features after preprocessing
     # TensorDict does not support differentiated sizes across keys for the same dimension
     input_shapes_by_head: Dict[str, Tuple[int, ...]]
-
-    # TODO what if we want to add or remove heads?
-    def update_input_shapes_with_data_config(self, data_config: DataConfig) -> Dict[str, Tuple[int, ...]]:
-        new_input_shapes_by_head = self.input_shapes_by_head.copy()
-        new_input_shapes_by_head.update(
-            {
-                "stage": (data_config.stage_embedding_dim,),
-                "ego_character": (data_config.character_embedding_dim,),
-                "opponent_character": (data_config.character_embedding_dim,),
-                "ego_action": (data_config.action_embedding_dim,),
-                "opponent_action": (data_config.action_embedding_dim,),
-            }
-        )
-        self.input_shapes_by_head = new_input_shapes_by_head
-        return new_input_shapes_by_head

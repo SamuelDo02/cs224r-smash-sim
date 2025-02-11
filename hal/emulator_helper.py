@@ -16,8 +16,6 @@ from typing import Optional
 
 import attr
 import melee
-from constants import Player
-from constants import get_opponent
 from loguru import logger
 from melee import enums
 from melee.menuhelper import MenuHelper
@@ -25,6 +23,8 @@ from tensordict import TensorDict
 
 from hal.constants import PLAYER_1_PORT
 from hal.constants import PLAYER_2_PORT
+from hal.constants import Player
+from hal.constants import get_opponent
 from hal.emulator_paths import REMOTE_CISO_PATH
 from hal.emulator_paths import REMOTE_EMULATOR_PATH
 from hal.emulator_paths import REMOTE_EVAL_REPLAY_DIR

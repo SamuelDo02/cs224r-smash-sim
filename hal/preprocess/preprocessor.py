@@ -1,14 +1,19 @@
 import random
 from typing import Dict
+from typing import Set
+from typing import Tuple
 
 import numpy as np
 import torch
 from tensordict import TensorDict
 
 from hal.constants import Player
+from hal.constants import get_opponent
+from hal.data.stats import FeatureStats
 from hal.data.stats import load_dataset_stats
-from hal.preprocess.preprocess_inputs import preprocess_input_features
-from hal.preprocess.registry import InputPreprocessRegistry
+from hal.preprocess.input_config import InputConfig
+from hal.preprocess.input_configs import DEFAULT_HEAD_NAME
+from hal.preprocess.registry import InputConfigRegistry
 from hal.preprocess.registry import PredPostprocessingRegistry
 from hal.preprocess.registry import TargetPreprocessRegistry
 from hal.preprocess.transform import Transformation
@@ -35,12 +40,15 @@ class Preprocessor:
         self.normalization_fn_by_feature_name: Dict[str, Transformation] = {}
         self.seq_len = data_config.seq_len
 
-        self.input_preprocess_config = InputPreprocessRegistry.get(self.data_config.input_preprocessing_fn)
-        self.input_shapes_by_head = self.input_preprocess_config.update_input_shapes_with_data_config(self.data_config)
+        self.input_config = InputConfigRegistry.get(self.data_config.input_preprocessing_fn)
+        # Dynamically update registered config with user-specified embedding shapes
+        self.input_shapes_by_head = update_input_shapes_with_data_config(
+            self.input_config.input_shapes_by_head, data_config
+        )
         self.preprocess_targets_fn = TargetPreprocessRegistry.get(self.data_config.target_preprocessing_fn)
         self.postprocess_preds_fn = PredPostprocessingRegistry.get(self.data_config.pred_postprocessing_fn)
 
-        self.frame_offsets_by_feature = self.input_preprocess_config.frame_offsets_by_feature
+        self.frame_offsets_by_feature = self.input_config.frame_offsets_by_feature
         self.max_abs_offset = max((abs(offset) for offset in self.frame_offsets_by_feature.values()), default=0)
         self.min_offset = min((offset for offset in self.frame_offsets_by_feature.values()), default=0)
 
@@ -111,7 +119,7 @@ class Preprocessor:
         return preprocess_input_features(
             sample=sample_L,
             ego=ego,
-            config=self.input_preprocess_config,
+            config=self.input_config,
             stats=self.stats,
         )
 
@@ -134,3 +142,78 @@ class Preprocessor:
             if num_clusters is not None
         }
         return TensorDict(out, batch_size=())
+
+
+def preprocess_input_features(
+    sample: TensorDict,
+    ego: Player,
+    config: InputConfig,
+    stats: Dict[str, FeatureStats],
+) -> TensorDict:
+    """Applies preprocessing functions to player and non-player input features for a given sample.
+
+    Does not slice or shift any features.
+    """
+    opponent = get_opponent(ego)
+    normalization_fn_by_feature_name = config.normalization_fn_by_feature_name
+    processed_features: Dict[str, torch.Tensor] = {}
+
+    # Process player features
+    for player in (ego, opponent):
+        perspective = "ego" if player == ego else "opponent"
+        for feature_name in config.player_features:
+            # Convert feature name from "p1" to "ego"/"opponent"
+            perspective_feature_name = f"{perspective}_{feature_name}"
+            player_feature_name = f"{player}_{feature_name}"
+            preprocess_fn = normalization_fn_by_feature_name[feature_name]
+            processed_features[perspective_feature_name] = preprocess_fn(
+                sample[player_feature_name], stats[player_feature_name]
+            )
+
+    # Process non-player features
+    non_player_features = [
+        feature_name for feature_name in normalization_fn_by_feature_name if feature_name not in config.player_features
+    ]
+    for feature_name in non_player_features:
+        preprocess_fn = normalization_fn_by_feature_name[feature_name]
+        if feature_name in sample:
+            # Single feature transformation
+            processed_features[feature_name] = preprocess_fn(sample[feature_name], stats[feature_name])
+        else:
+            # Multi-feature transformation (e.g. controller inputs)
+            # Pass entire dict and player perspective
+            processed_features[feature_name] = preprocess_fn(sample, ego)
+    # Concatenate processed features by head
+    concatenated_features_by_head_name: Dict[str, torch.Tensor] = {}
+    seen_feature_names: Set[str] = set()
+    for head_name, feature_names in config.grouped_feature_names_by_head.items():
+        features_to_concatenate = [processed_features[feature_name] for feature_name in feature_names]
+        concatenated_features_by_head_name[head_name] = torch.cat(features_to_concatenate, dim=-1)
+        seen_feature_names.update(feature_names)
+
+    # Add features that are not associated with any head to default `gamestate` head
+    unseen_feature_tensors = []
+    for feature_name, feature_tensor in processed_features.items():
+        if feature_name not in seen_feature_names:
+            if feature_tensor.ndim == 1:
+                feature_tensor = feature_tensor.unsqueeze(-1)
+            unseen_feature_tensors.append(feature_tensor)
+    concatenated_features_by_head_name[DEFAULT_HEAD_NAME] = torch.cat(unseen_feature_tensors, dim=-1)
+
+    return TensorDict(concatenated_features_by_head_name, batch_size=sample.batch_size)
+
+
+def update_input_shapes_with_data_config(
+    input_shapes_by_head: Dict[str, Tuple[int, ...]], data_config: DataConfig
+) -> Dict[str, Tuple[int, ...]]:
+    new_input_shapes_by_head = input_shapes_by_head.copy()
+    new_input_shapes_by_head.update(
+        {
+            "stage": (data_config.stage_embedding_dim,),
+            "ego_character": (data_config.character_embedding_dim,),
+            "opponent_character": (data_config.character_embedding_dim,),
+            "ego_action": (data_config.action_embedding_dim,),
+            "opponent_action": (data_config.action_embedding_dim,),
+        }
+    )
+    return new_input_shapes_by_head

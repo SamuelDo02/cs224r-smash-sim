@@ -1,18 +1,9 @@
-from typing import Dict
-from typing import Set
-
-import torch
-from tensordict import TensorDict
-
 from hal.constants import INCLUDED_BUTTONS
-from hal.constants import Player
 from hal.constants import SHOULDER_CLUSTER_CENTERS_V0
 from hal.constants import STICK_XY_CLUSTER_CENTERS_V0
 from hal.constants import STICK_XY_CLUSTER_CENTERS_V1
-from hal.constants import get_opponent
-from hal.data.stats import FeatureStats
-from hal.preprocess.input_preprocess_config import InputPreprocessConfig
-from hal.preprocess.registry import InputPreprocessRegistry
+from hal.preprocess.input_config import InputConfig
+from hal.preprocess.registry import InputConfigRegistry
 from hal.preprocess.transform import cast_int32
 from hal.preprocess.transform import concat_controller_inputs_coarse
 from hal.preprocess.transform import concat_controller_inputs_fine
@@ -24,66 +15,7 @@ from hal.preprocess.transform import standardize
 DEFAULT_HEAD_NAME = "gamestate"
 
 
-def preprocess_input_features(
-    sample: TensorDict,
-    ego: Player,
-    config: InputPreprocessConfig,
-    stats: Dict[str, FeatureStats],
-) -> TensorDict:
-    """Applies preprocessing functions to player and non-player input features for a given sample.
-
-    Does not slice or shift any features.
-    """
-    opponent = get_opponent(ego)
-    normalization_fn_by_feature_name = config.normalization_fn_by_feature_name
-    processed_features: Dict[str, torch.Tensor] = {}
-
-    # Process player features
-    for player in (ego, opponent):
-        perspective = "ego" if player == ego else "opponent"
-        for feature_name in config.player_features:
-            # Convert feature name from "p1" to "ego"/"opponent"
-            perspective_feature_name = f"{perspective}_{feature_name}"
-            player_feature_name = f"{player}_{feature_name}"
-            preprocess_fn = normalization_fn_by_feature_name[feature_name]
-            processed_features[perspective_feature_name] = preprocess_fn(
-                sample[player_feature_name], stats[player_feature_name]
-            )
-
-    # Process non-player features
-    non_player_features = [
-        feature_name for feature_name in normalization_fn_by_feature_name if feature_name not in config.player_features
-    ]
-    for feature_name in non_player_features:
-        preprocess_fn = normalization_fn_by_feature_name[feature_name]
-        if feature_name in sample:
-            # Single feature transformation
-            processed_features[feature_name] = preprocess_fn(sample[feature_name], stats[feature_name])
-        else:
-            # Multi-feature transformation (e.g. controller inputs)
-            # Pass entire dict and player perspective
-            processed_features[feature_name] = preprocess_fn(sample, ego)
-    # Concatenate processed features by head
-    concatenated_features_by_head_name: Dict[str, torch.Tensor] = {}
-    seen_feature_names: Set[str] = set()
-    for head_name, feature_names in config.grouped_feature_names_by_head.items():
-        features_to_concatenate = [processed_features[feature_name] for feature_name in feature_names]
-        concatenated_features_by_head_name[head_name] = torch.cat(features_to_concatenate, dim=-1)
-        seen_feature_names.update(feature_names)
-
-    # Add features that are not associated with any head to default `gamestate` head
-    unseen_feature_tensors = []
-    for feature_name, feature_tensor in processed_features.items():
-        if feature_name not in seen_feature_names:
-            if feature_tensor.ndim == 1:
-                feature_tensor = feature_tensor.unsqueeze(-1)
-            unseen_feature_tensors.append(feature_tensor)
-    concatenated_features_by_head_name[DEFAULT_HEAD_NAME] = torch.cat(unseen_feature_tensors, dim=-1)
-
-    return TensorDict(concatenated_features_by_head_name, batch_size=sample.batch_size)
-
-
-def inputs_v0() -> InputPreprocessConfig:
+def inputs_v0() -> InputConfig:
     """
     Baseline input features.
 
@@ -105,7 +37,7 @@ def inputs_v0() -> InputPreprocessConfig:
         "position_y",
     )
 
-    return InputPreprocessConfig(
+    return InputConfig(
         player_features=player_features,
         normalization_fn_by_feature_name={
             # Shared/embedded features are passed unchanged, to be embedded by model
@@ -133,12 +65,12 @@ def inputs_v0() -> InputPreprocessConfig:
             "opponent_action": ("opponent_action",),
         },
         input_shapes_by_head={
-            "gamestate": (2 * 9 + 1,),  # 2x for ego and opponent + 1 for frame
+            DEFAULT_HEAD_NAME: (2 * 9 + 1,),  # 2x for ego and opponent + 1 for frame
         },
     )
 
 
-def inputs_v0_controller() -> InputPreprocessConfig:
+def inputs_v0_controller() -> InputConfig:
     """
     Baseline input features, controller inputs.
 
@@ -160,7 +92,7 @@ def inputs_v0_controller() -> InputPreprocessConfig:
         "position_y",
     )
 
-    return InputPreprocessConfig(
+    return InputConfig(
         player_features=player_features,
         normalization_fn_by_feature_name={
             # Shared/embedded features are passed unchanged, to be embedded by model
@@ -192,12 +124,12 @@ def inputs_v0_controller() -> InputPreprocessConfig:
             "controller": ("controller",),
         },
         input_shapes_by_head={
-            "gamestate": (2 * 9 + 2 * len(STICK_XY_CLUSTER_CENTERS_V0) + len(INCLUDED_BUTTONS),),
+            DEFAULT_HEAD_NAME: (2 * 9 + 2 * len(STICK_XY_CLUSTER_CENTERS_V0) + len(INCLUDED_BUTTONS),),
         },
     )
 
 
-def inputs_v1() -> InputPreprocessConfig:
+def inputs_v1() -> InputConfig:
     """
     Baseline input features + action frame.
 
@@ -220,7 +152,7 @@ def inputs_v1() -> InputPreprocessConfig:
         "action_frame",
     )
 
-    return InputPreprocessConfig(
+    return InputConfig(
         player_features=player_features,
         normalization_fn_by_feature_name={
             # Shared/embedded features are passed unchanged, to be embedded by model
@@ -249,12 +181,12 @@ def inputs_v1() -> InputPreprocessConfig:
             "opponent_action": ("opponent_action",),
         },
         input_shapes_by_head={
-            "gamestate": (2 * 10 + 1,),  # 2x for ego and opponent + 1 for frame
+            DEFAULT_HEAD_NAME: (2 * 10 + 1,),  # 2x for ego and opponent + 1 for frame
         },
     )
 
 
-def inputs_v1_controller() -> InputPreprocessConfig:
+def inputs_v1_controller() -> InputConfig:
     """
     Baseline input features + action frame, controller inputs.
 
@@ -277,7 +209,7 @@ def inputs_v1_controller() -> InputPreprocessConfig:
         "action_frame",
     )
 
-    return InputPreprocessConfig(
+    return InputConfig(
         player_features=player_features,
         normalization_fn_by_feature_name={
             # Shared/embedded features are passed unchanged, to be embedded by model
@@ -310,12 +242,12 @@ def inputs_v1_controller() -> InputPreprocessConfig:
             "controller": ("controller",),
         },
         input_shapes_by_head={
-            "gamestate": (2 * 10 + 2 * len(STICK_XY_CLUSTER_CENTERS_V0) + len(INCLUDED_BUTTONS),),
+            DEFAULT_HEAD_NAME: (2 * 10 + 2 * len(STICK_XY_CLUSTER_CENTERS_V0) + len(INCLUDED_BUTTONS),),
         },
     )
 
 
-def inputs_v2_controller() -> InputPreprocessConfig:
+def inputs_v2_controller() -> InputConfig:
     """
     Baseline input features, finer-grained clusters for controller inputs.
 
@@ -337,7 +269,7 @@ def inputs_v2_controller() -> InputPreprocessConfig:
         "position_y",
     )
 
-    return InputPreprocessConfig(
+    return InputConfig(
         player_features=player_features,
         normalization_fn_by_feature_name={
             # Shared/embedded features are passed unchanged, to be embedded by model
@@ -369,12 +301,12 @@ def inputs_v2_controller() -> InputPreprocessConfig:
             "controller": ("controller",),
         },
         input_shapes_by_head={
-            "gamestate": (2 * 9 + 2 * len(STICK_XY_CLUSTER_CENTERS_V1) + len(INCLUDED_BUTTONS),),
+            DEFAULT_HEAD_NAME: (2 * 9 + 2 * len(STICK_XY_CLUSTER_CENTERS_V1) + len(INCLUDED_BUTTONS),),
         },
     )
 
 
-def inputs_v3_controller() -> InputPreprocessConfig:
+def inputs_v3_controller() -> InputConfig:
     """
     Baseline input features, finer-grained clusters for controller inputs.
 
@@ -398,7 +330,7 @@ def inputs_v3_controller() -> InputPreprocessConfig:
         "position_y",
     )
 
-    return InputPreprocessConfig(
+    return InputConfig(
         player_features=player_features,
         normalization_fn_by_feature_name={
             # Shared/embedded features are passed unchanged, to be embedded by model
@@ -430,7 +362,7 @@ def inputs_v3_controller() -> InputPreprocessConfig:
             "controller": ("controller",),
         },
         input_shapes_by_head={
-            "gamestate": (
+            DEFAULT_HEAD_NAME: (
                 2 * 9
                 + 2 * len(STICK_XY_CLUSTER_CENTERS_V1)
                 + len(INCLUDED_BUTTONS)
@@ -440,9 +372,9 @@ def inputs_v3_controller() -> InputPreprocessConfig:
     )
 
 
-InputPreprocessRegistry.register("inputs_v0", inputs_v0())
-InputPreprocessRegistry.register("inputs_v0_controller", inputs_v0_controller())
-InputPreprocessRegistry.register("inputs_v1", inputs_v1())
-InputPreprocessRegistry.register("inputs_v1_controller", inputs_v1_controller())
-InputPreprocessRegistry.register("inputs_v2_controller", inputs_v2_controller())
-InputPreprocessRegistry.register("inputs_v3_controller", inputs_v3_controller())
+InputConfigRegistry.register("inputs_v0", inputs_v0())
+InputConfigRegistry.register("inputs_v0_controller", inputs_v0_controller())
+InputConfigRegistry.register("inputs_v1", inputs_v1())
+InputConfigRegistry.register("inputs_v1_controller", inputs_v1_controller())
+InputConfigRegistry.register("inputs_v2_controller", inputs_v2_controller())
+InputConfigRegistry.register("inputs_v3_controller", inputs_v3_controller())

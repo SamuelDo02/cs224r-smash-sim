@@ -4,20 +4,20 @@ from typing import Dict
 from tensordict import TensorDict
 
 from hal.constants import Player
-from hal.preprocess.input_preprocess_config import InputPreprocessConfig
+from hal.preprocess.input_config import InputConfig
 
 
-class InputPreprocessRegistry:
-    CONFIGS: Dict[str, InputPreprocessConfig] = {}
+class InputConfigRegistry:
+    CONFIGS: Dict[str, InputConfig] = {}
 
     @classmethod
-    def get(cls, name: str) -> InputPreprocessConfig:
+    def get(cls, name: str) -> InputConfig:
         if name in cls.CONFIGS:
             return cls.CONFIGS[name]
         raise NotImplementedError(f"Preprocessing fn {name} not found. Valid functions: {sorted(cls.CONFIGS.keys())}.")
 
     @classmethod
-    def register(cls, name: str, config: InputPreprocessConfig) -> None:
+    def register(cls, name: str, config: InputConfig) -> None:
         cls.CONFIGS[name] = config
 
 
