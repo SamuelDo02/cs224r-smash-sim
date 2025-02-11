@@ -14,4 +14,9 @@ TARGETS_EMBEDDING_SIZES = {
         "shoulder": len(SHOULDER_CLUSTER_CENTERS_V0),
         "buttons": 6,
     },
+    "targets_v2": {
+        "main_stick": len(STICK_XY_CLUSTER_CENTERS_V1),
+        "c_stick": len(STICK_XY_CLUSTER_CENTERS_V1),
+        "buttons": 6,
+    },
 }
