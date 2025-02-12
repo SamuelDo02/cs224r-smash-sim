@@ -26,7 +26,7 @@ class GaussianLossTrainer(Trainer):
 
     def __init__(self, config: TrainConfig, train_loader: DataLoader, val_loader: DataLoader) -> None:
         super().__init__(config, train_loader, val_loader)
-        target_config = TargetConfigRegistry.get(self.data_config.target_preprocessing_fn)
+        target_config = TargetConfigRegistry.get(self.config.data.target_preprocessing_fn)
         self.gaussian_loss = Gaussian2DPointsLoss(
             torch.tensor(target_config.reference_points),
             sigma=target_config.sigma,

@@ -97,7 +97,7 @@ class TrainConfig(BaseConfig):
     eval: EvalConfig = EvalConfig()
 
     # Hyperparams
-    loss_fn: str = "ce"
+    loss_fn: str = "ce"  # TODO decide whether to keep this
     local_batch_size: int = 256
     lr: float = 3e-4
     n_samples: int = 2**24
