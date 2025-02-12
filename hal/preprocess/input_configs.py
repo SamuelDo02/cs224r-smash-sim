@@ -34,7 +34,6 @@ def inputs_v0() -> InputConfig:
         player_features=player_features,
         transformation_by_feature_name={
             # Shared/embedded features are passed unchanged, to be embedded by model
-            "frame": cast_int32,
             "stage": cast_int32,
             "character": cast_int32,
             "action": cast_int32,
@@ -58,7 +57,7 @@ def inputs_v0() -> InputConfig:
             "opponent_action": ("opponent_action",),
         },
         input_shapes_by_head={
-            DEFAULT_HEAD_NAME: (2 * 9 + 1,),  # 2x for ego and opponent + 1 for frame
+            DEFAULT_HEAD_NAME: (2 * 9,),  # 2x for ego and opponent
         },
         include_target_features=False,
     )

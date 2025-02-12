@@ -53,8 +53,8 @@ class DataConfig:
     debug_save_batch: bool = False
 
     # Preprocessing / postprocessing functions
-    input_preprocessing_fn: str = "inputs_v0"
-    target_preprocessing_fn: str = "targets_v0"
+    input_preprocessing_fn: str = "inputs_v0_controller"
+    target_preprocessing_fn: str = "baseline_coarse"
     pred_postprocessing_fn: str = "preds_v0"
 
     # --- Below determines model input/output head shape ---
