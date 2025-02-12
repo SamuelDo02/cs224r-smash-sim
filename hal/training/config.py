@@ -90,7 +90,6 @@ class TrainConfig(BaseConfig):
 
     # Data
     data: DataConfig = DataConfig()
-    embedding: DataConfig = DataConfig()
     dataworker: DataworkerConfig = DataworkerConfig()
     seed: int = 42
 
