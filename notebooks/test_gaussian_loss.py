@@ -25,7 +25,7 @@ def plot_probs(actual_points: torch.Tensor, probs_BD: torch.Tensor, reference_po
 
 
 # %%
-loss_fn = Gaussian2DPointsLoss(torch.tensor(STICK_XY_CLUSTER_CENTERS_V0), sigma=0.08)
+loss_fn = Gaussian2DPointsLoss(torch.tensor(STICK_XY_CLUSTER_CENTERS_V0), sigma=0.1)
 
 actual_points = torch.tensor([[0.5, 0.5], [1.0, 0.5], [0.15, 0.3], [0.8338728, 0.13657573], [0.03, 0.5]])
 probs = loss_fn.transform_to_probs(actual_points)

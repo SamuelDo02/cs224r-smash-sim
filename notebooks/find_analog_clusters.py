@@ -213,11 +213,11 @@ main_stick = main_stick[np.random.choice(len(main_stick), size=1000000, replace=
 c_stick = c_stick[np.random.choice(len(c_stick), size=1000000, replace=False)]
 
 # %%
-main_stick_10k = main_stick[np.random.choice(len(main_stick), size=10000, replace=False)]
+main_stick_1k = main_stick[np.random.choice(len(main_stick), size=1000, replace=False)]
 # %%
 # smooth heatmap of main stick using KDE
 # WARNING: SLOW
-sns.kdeplot(x=main_stick_10k[:, 0], y=main_stick_10k[:, 1], cmap="YlOrRd", fill=True, cbar=True)
+sns.kdeplot(x=main_stick_1k[:, 0], y=main_stick_1k[:, 1], cmap="YlOrRd", fill=True, cbar=True)
 plt.title("Main Stick Heatmap")
 plt.show()
 

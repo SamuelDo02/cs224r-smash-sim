@@ -125,9 +125,7 @@ class Trainer(torch.nn.Module, abc.ABC):
     def val_op(self, batch: TensorDict) -> MetricsDict:
         with torch.no_grad():
             loss_by_head = self.forward_loop(batch)
-            loss_total = sum(v for k, v in loss_by_head.items() if k.startswith("loss"))
-
-        loss_by_head["loss_total"] = loss_total  # type: ignore
+        # We compute loss_total & averages once outside of val_op
         metrics_dict = {f"val/{k}": v.item() for k, v in loss_by_head.detach().to("cpu").items()}
         return metrics_dict
 
