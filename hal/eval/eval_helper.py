@@ -5,7 +5,6 @@ import melee
 import torch
 from tensordict import TensorDict
 
-from hal.constants import INCLUDED_BUTTONS
 from hal.constants import PLAYER_1_PORT
 from hal.constants import PLAYER_2_PORT
 from hal.constants import Player
@@ -81,47 +80,6 @@ class EpisodeStats:
             f"{prefix}/stock_win_rate": stock_win_rate,
             f"{prefix}/frames": self.frames,
         }
-
-
-def send_controller_inputs(controller: melee.Controller, inputs: TensorDict, idx: int = -1) -> None:
-    """
-    Press buttons and tilt analog sticks given a dictionary of array-like values (length T for T future time steps).
-
-    Args:
-        controller_inputs (Dict[str, torch.Tensor]): Dictionary of array-like values.
-        controller (melee.Controller): Controller object.
-        idx (int): Index in the arrays to send.
-    """
-    if idx >= 0:
-        assert idx < len(inputs["main_stick_x"])
-
-    controller.tilt_analog(
-        melee.Button.BUTTON_MAIN,
-        inputs["main_stick_x"][idx].item(),
-        inputs["main_stick_y"][idx].item(),
-    )
-    controller.tilt_analog(
-        melee.Button.BUTTON_C,
-        inputs["c_stick_x"][idx].item(),
-        inputs["c_stick_y"][idx].item(),
-    )
-    if "shoulder" in inputs:
-        controller.press_shoulder(
-            melee.Button.BUTTON_L,
-            inputs["shoulder"][idx].item(),
-        )
-
-    button_idx = inputs["button"][idx].item()
-    for i, button in enumerate(INCLUDED_BUTTONS):
-        if button == "NO_BUTTON":
-            continue
-        button = getattr(melee.Button, button.upper())
-        if i == button_idx:
-            controller.press_button(button)
-        else:
-            controller.release_button(button)
-
-    controller.flush()
 
 
 def mock_framedata_as_tensordict(seq_len: int) -> TensorDict:

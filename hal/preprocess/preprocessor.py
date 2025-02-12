@@ -136,7 +136,7 @@ class Preprocessor:
             seq_len=self.seq_len,
         )
 
-    def postprocess_preds(self, preds_C: TensorDict) -> TensorDict:
+    def postprocess_preds(self, preds_C: TensorDict) -> Dict[str, Any]:
         return postprocess_predictions(preds_C, self.postprocess_preds_fn)
 
     def mock_preds_as_tensordict(self) -> TensorDict:

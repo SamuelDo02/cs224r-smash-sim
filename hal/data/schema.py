@@ -1,3 +1,4 @@
+# TODO remove dependency on pyarrow
 import pyarrow as pa
 
 PYARROW_DTYPE_BY_COLUMN = {

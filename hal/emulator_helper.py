@@ -20,8 +20,8 @@ import melee
 from loguru import logger
 from melee import enums
 from melee.menuhelper import MenuHelper
-from tensordict import TensorDict
 
+from hal.constants import INCLUDED_BUTTONS
 from hal.constants import PLAYER_1_PORT
 from hal.constants import PLAYER_2_PORT
 from hal.constants import Player
@@ -30,7 +30,6 @@ from hal.emulator_paths import REMOTE_CISO_PATH
 from hal.emulator_paths import REMOTE_EMULATOR_PATH
 from hal.emulator_paths import REMOTE_EVAL_REPLAY_DIR
 from hal.eval.eval_helper import EpisodeStats
-from hal.eval.eval_helper import send_controller_inputs
 from hal.training.io import find_latest_idx
 from hal.training.io import get_path_friendly_datetime
 
@@ -239,6 +238,42 @@ def console_manager(console: melee.Console, console_logger: melee.Logger | None 
         logger.info("Shutting down cleanly...")
 
 
+def send_controller_inputs(controller: melee.Controller, inputs: Dict[str, Any]) -> None:
+    """
+    Press buttons and tilt analog sticks given a dictionary of array-like values (length T for T future time steps).
+
+    Args:
+        controller (melee.Controller): Controller object.
+        inputs (Dict[str, Any]): Dictionary of controller inputs
+    """
+    controller.tilt_analog(
+        melee.Button.BUTTON_MAIN,
+        inputs["main_stick"][0],
+        inputs["main_stick"][1],
+    )
+    controller.tilt_analog(
+        melee.Button.BUTTON_C,
+        inputs["c_stick"][0],
+        inputs["c_stick"][1],
+    )
+    if "shoulder" in inputs:
+        controller.press_shoulder(
+            melee.Button.BUTTON_L,
+            inputs["shoulder"],
+        )
+
+    for button_str in INCLUDED_BUTTONS:
+        if button_str == "NO_BUTTON":
+            continue
+        button = getattr(melee.Button, button_str.upper())
+        if inputs["button"] == button_str:
+            controller.press_button(button)
+        else:
+            controller.release_button(button)
+
+    controller.flush()
+
+
 @attr.s(auto_attribs=True)
 class EmulatorManager:
     udp_port: int
@@ -268,7 +303,7 @@ class EmulatorManager:
             console=self.console, port=_get_console_port(get_opponent(self.player)), type=melee.ControllerType.STANDARD
         )
 
-    def run_game(self) -> Generator[melee.GameState, TensorDict, None]:
+    def run_game(self) -> Generator[melee.GameState, Dict[str, Any], None]:
         """Generator that yields gamestates and receives controller inputs.
 
         Yields:
@@ -349,9 +384,7 @@ class EmulatorManager:
                         logger.debug("Match started")
 
                     # Yield gamestate and receive controller inputs
-                    # logger.debug(f"Yielding gamestate {i}")
                     controller_inputs = yield gamestate
-                    # logger.debug(f"Controller inputs: {controller_inputs}")
                     if controller_inputs is None:
                         logger.error("Controller inputs are None")
                     else:

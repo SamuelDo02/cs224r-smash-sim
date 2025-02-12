@@ -268,7 +268,7 @@ def sample_buttons(pred_C: TensorDict, temperature: float = 1.0) -> str:
     return button
 
 
-def sample_shoulder(pred_C: TensorDict, temperature: float = 1.0) -> str:
+def sample_shoulder(pred_C: TensorDict, temperature: float = 1.0) -> float:
     shoulder_probs = torch.softmax(pred_C["shoulder"] / temperature, dim=-1)
     shoulder_idx = int(torch.multinomial(shoulder_probs, num_samples=1).item())
     shoulder = SHOULDER_CLUSTER_CENTERS_V0[shoulder_idx]

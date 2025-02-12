@@ -12,8 +12,8 @@ from tensordict import TensorDict
 from hal.emulator_helper import console_manager
 from hal.emulator_helper import get_gui_console_kwargs
 from hal.emulator_helper import self_play_menu_helper
+from hal.emulator_helper import send_controller_inputs
 from hal.eval.eval_helper import mock_framedata_as_tensordict
-from hal.eval.eval_helper import send_controller_inputs
 from hal.preprocess.preprocessor import Preprocessor
 from hal.training.config import TrainConfig
 from hal.training.io import load_config_from_artifact_dir
