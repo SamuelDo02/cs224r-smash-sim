@@ -1,12 +1,12 @@
 import random
 from functools import partial
+from typing import Any
 from typing import Dict
 from typing import Set
 
 import attr
 import numpy as np
 import torch
-from loguru import logger
 from tensordict import TensorDict
 
 from hal.constants import Player
@@ -15,8 +15,9 @@ from hal.data.stats import FeatureStats
 from hal.data.stats import load_dataset_stats
 from hal.preprocess.input_config import InputConfig
 from hal.preprocess.input_configs import DEFAULT_HEAD_NAME
+from hal.preprocess.postprocess_config import PostprocessConfig
 from hal.preprocess.registry import InputConfigRegistry
-from hal.preprocess.registry import PredPostprocessingRegistry
+from hal.preprocess.registry import PostprocessConfigRegistry
 from hal.preprocess.registry import TargetConfigRegistry
 from hal.preprocess.target_config import TargetConfig
 from hal.preprocess.transformations import Transformation
@@ -50,11 +51,7 @@ class Preprocessor:
         # Dynamically update input config with user-specified embedding shapes and target features
         self.input_config = update_input_shapes_with_data_config(self.input_config, data_config)
         self.input_config = maybe_add_target_features_to_input_config(self.input_config, self.target_config)
-        logger.info(f"Input config: {self.input_config}")
-        logger.info(f"Target config: {self.target_config}")
-
-        # TODO refactor
-        self.postprocess_preds_fn = PredPostprocessingRegistry.get(self.data_config.pred_postprocessing_fn)
+        self.postprocess_preds_fn = PostprocessConfigRegistry.get(self.data_config.pred_postprocessing_fn)
 
         self.frame_offsets_by_input = self.input_config.frame_offsets_by_input
         self.frame_offsets_by_target = self.target_config.frame_offsets_by_target
@@ -118,7 +115,7 @@ class Preprocessor:
         return preprocess_target_features(
             sample_T=sample_T,
             ego=ego,
-            config=self.target_config,
+            target_config=self.target_config,
         )
 
     def offset_inputs(self, inputs_T: TensorDict) -> TensorDict:
@@ -140,7 +137,7 @@ class Preprocessor:
         )
 
     def postprocess_preds(self, preds_C: TensorDict) -> TensorDict:
-        return self.postprocess_preds_fn(preds_C)
+        return postprocess_predictions(preds_C, self.postprocess_preds_fn)
 
     def mock_preds_as_tensordict(self) -> TensorDict:
         """Mock a single model prediction."""
@@ -284,3 +281,12 @@ def _offset_features(
         offset_features[feature_name] = tensor[start_idx:end_idx]
 
     return TensorDict(offset_features, batch_size=(seq_len,))
+
+
+def postprocess_predictions(pred_C: TensorDict, postprocess_config: PostprocessConfig) -> Dict[str, Any]:
+    processed_features: Dict[str, Any] = {}
+
+    for feature_name, transformation in postprocess_config.transformation_by_controller_input.items():
+        processed_features[feature_name] = transformation(pred_C)
+
+    return processed_features

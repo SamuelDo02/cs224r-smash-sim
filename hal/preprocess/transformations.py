@@ -8,6 +8,7 @@ import numpy as np
 import torch
 from tensordict import TensorDict
 
+from hal.constants import INCLUDED_BUTTONS
 from hal.constants import Player
 from hal.constants import SHOULDER_CLUSTER_CENTERS_V0
 from hal.constants import STICK_XY_CLUSTER_CENTERS_V0
@@ -61,10 +62,10 @@ def offset(array: torch.Tensor, stats: FeatureStats) -> torch.Tensor:
 ### CONTROLLER / TARGETS
 
 
-def preprocess_target_features(sample_T: TensorDict, ego: Player, config: TargetConfig) -> TensorDict:
+def preprocess_target_features(sample_T: TensorDict, ego: Player, target_config: TargetConfig) -> TensorDict:
     processed_features: Dict[str, torch.Tensor] = {}
 
-    for feature_name, transformation in config.transformation_by_target.items():
+    for feature_name, transformation in target_config.transformation_by_target.items():
         processed_features[feature_name] = transformation(sample_T, ego)
 
     return TensorDict(processed_features, batch_size=sample_T.batch_size)
@@ -219,3 +220,56 @@ def encode_shoulder_one_hot_coarse(sample: TensorDict, player: str) -> torch.Ten
 def concat_controller_inputs(sample_T: TensorDict, ego: Player, target_config: TargetConfig) -> torch.Tensor:
     controller_feats = preprocess_target_features(sample_T, ego, target_config)
     return torch.cat(list(controller_feats.values()), dim=-1)
+
+
+### POSTPROCESSING MODEL PREDICTIONS
+
+
+def sample_main_stick_coarse(pred_C: TensorDict, temperature: float = 1.0) -> tuple[float, float]:
+    main_stick_probs = torch.softmax(pred_C["main_stick"] / temperature, dim=-1)
+    main_stick_cluster_idx = torch.multinomial(main_stick_probs, num_samples=1)
+    main_stick_x, main_stick_y = torch.split(
+        torch.tensor(STICK_XY_CLUSTER_CENTERS_V0[main_stick_cluster_idx]), 1, dim=-1
+    )
+
+    return main_stick_x.item(), main_stick_y.item()
+
+
+def sample_c_stick_coarse(pred_C: TensorDict, temperature: float = 1.0) -> tuple[float, float]:
+    c_stick_probs = torch.softmax(pred_C["c_stick"] / temperature, dim=-1)
+    c_stick_cluster_idx = torch.multinomial(c_stick_probs, num_samples=1)
+    c_stick_x, c_stick_y = torch.split(torch.tensor(STICK_XY_CLUSTER_CENTERS_V0[c_stick_cluster_idx]), 1, dim=-1)
+
+    return c_stick_x.item(), c_stick_y.item()
+
+
+def sample_main_stick_fine(pred_C: TensorDict, temperature: float = 1.0) -> tuple[float, float]:
+    main_stick_probs = torch.softmax(pred_C["main_stick"] / temperature, dim=-1)
+    main_stick_cluster_idx = torch.multinomial(main_stick_probs, num_samples=1)
+    main_stick_x, main_stick_y = torch.split(
+        torch.tensor(STICK_XY_CLUSTER_CENTERS_V1[main_stick_cluster_idx]), 1, dim=-1
+    )
+
+    return main_stick_x.item(), main_stick_y.item()
+
+
+def sample_c_stick_fine(pred_C: TensorDict, temperature: float = 1.0) -> tuple[float, float]:
+    c_stick_probs = torch.softmax(pred_C["c_stick"] / temperature, dim=-1)
+    c_stick_cluster_idx = torch.multinomial(c_stick_probs, num_samples=1)
+    c_stick_x, c_stick_y = torch.split(torch.tensor(STICK_XY_CLUSTER_CENTERS_V1[c_stick_cluster_idx]), 1, dim=-1)
+
+    return c_stick_x.item(), c_stick_y.item()
+
+
+def sample_buttons(pred_C: TensorDict, temperature: float = 1.0) -> str:
+    button_probs = torch.softmax(pred_C["buttons"] / temperature, dim=-1)
+    button_idx = int(torch.multinomial(button_probs, num_samples=1).item())
+    button = INCLUDED_BUTTONS[button_idx]
+    return button
+
+
+def sample_shoulder(pred_C: TensorDict, temperature: float = 1.0) -> str:
+    shoulder_probs = torch.softmax(pred_C["shoulder"] / temperature, dim=-1)
+    shoulder_idx = int(torch.multinomial(shoulder_probs, num_samples=1).item())
+    shoulder = SHOULDER_CLUSTER_CENTERS_V0[shoulder_idx]
+    return shoulder
