@@ -1,10 +1,12 @@
 # %%
 import random
+from pathlib import Path
 
+import melee
+from data.process_replays import process_replay
 from streaming import StreamingDataset
 
-from data.process_replays import process_replay
-
+# %%
 mds_path = "/opt/projects/hal2/data/mang0/train"
 ds = StreamingDataset(local=mds_path, batch_size=1, shuffle=True)
 
@@ -17,12 +19,8 @@ print(x["p2_percent"])
 
 import random
 
+
 # %%
-from pathlib import Path
-
-import melee
-
-
 def has_iceclimbers(replay_path: Path):
     try:
         console = melee.Console(path=str(replay_path), is_dolphin=False, allow_old_version=True)
@@ -86,3 +84,33 @@ for i, (p1_state, nana_state) in enumerate(zip(p1_states, p1_nana_data)):
     print(i, p1_state.stock, nana_stock)
 # %%
 np_dict = process_replay(iceclimbers_replays[0])
+# %%
+replay_path = Path(
+    "/opt/slippi/data/ranked-anonymized-2-151807/ranked-anonymized/master-platinum-f9770bb9a470e511f7f7c541.slp"
+)
+np_dict = process_replay(replay_path)
+# %%
+for k in np_dict.keys():
+    print(k)
+# %%
+import numpy as np
+import numpy.ma as ma
+
+# x = np.array([1.0, 2.0, 3.0], dtype=np.float32)
+x = ma.array([1.0, 2.0, 3.0], mask=[0, 1, 0], dtype=np.float32)
+# %%
+x.dtype
+# %%
+np.dtype(x.dtype).name
+# %%
+x.filled()
+# %%
+from streaming import MDSWriter
+
+with MDSWriter(
+    out="/tmp/test/",
+    columns={"x": "float32"},
+    exist_ok=True,
+) as writer:
+    writer.write({"x": np.array([1.0, 2.0, 3.0], dtype=np.float32)})
+# %%

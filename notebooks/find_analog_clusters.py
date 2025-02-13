@@ -170,7 +170,7 @@ def k_means(
 # for k in x.keys():
 #     print(k)
 # %%
-mds_path = "/opt/projects/hal2/data/ranked/train"
+mds_path = "/opt/projects/hal2/data/mang0/train"
 ds = StreamingDataset(local=mds_path, batch_size=1, shuffle=True)
 
 # %%
@@ -184,7 +184,7 @@ len(ds)
 
 # %%
 for i, sample in enumerate(ds):
-    if i > 10000:
+    if i > 5000:
         break
     if i % 100 == 0:
         print(f"Processing sample {i}")
@@ -208,7 +208,7 @@ c_stick = np.stack((c_stick_x, c_stick_y), axis=-1)
 
 # %%
 # randomly sample 1000000 points
-main_stick = main_stick[np.random.choice(len(main_stick), size=1000000, replace=False)]
+main_stick = main_stick[np.random.choice(len(main_stick), size=100000, replace=False)]
 # %%
 c_stick = c_stick[np.random.choice(len(c_stick), size=1000000, replace=False)]
 
@@ -229,10 +229,17 @@ main_stick_centroids = k_means(main_stick, k=21, max_iterations=10)
 plt.scatter(main_stick_centroids[:, 0], main_stick_centroids[:, 1], color="red")
 
 # %%
-main_stick_centroids = k_means(main_stick, k=32, max_iterations=100)
-
-# %%
+main_stick_centroids = k_means(main_stick, k=35, max_iterations=100)
 plt.scatter(main_stick_centroids[:, 0], main_stick_centroids[:, 1], color="red")
+plt.axis("equal")
+# %%
+main_stick_centroids = k_means(main_stick, k=32, max_iterations=100)
+plt.scatter(main_stick_centroids[:, 0], main_stick_centroids[:, 1], color="red")
+plt.axis("equal")
+# %%
+main_stick_centroids = k_means(main_stick, k=29, max_iterations=100)
+plt.scatter(main_stick_centroids[:, 0], main_stick_centroids[:, 1], color="red")
+plt.axis("equal")
 # %%
 main_stick_centroids
 # %%
@@ -407,8 +414,8 @@ def remove_near_duplicates(points, rtol=1e-3):
 
 # Replace the np.unique line with:
 deduped_new_pts_y = remove_near_duplicates(new_pts_y, rtol=1e-2)
-len(deduped_new_pts_y)
-# %%
+print(len(deduped_new_pts_y))
+
 plt.scatter(deduped_new_pts_y[:, 0], deduped_new_pts_y[:, 1], c="green", s=40, label="y–axis Symmetric")
 plt.scatter(center[0], center[1], c="red", marker="x", s=100, label="Center")
 plt.title("Forced Symmetry across y–axis")
