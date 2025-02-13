@@ -233,6 +233,7 @@ class GPTv1(BaseGPT):
         assert L <= self.block_size, f"Cannot forward sequence of length {L}, block size is only {self.block_size}"
 
         # concatenate embeddings and numerical inputs -> project down
+        # TODO handle Nana, call embed twice and add down proj
         combined_inputs_BLG = self._embed_inputs(inputs)
         proj_inputs_BLD = self.transformer.proj_down(combined_inputs_BLG)
 

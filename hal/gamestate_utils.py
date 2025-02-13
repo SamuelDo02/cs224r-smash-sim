@@ -88,9 +88,14 @@ def extract_and_append_gamestate_inplace(
         # Player / gamestate data
         player_data = extract_player_state(player_state)
         player_data["port"] = port
-        # TODO: Ice climbers' Nana data
-        # nana_data = extract_player_state(player_state.nana) if player_state.nana is not None else {}
-        # player_data.update({f"nana_{k}": v for k, v in nana_data.items()})
+
+        # Handle Ice Climbers' Nana data
+        # Empirically appears in about 5% of games
+        if player_state.nana is not None:
+            nana_data = extract_player_state(player_state.nana)
+        else:
+            nana_data = {k: None for k in player_data.keys()}
+        player_data.update({f"nana_{k}": v for k, v in nana_data.items()})
 
         for ecb in ["bottom", "top", "left", "right"]:
             player_data[f"ecb_{ecb}_x"] = getattr(player_state, f"ecb_{ecb}")[0]

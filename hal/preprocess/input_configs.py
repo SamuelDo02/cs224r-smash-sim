@@ -58,6 +58,7 @@ def baseline() -> InputConfig:
         frame_offsets_by_input={},
         grouped_feature_names_by_head={
             "stage": ("stage",),
+            # TODO handle Nana
             "ego_character": ("ego_character",),
             "opponent_character": ("opponent_character",),
             "ego_action": ("ego_action",),

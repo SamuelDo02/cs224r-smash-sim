@@ -179,6 +179,7 @@ def preprocess_input_features(
         for feature_name in config.player_features:
             # Convert feature name from p1/p2 to either ego/opponent
             perspective_feature_name = f"{perspective}_{feature_name}"  # e.g. "p1_action"
+            # TODO handle Nana
             player_feature_name = f"{player}_{feature_name}"  # e.g. "ego_action"
             transform = transformation_by_feature_name[feature_name]
             processed_features[perspective_feature_name] = transform(

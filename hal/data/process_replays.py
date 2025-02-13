@@ -17,7 +17,7 @@ from streaming import MDSWriter
 from tqdm import tqdm
 
 from hal.data.schema import NP_DTYPE_STR_BY_COLUMN
-from hal.data.schema import PYARROW_DTYPE_BY_COLUMN
+from hal.data.schema import NP_TYPE_BY_COLUMN
 from hal.gamestate_utils import FrameData
 from hal.gamestate_utils import extract_and_append_gamestate_inplace
 
@@ -77,9 +77,7 @@ def process_replay(replay_path: Path, check_damage: bool = True) -> Optional[Dic
             return None
 
     sample = {
-        key: np.array(frame_data[key], dtype=dtype.to_pandas_dtype())
-        for key, dtype in PYARROW_DTYPE_BY_COLUMN.items()
-        if key in frame_data
+        key: np.array(frame_data[key], dtype=dtype) for key, dtype in NP_TYPE_BY_COLUMN.items() if key in frame_data
     }
     sample["replay_uuid"] = np.array([replay_uuid] * len(frame_data["frame"]), dtype=np.int64)
     return sample

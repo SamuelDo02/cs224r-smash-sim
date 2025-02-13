@@ -8,7 +8,7 @@ from tensordict import TensorDict
 from hal.constants import PLAYER_1_PORT
 from hal.constants import PLAYER_2_PORT
 from hal.constants import Player
-from hal.data.schema import PYARROW_DTYPE_BY_COLUMN
+from hal.data.schema import NP_TYPE_BY_COLUMN
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -85,7 +85,9 @@ class EpisodeStats:
 
 def mock_framedata_as_tensordict(seq_len: int) -> TensorDict:
     """Mock `seq_len` frames of gamestate data."""
-    return TensorDict({k: torch.zeros(seq_len) for k in PYARROW_DTYPE_BY_COLUMN}, batch_size=(seq_len,))
+    return TensorDict(
+        {k: torch.zeros(seq_len, dtype=dtype) for k, dtype in NP_TYPE_BY_COLUMN.items()}, batch_size=(seq_len,)
+    )
 
 
 def share_and_pin_memory(tensordict: TensorDict) -> TensorDict:
