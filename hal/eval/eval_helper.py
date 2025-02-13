@@ -73,6 +73,7 @@ class EpisodeStats:
             f"{prefix}/damage_received": damage_received,
             f"{prefix}/damage_inflicted_per_episode": damage_inflicted / self.episodes,
             f"{prefix}/damage_received_per_episode": damage_received / self.episodes,
+            f"{prefix}/damage_win_rate": damage_inflicted / (damage_inflicted + damage_received),
             f"{prefix}/stocks_taken": stocks_taken,
             f"{prefix}/stocks_lost": stocks_lost,
             f"{prefix}/stocks_taken_per_episode": stocks_taken / self.episodes,
