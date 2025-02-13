@@ -37,21 +37,20 @@ def process_replay(replay_path: Path, check_damage: bool = True) -> Optional[Dic
 
     replay_uuid = hash(replay_path)
 
-    # Skip first frame since we need both current and next states
     try:
-        next_gamestate = console.step()
-        while next_gamestate is not None:
-            curr_gamestate = next_gamestate
+        # Double step on first frame to match next controller state to current gamestate
+        curr_gamestate = console.step()
+        while curr_gamestate is not None:
             next_gamestate = console.step()
-            if next_gamestate is None:
-                break
-
             frame_data = extract_and_append_gamestate_inplace(
                 frame_data_by_field=frame_data,
                 curr_gamestate=curr_gamestate,
                 next_gamestate=next_gamestate,
                 replay_uuid=replay_uuid,
             )
+            curr_gamestate = next_gamestate
+            if curr_gamestate is None:
+                break
     except AssertionError as e:
         logger.trace(f"Skipping replay {replay_path}: {e}")
         return None
@@ -107,15 +106,19 @@ def process_replays(
 
     for split, split_replay_paths in splits.items():
         split_output_dir = Path(output_dir) / f"{split}"
+
         num_replays = len(split_replay_paths)
+        if num_replays == 0:
+            logger.info(f"No replays found for {split} split")
+            continue
+
         logger.info(f"Writing {num_replays} replays to {split_output_dir}")
-        # Write larger shards to disk, data is repetitive so compression helps a lot
         actual = 0
         with MDSWriter(
             out=str(split_output_dir),
             columns=NP_DTYPE_STR_BY_COLUMN,
             compression="zstd",
-            size_limit=1 << 30,
+            size_limit=1 << 30,  # Write 1GB shards, data is repetitive so compression is ~10x
             exist_ok=True,
         ) as out:
             with mp.Pool(max_parallelism) as pool:
