@@ -37,7 +37,7 @@ def hash_to_int32(data: str) -> int:
     return int32_value
 
 
-def process_replay(replay_path: Path, check_damage: bool = True) -> Optional[Dict[str, Any]]:
+def process_replay(replay_path: Path, check_damage: bool = True, check_complete: bool = True) -> Optional[Dict[str, Any]]:
     frame_data: FrameData = defaultdict(list)
     try:
         console = melee.Console(path=str(replay_path), is_dolphin=False, allow_old_version=True)
@@ -84,6 +84,10 @@ def process_replay(replay_path: Path, check_damage: bool = True) -> Optional[Dic
         # Check for damage
         if all(x == 0 for x in frame_data["p1_percent"]) or all(x == 0 for x in frame_data["p2_percent"]):
             logger.trace(f"Replay {replay_path} had no damage, skipping.")
+            return None
+    if check_complete:
+        if not (frame_data["p1_stock"][-1] == 0 or frame_data["p2_stock"][-1] == 0):
+            logger.trace(f"Replay {replay_path} was not completed, skipping.")
             return None
 
     sample = {}
