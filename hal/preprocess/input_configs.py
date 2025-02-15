@@ -10,6 +10,7 @@ from hal.preprocess.transformations import cast_int32
 from hal.preprocess.transformations import concat_controller_inputs
 from hal.preprocess.transformations import invert_and_normalize
 from hal.preprocess.transformations import normalize
+from hal.preprocess.transformations import normalize_and_embed_fourier
 from hal.preprocess.transformations import standardize
 
 DEFAULT_HEAD_NAME = "gamestate"
@@ -199,8 +200,70 @@ def baseline_action_frame_controller() -> InputConfig:
     ...
 
 
+def fourier_xy() -> InputConfig:
+    """
+    Baseline input features + controller inputs + Fourier-transformed x/y positions.
+
+    Separate embedding heads for stage, character, & action.
+    No controller, no platforms, no projectiles.
+    """
+
+    player_features = (
+        "character",
+        "action",
+        "percent",
+        "stock",
+        "facing",
+        "invulnerable",
+        "jumps_left",
+        "on_ground",
+        "shield_strength",
+        "position_x",
+        "position_y",
+    )
+
+    return InputConfig(
+        player_features=player_features,
+        transformation_by_feature_name={
+            # Shared/embedded features are passed unchanged, to be embedded by model
+            "stage": cast_int32,
+            "character": cast_int32,
+            "action": cast_int32,
+            # Normalized player features
+            "percent": normalize,
+            "stock": normalize,
+            "facing": normalize,
+            "invulnerable": normalize,
+            "jumps_left": normalize,
+            "on_ground": normalize,
+            "shield_strength": invert_and_normalize,
+            "position_x": partial(normalize_and_embed_fourier, dim=4),
+            "position_y": partial(normalize_and_embed_fourier, dim=4),
+            # Target features
+            "controller": partial(concat_controller_inputs, target_config=baseline_coarse()),
+        },
+        frame_offsets_by_input={
+            "controller": -1,
+        },
+        grouped_feature_names_by_head={
+            "stage": ("stage",),
+            "ego_character": ("ego_character",),
+            "opponent_character": ("opponent_character",),
+            "ego_action": ("ego_action",),
+            "opponent_action": ("opponent_action",),
+            "controller": ("controller",),
+            # TODO handle Nana
+        },
+        input_shapes_by_head={
+            DEFAULT_HEAD_NAME: (2 * 7 + (2 * 2 * 4),),  # 2x for ego and opponent
+            "controller": (baseline_coarse().target_size,),
+        },
+    )
+
+
 InputConfigRegistry.register("baseline", baseline())
 InputConfigRegistry.register("baseline_controller", baseline_controller())
 InputConfigRegistry.register("baseline_controller_fine", baseline_controller_fine())
 InputConfigRegistry.register("baseline_action_frame", baseline_action_frame())
 InputConfigRegistry.register("baseline_action_frame_controller", baseline_action_frame_controller())
+InputConfigRegistry.register("fourier_xy", fourier_xy())
