@@ -1,4 +1,6 @@
+import random
 from typing import Dict
+from typing import List
 
 import attr
 import melee
@@ -9,6 +11,67 @@ from hal.constants import PLAYER_1_PORT
 from hal.constants import PLAYER_2_PORT
 from hal.constants import Player
 from hal.data.schema import NP_TYPE_BY_COLUMN
+
+PRIOR_STAGE_LIKELIHOODS = {
+    "BATTLEFIELD": 0.3358,
+    "YOSHIS_STORY": 0.2018,
+    "POKEMON_STADIUM": 0.1888,
+    "FOUNTAIN_OF_DREAMS": 0.1259,
+    "DREAMLAND": 0.0826,
+    "FINAL_DESTINATION": 0.0651,
+}
+
+
+PRIOR_CHARACTER_LIKELIHOODS = {
+    "FOX": 0.2519,
+    "FALCO": 0.1779,
+    "MARTH": 0.1039,
+    "SHEIK": 0.0789,
+    "CPTFALCON": 0.0652,
+    "JIGGLYPUFF": 0.0636,
+    "PEACH": 0.0499,
+    "SAMUS": 0.034,
+    "LUIGI": 0.0274,
+    "POPO": 0.0212,
+    "GANONDORF": 0.0171,
+    "PIKACHU": 0.0166,
+    "DOC": 0.0161,
+    "DK": 0.0159,
+    "YOSHI": 0.00995,
+    "NESS": 0.00855,
+    "LINK": 0.00735,
+    "BOWSER": 0.0059,
+    "MEWTWO": 0.0058,
+    "MARIO": 0.0057,
+    "GAMEANDWATCH": 0.00500,
+    "ROY": 0.00435,
+    "YLINK": 0.0039,
+    "ZELDA": 0.00245,
+    "KIRBY": 0.00105,
+    "PICHU": 0.0004,
+}
+
+
+@attr.s(auto_attribs=True, frozen=True)
+class Matchup:
+    stage: str
+    ego_character: str
+    opponent_character: str
+
+
+def deterministically_generate_random_matchup(n: int, seed: int) -> List[Matchup]:
+    random.seed(seed)
+    stage = random.choices(list(PRIOR_STAGE_LIKELIHOODS.keys()), weights=list(PRIOR_STAGE_LIKELIHOODS.values()), k=n)
+    ego_character = random.choices(
+        list(PRIOR_CHARACTER_LIKELIHOODS.keys()), weights=list(PRIOR_CHARACTER_LIKELIHOODS.values()), k=n
+    )
+    opponent_character = random.choices(
+        list(PRIOR_CHARACTER_LIKELIHOODS.keys()), weights=list(PRIOR_CHARACTER_LIKELIHOODS.values()), k=n
+    )
+    matchups = []
+    for stage, ego_character, opponent_character in zip(stage, ego_character, opponent_character):
+        matchups.append(Matchup(stage=stage, ego_character=ego_character, opponent_character=opponent_character))
+    return matchups
 
 
 @attr.s(auto_attribs=True, slots=True)
