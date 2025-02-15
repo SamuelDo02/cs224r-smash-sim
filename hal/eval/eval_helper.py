@@ -5,6 +5,7 @@ import attr
 import melee
 import numpy as np
 import torch
+from loguru import logger
 from tensordict import TensorDict
 
 from hal.constants import PLAYER_1_PORT
@@ -115,8 +116,8 @@ class EpisodeStats:
 
         self.p1_damage += max(0, p1_percent - self._prev_p1_percent)
         self.p2_damage += max(0, p2_percent - self._prev_p2_percent)
-        self.p1_stocks_lost += p1.stock < 4 and p1.stock < self._prev_p1_stock
-        self.p2_stocks_lost += p2.stock < 4 and p2.stock < self._prev_p2_stock
+        self.p1_stocks_lost += p1.stock < self._prev_p1_stock
+        self.p2_stocks_lost += p2.stock < self._prev_p2_stock
 
         self._prev_p1_percent = p1_percent
         self._prev_p2_percent = p2_percent
@@ -125,19 +126,28 @@ class EpisodeStats:
         self.frames += 1
 
     def to_wandb_dict(self, player: Player, prefix: str = "closed_loop_eval") -> Dict[str, float]:
+        if self.episodes == 0:
+            logger.warning("No closed loop episode stats recorded")
+            return {}
+
         # Calculate stock win rate as stocks taken / (stocks taken + stocks lost)
         stocks_taken = self.p2_stocks_lost if player == "p1" else self.p1_stocks_lost
         stocks_lost = self.p1_stocks_lost if player == "p1" else self.p2_stocks_lost
         stock_win_rate = stocks_taken / (stocks_taken + stocks_lost) if (stocks_taken + stocks_lost) > 0 else 0.0
         damage_inflicted = self.p2_damage if player == "p1" else self.p1_damage
         damage_received = self.p1_damage if player == "p1" else self.p2_damage
+        damage_win_rate = (
+            damage_inflicted / (damage_inflicted + damage_received)
+            if (damage_inflicted + damage_received) > 0
+            else 0.0
+        )
         return {
             f"{prefix}/episodes": self.episodes,
             f"{prefix}/damage_inflicted": damage_inflicted,
             f"{prefix}/damage_received": damage_received,
             f"{prefix}/damage_inflicted_per_episode": damage_inflicted / self.episodes,
             f"{prefix}/damage_received_per_episode": damage_received / self.episodes,
-            f"{prefix}/damage_win_rate": damage_inflicted / (damage_inflicted + damage_received),
+            f"{prefix}/damage_win_rate": damage_win_rate,
             f"{prefix}/stocks_taken": stocks_taken,
             f"{prefix}/stocks_lost": stocks_lost,
             f"{prefix}/stocks_taken_per_episode": stocks_taken / self.episodes,
