@@ -223,7 +223,7 @@ class Trainer(torch.nn.Module, abc.ABC):
                 target=run_closed_loop_evaluation,
                 kwargs=dict(
                     artifact_dir=self.artifact_dir,
-                    eval_config=self.config.eval,
+                    n_workers=self.config.eval.n_workers,
                     checkpoint_idx=step,
                     eval_stats_queue=eval_stats_queue,
                     player="p1",
@@ -257,13 +257,13 @@ class Trainer(torch.nn.Module, abc.ABC):
             try:
                 # We wait so wandb can commit the metrics
                 logger.debug("Waiting for closed loop evaluation")
+                eval_process.join(timeout=60 * 8 + 30)
                 # Standard match time limit is 8 minutes, plus buffer for setup/teardown
-                closed_loop_eval_stats: EpisodeStats = eval_stats_queue.get(block=True, timeout=60 * 8 + 30)
+                closed_loop_eval_stats: EpisodeStats = eval_stats_queue.get(block=True, timeout=1.0)
                 loss_dict.update(closed_loop_eval_stats.to_wandb_dict(prefix="closed_loop_eval", player="p1"))
             except Empty:
                 logger.warning("Closed loop evaluation stats not available")
             finally:
-                eval_process.join(timeout=1.0)
                 if eval_process.is_alive():
                     eval_process.kill()
 

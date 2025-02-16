@@ -19,7 +19,6 @@ import attr
 import melee
 from loguru import logger
 from melee import enums
-from melee.menuhelper import MenuHelper
 
 from hal.constants import INCLUDED_BUTTONS
 from hal.constants import PLAYER_1_PORT
@@ -156,60 +155,59 @@ def get_gui_console_kwargs(
     return console_kwargs
 
 
-def self_play_menu_helper(
-    gamestate: melee.GameState,
-    controller_1: melee.Controller,
-    controller_2: melee.Controller,
-    character_1: melee.Character,
-    character_2: Optional[melee.Character],
-    stage_selected: Optional[melee.Stage],
-    opponent_cpu_level: int = 9,
-) -> None:
-    """
-    Helper function to handle menu state logic.
+@attr.s(auto_attribs=True)
+class MatchupMenuHelper:
+    controller_1: melee.Controller
+    controller_2: melee.Controller
+    character_1: melee.Character
+    character_2: Optional[melee.Character]
+    stage: Optional[melee.Stage]
+    opponent_cpu_level: int = 9
 
-    If character_2 or stage_selected is None, the function will wait for human user.
-    """
-    if gamestate.menu_state == enums.Menu.MAIN_MENU:
-        MenuHelper.choose_versus_mode(gamestate=gamestate, controller=controller_1)
-    # If we're at the character select screen, choose our character
-    elif gamestate.menu_state == enums.Menu.CHARACTER_SELECT:
-        player_1 = gamestate.players[controller_1.port]
-        player_1_character_selected = player_1.character == character_1
+    # Internal use
+    _player_1_character_selected: bool = False
 
-        if not player_1_character_selected:
-            MenuHelper.choose_character(
-                character=character_1,
+    def select_character_and_stage(self, gamestate: melee.GameState) -> None:
+        """
+        Helper function to handle menu state logic.
+
+        If character_2 or stage_selected is None, the function will wait for human user.
+        """
+        if gamestate.menu_state == enums.Menu.MAIN_MENU:
+            melee.menuhelper.MenuHelper.choose_versus_mode(gamestate=gamestate, controller=self.controller_1)
+        # If we're at the character select screen, choose our character
+        elif gamestate.menu_state == enums.Menu.CHARACTER_SELECT:
+            melee.menuhelper.MenuHelper.choose_character(
+                character=self.character_1,
                 gamestate=gamestate,
-                controller=controller_1,
-                cpu_level=0,
+                controller=self.controller_1,
+                cpu_level=0,  # human
                 costume=0,
                 swag=False,
                 start=False,
             )
-        else:
-            # Early return if human player
-            if character_2 is None:
+            if self.character_2 is None:
                 return
-            MenuHelper.choose_character(
-                character=character_2,
+            melee.menuhelper.MenuHelper.choose_character(
+                character=self.character_2,
                 gamestate=gamestate,
-                controller=controller_2,
-                cpu_level=opponent_cpu_level,
+                controller=self.controller_2,
+                cpu_level=self.opponent_cpu_level,
                 costume=1,
                 swag=False,
                 start=True,
             )
-    # If we're at the stage select screen, choose a stage
-    elif gamestate.menu_state == enums.Menu.STAGE_SELECT:
-        if stage_selected is None:
-            return
-        MenuHelper.choose_stage(
-            stage=stage_selected, gamestate=gamestate, controller=controller_1, character=character_1
-        )
-    # If we're at the postgame scores screen, spam START
-    elif gamestate.menu_state == enums.Menu.POSTGAME_SCORES:
-        MenuHelper.skip_postgame(controller=controller_1)
+        # If we're at the stage select screen, choose a stage
+        elif gamestate.menu_state == enums.Menu.STAGE_SELECT:
+            if self.stage is None:
+                return
+            melee.menuhelper.MenuHelper.choose_stage(
+                stage=self.stage, gamestate=gamestate, controller=self.controller_1, character=self.character_1
+            )
+            logger.debug("Selecting stage")
+        # If we're at the postgame scores screen, spam START
+        elif gamestate.menu_state == enums.Menu.POSTGAME_SCORES:
+            melee.menuhelper.MenuHelper.skip_postgame(controller=self.controller_1)
 
 
 @contextmanager
@@ -304,6 +302,14 @@ class EmulatorManager:
         self.opponent_controller = melee.Controller(
             console=self.console, port=_get_console_port(get_opponent(self.player)), type=melee.ControllerType.STANDARD
         )
+        self.menu_helper = MatchupMenuHelper(
+            controller_1=self.ego_controller,
+            controller_2=self.opponent_controller,
+            character_1=melee.Character[self.matchup.ego_character],
+            character_2=melee.Character[self.matchup.opponent_character],
+            stage=melee.Stage[self.matchup.stage],
+            opponent_cpu_level=self.opponent_cpu_level,
+        )
 
     def run_game(self) -> Generator[melee.GameState, Dict[str, Any], None]:
         """Generator that yields gamestates and receives controller inputs.
@@ -346,7 +352,9 @@ class EmulatorManager:
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor, console_manager(
             console=self.console, console_logger=self.console_logger
         ):
-            logger.debug("Starting episode")
+            logger.debug(
+                f"Starting episode on {self.matchup.stage}: {self.matchup.ego_character} vs. {self.matchup.opponent_character}"
+            )
             while i < self.max_steps:
                 # Wrap `console.step()` in a thread with timeout
                 future = executor.submit(self.console.step)
@@ -369,16 +377,7 @@ class EmulatorManager:
                     if match_started:
                         logger.debug("Match ended")
                         break
-
-                    self_play_menu_helper(
-                        gamestate=gamestate,
-                        controller_1=self.ego_controller,
-                        controller_2=self.opponent_controller,
-                        character_1=melee.Character[self.matchup.ego_character],
-                        character_2=melee.Character[self.matchup.opponent_character],
-                        stage_selected=melee.Stage[self.matchup.stage],
-                        opponent_cpu_level=self.opponent_cpu_level,
-                    )
+                    self.menu_helper.select_character_and_stage(gamestate)
                 else:
                     if not match_started:
                         match_started = True
