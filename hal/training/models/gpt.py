@@ -824,9 +824,9 @@ Arch.register(
 )
 # This OOMs with batch 256 on 24GB GPU
 Arch.register(
-    "GPTv4Controller-512-8-8-dropout",
+    "GPTv4Controller-512-6-8-dropout",
     GPTv4Controller,
-    gpt_config=GPTConfig(block_size=1024, n_embd=512, n_layer=8, n_head=8, dropout=0.2),
+    gpt_config=GPTConfig(block_size=1024, n_embd=512, n_layer=6, n_head=8, dropout=0.2),
 )
 
 Arch.register(
