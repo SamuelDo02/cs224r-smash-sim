@@ -601,25 +601,12 @@ from hal.constants import STICK_XY_CLUSTER_CENTERS_V2
 plt.scatter(STICK_XY_CLUSTER_CENTERS_V2[:, 0], STICK_XY_CLUSTER_CENTERS_V2[:, 1], color="blue")
 plt.axis("equal")
 plt.show()
-
-
 # %%
-main_stick_x_tensors = []
-main_stick_y_tensors = []
-c_stick_x_tensors = []
-c_stick_y_tensors = []
+importlib.reload(hal.constants)
+from hal.constants import STICK_XY_CLUSTER_CENTERS_V0_1
 
+plt.scatter(STICK_XY_CLUSTER_CENTERS_V0_1[:, 0], STICK_XY_CLUSTER_CENTERS_V0_1[:, 1], color="red")
+plt.axis("equal")
+plt.title("C-Stick Clusters (Coarser)")
+plt.show()
 # %%
-len(ds)
-
-# %%
-for i, sample in enumerate(ds):
-    if i > 5000:
-        break
-    if i % 100 == 0:
-        print(f"Processing sample {i}")
-    for player in ["p1", "p2"]:
-        main_stick_x_tensors.append(sample[f"{player}_main_stick_x"])
-        main_stick_y_tensors.append(sample[f"{player}_main_stick_y"])
-        c_stick_x_tensors.append(sample[f"{player}_c_stick_x"])
-        c_stick_y_tensors.append(sample[f"{player}_c_stick_y"])

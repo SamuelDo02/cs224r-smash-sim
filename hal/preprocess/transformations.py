@@ -13,6 +13,7 @@ from hal.constants import INCLUDED_BUTTONS_NO_SHOULDER
 from hal.constants import Player
 from hal.constants import SHOULDER_CLUSTER_CENTERS_V0
 from hal.constants import STICK_XY_CLUSTER_CENTERS_V0
+from hal.constants import STICK_XY_CLUSTER_CENTERS_V0_1
 from hal.constants import STICK_XY_CLUSTER_CENTERS_V1
 from hal.constants import STICK_XY_CLUSTER_CENTERS_V2
 from hal.data.stats import FeatureStats
@@ -191,6 +192,14 @@ def encode_c_stick_one_hot_coarse(sample: TensorDict, player: str) -> torch.Tens
     return torch.tensor(one_hot_c_stick, dtype=torch.float32)
 
 
+def encode_c_stick_one_hot_coarser(sample: TensorDict, player: str) -> torch.Tensor:
+    c_stick_x = sample[f"{player}_c_stick_x"]
+    c_stick_y = sample[f"{player}_c_stick_y"]
+    c_stick_clusters = get_closest_2D_cluster(c_stick_x, c_stick_y, STICK_XY_CLUSTER_CENTERS_V0_1)
+    one_hot_c_stick = one_hot_from_int(c_stick_clusters, len(STICK_XY_CLUSTER_CENTERS_V0_1))
+    return torch.tensor(one_hot_c_stick, dtype=torch.float32)
+
+
 def encode_c_stick_one_hot_fine(sample: TensorDict, player: str) -> torch.Tensor:
     c_stick_x = sample[f"{player}_c_stick_x"]
     c_stick_y = sample[f"{player}_c_stick_y"]
@@ -263,6 +272,14 @@ def sample_c_stick_coarse(pred_C: TensorDict, temperature: float = 1.0) -> tuple
     c_stick_probs = torch.softmax(pred_C["c_stick"] / temperature, dim=-1)
     c_stick_cluster_idx = torch.multinomial(c_stick_probs, num_samples=1)
     c_stick_x, c_stick_y = torch.split(torch.tensor(STICK_XY_CLUSTER_CENTERS_V0[c_stick_cluster_idx]), 1, dim=-1)
+
+    return c_stick_x.item(), c_stick_y.item()
+
+
+def sample_c_stick_coarser(pred_C: TensorDict, temperature: float = 1.0) -> tuple[float, float]:
+    c_stick_probs = torch.softmax(pred_C["c_stick"] / temperature, dim=-1)
+    c_stick_cluster_idx = torch.multinomial(c_stick_probs, num_samples=1)
+    c_stick_x, c_stick_y = torch.split(torch.tensor(STICK_XY_CLUSTER_CENTERS_V0_1[c_stick_cluster_idx]), 1, dim=-1)
 
     return c_stick_x.item(), c_stick_y.item()
 

@@ -178,6 +178,21 @@ STICK_XY_CLUSTER_CENTERS_V0: np.ndarray = np.array(
 )
 STICK_XY_CLUSTER_CENTERS_V0.flags.writeable = False
 
+STICK_XY_CLUSTER_CENTERS_V0_1: np.ndarray = np.array(
+    [
+        [0.5, 0.5],
+        [1.0, 0.5],
+        [0.0, 0.5],
+        [0.50, 0.0],
+        [0.50, 1.0],
+        [0.15, 0.15],
+        [0.85, 0.15],
+        [0.85, 0.85],
+        [0.15, 0.85],
+    ]
+)
+STICK_XY_CLUSTER_CENTERS_V0_1.flags.writeable = False
+
 STICK_XY_CLUSTER_CENTERS_V1: np.ndarray = np.array(
     [
         [0.0, 0.5],

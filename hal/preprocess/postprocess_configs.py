@@ -3,6 +3,7 @@ from hal.preprocess.registry import PostprocessConfigRegistry
 from hal.preprocess.transformations import sample_buttons
 from hal.preprocess.transformations import sample_buttons_no_shoulder
 from hal.preprocess.transformations import sample_c_stick_coarse
+from hal.preprocess.transformations import sample_c_stick_coarser
 from hal.preprocess.transformations import sample_c_stick_fine
 from hal.preprocess.transformations import sample_main_stick_coarse
 from hal.preprocess.transformations import sample_main_stick_fine
@@ -44,7 +45,7 @@ def fine_main_analog_shoulder() -> PostprocessConfig:
     return PostprocessConfig(
         transformation_by_controller_input={
             "main_stick": sample_main_stick_fine,
-            "c_stick": sample_c_stick_coarse,
+            "c_stick": sample_c_stick_coarser,
             "buttons": sample_buttons_no_shoulder,
             "shoulder": sample_shoulder,
         }
