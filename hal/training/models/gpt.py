@@ -635,10 +635,9 @@ class GPTv4Controller(BaseGPT):
             x_BLD = block(x_BLD)
         x_BLD = self.transformer.ln_f(x_BLD)
 
-        # TODO detach
         c_stick = self.c_stick_head(x_BLD)
-        main_stick = self.main_stick_head(torch.cat((x_BLD, c_stick), dim=-1))
-        button = self.button_head(torch.cat((x_BLD, c_stick, main_stick), dim=-1))
+        main_stick = self.main_stick_head(torch.cat((x_BLD, c_stick.detach()), dim=-1))
+        button = self.button_head(torch.cat((x_BLD, c_stick.detach(), main_stick.detach()), dim=-1))
 
         return TensorDict(
             {
@@ -843,6 +842,11 @@ Arch.register(
     "GPTv5Controller-256-6-4-dropout",
     GPTv5Controller,
     gpt_config=GPTConfig(block_size=1024, n_embd=256, n_layer=6, n_head=4, dropout=0.2),
+)
+Arch.register(
+    "GPTv5Controller-512-6-8-dropout",
+    GPTv5Controller,
+    gpt_config=GPTConfig(block_size=1024, n_embd=512, n_layer=6, n_head=8, dropout=0.2),
 )
 Arch.register(
     "GPTv5Controller-256-8-4-dropout",
