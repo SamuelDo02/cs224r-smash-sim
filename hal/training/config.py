@@ -110,6 +110,10 @@ class TrainConfig(BaseConfig):
     wd: float = 1e-2
     grad_clip_norm: float = 1.0
 
+    # Path to resume directory
+    resume_dir: Optional[str] = None
+    resume_idx: Optional[int] = None
+
 
 def create_parser_for_attrs_class(
     cls: Type[Any], parser: argparse.ArgumentParser, prefix: str = ""

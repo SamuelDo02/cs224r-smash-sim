@@ -62,7 +62,10 @@ class Trainer(torch.nn.Module, abc.ABC):
         self.preprocessor = Preprocessor(data_config=config.data)
 
         self.samples = 0
-        self.artifact_dir = get_artifact_dir(get_exp_name(self.config))
+        if self.config.resume_dir is not None:
+            self.artifact_dir = Path(self.config.resume_dir)
+        else:
+            self.artifact_dir = get_artifact_dir(get_exp_name(self.config))
 
         logger.info(f"Initializing model {self.config.arch}")
         model = Arch.get(self.config.arch, preprocessor=self.preprocessor)
@@ -95,7 +98,7 @@ class Trainer(torch.nn.Module, abc.ABC):
         )
 
     def _restore_checkpoint(self) -> int:
-        resume_idx, _ = self.ckpt.restore()
+        resume_idx, _ = self.ckpt.restore(idx=self.config.resume_idx, device=self.device)
         if resume_idx > 0:
             log_if_master(f"Resuming training at {resume_idx} ({resume_idx / (1 << 20):.2f}M samples)")
         return resume_idx
