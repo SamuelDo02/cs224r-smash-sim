@@ -79,8 +79,8 @@ def get_default_melee_iso_path() -> str:
     return melee_path
 
 
-FILE_MATCH: str = "*.pth"
-FILE_FORMAT: str = "%012d.pth"
+MODEL_FILE_MATCH: str = "*.pt"
+MODEL_FILE_FORMAT: str = "%012d.pt"
 TRAIN_LOADER_STATE_FILENAME: str = "train_loader_state_%012d.pth"
 VAL_LOADER_STATE_FILENAME: str = "val_loader_state_%012d.pth"
 CONFIG_FILENAME: str = "config.json"
@@ -104,7 +104,7 @@ def load_model_from_artifact_dir(
 
 
 def find_latest_idx(artifact_dir: Path) -> int:
-    all_ckpts = artifact_dir.glob(FILE_MATCH)
+    all_ckpts = artifact_dir.glob(MODEL_FILE_MATCH)
     try:
         filename = max(str(x) for x in all_ckpts)
         idx = int(Path(filename).stem.split(".")[0])
@@ -131,7 +131,7 @@ class Checkpoint:
             idx = find_latest_idx(self.artifact_dir)
             if idx == 0:
                 return 0, None
-        ckpt = self.artifact_dir / (FILE_FORMAT % idx)
+        ckpt = self.artifact_dir / (MODEL_FILE_FORMAT % idx)
         logger.info(f"Resuming checkpoint from: {ckpt}")
         with ckpt.open("rb") as f:
             state_dict = torch.load(f, map_location=device)
@@ -163,15 +163,16 @@ class Checkpoint:
         config_path = self.artifact_dir / CONFIG_FILENAME
         with config_path.open("w") as f:
             json.dump(serialize(self.config), f)
-        ckpt = self.artifact_dir / (FILE_FORMAT % idx)
+        ckpt = self.artifact_dir / (MODEL_FILE_FORMAT % idx)
         with ckpt.open("wb") as f:
             torch.save(self.model.state_dict(), f)
 
         save_dataloader_state(train_loader, self.artifact_dir / (TRAIN_LOADER_STATE_FILENAME % idx))
         save_dataloader_state(val_loader, self.artifact_dir / (VAL_LOADER_STATE_FILENAME % idx))
 
-        old_ckpts = sorted(self.artifact_dir.glob(FILE_MATCH), key=str)
+        old_ckpts = sorted(self.artifact_dir.glob(MODEL_FILE_MATCH), key=str)
         for ckpt_file in old_ckpts[: -self.keep_ckpts]:
+            logger.debug(f"Deleting old checkpoint: {ckpt_file}")
             ckpt_file.unlink()
 
     def save_file(self, model: torch.nn.Module, filename: str) -> None:
