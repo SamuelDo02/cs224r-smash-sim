@@ -46,10 +46,10 @@ class DataConfig:
     """Training & eval dataset & preprocessing."""
 
     # Dataset & filtering
-    data_dir: str = "/opt/projects/hal2/data/dev"
-
+    # Must specify `data_dir` or `streams` but NOT BOTH
+    data_dir: str = ""
     streams: str = ""
-    stream_stats: str = ""  # TODO
+    stream_stats: str = ""
     # Number of input and target frames in example
     seq_len: int = 256
     replay_filter: ReplayFilter = ReplayFilter()
@@ -72,10 +72,14 @@ class DataConfig:
     character_embedding_dim: int = 12
     action_embedding_dim: int = 32
 
+    def __attrs_post_init__(self) -> None:
+        if self.streams and self.data_dir:
+            raise ValueError("Cannot specify both streams and data_dir")
+
     @property
     def stats_path(self) -> Path:
-        # TODO figure out more elegant way to get stats
-        # This currently still must be set for streams to work
+        if self.streams:
+            return Path(self.stream_stats)
         return Path(self.data_dir) / "stats.json"
 
     def get_streams(self) -> Tuple[Sequence[Stream], Sequence[Stream]]:
@@ -112,9 +116,9 @@ class TrainConfig(BaseConfig):
 
     # Hyperparams
     loss_fn: str = "ce"  # TODO decide whether to keep this
-    local_batch_size: int = 256
+    local_batch_size: int = 512
     lr: float = 3e-4
-    n_samples: int = 2**23
+    n_samples: int = 2**24
     n_val_samples: int = 2**15
     keep_ckpts: int = 2**4
     report_len: int = 2**18
