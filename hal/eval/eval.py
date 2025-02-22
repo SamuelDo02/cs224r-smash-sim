@@ -193,6 +193,7 @@ def gpu_worker(
             context_window_BL[:, iteration].copy_(shared_batched_model_input_B, non_blocking=True)
         else:
             # Update the context window by rolling frame data left and adding new data on the right
+            # TODO move this to line 178 to overlap with waiting on CPU workers
             context_window_BL[:, :-1].copy_(context_window_BL[:, 1:].clone())
             context_window_BL[:, -1].copy_(shared_batched_model_input_B, non_blocking=True)
         # context_window_BL.save(f"/tmp/multishine_debugging/model_inputs_{iteration:06d}")

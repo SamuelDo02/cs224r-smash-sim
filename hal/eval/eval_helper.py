@@ -80,32 +80,56 @@ class Matchup:
         return matchups
 
     @classmethod
-    def rainbow(cls, n: int, seed: int = 42) -> List["Matchup"]:
-        """Deterministically generate `n` random matchups."""
+    def fox_rainbow(cls, n: int, seed: int = 42) -> List["Matchup"]:
         rng = np.random.default_rng(seed)
-        stage = rng.choice(
+        stages = rng.choice(
             list(PRIOR_STAGE_LIKELIHOODS.keys()),
             size=n,
             replace=True,
             p=list(PRIOR_STAGE_LIKELIHOODS.values()),
         )
-        ego_character = rng.choice(
-            list(PRIOR_CHARACTER_LIKELIHOODS.keys()),
-            size=n,
-            replace=True,
-            p=list(PRIOR_CHARACTER_LIKELIHOODS.values()),
-        )
-        opponent_character = rng.choice(
+        opponent_characters = rng.choice(
             list(PRIOR_CHARACTER_LIKELIHOODS.keys()),
             size=n,
             replace=True,
             p=list(PRIOR_CHARACTER_LIKELIHOODS.values()),
         )
         # We can't force CPU to pick Sheik, so we replace all Sheik with Zelda
-        opponent_character = ["ZELDA" if c == "SHEIK" else c for c in opponent_character]
+        opponent_characters = ["ZELDA" if c == "SHEIK" else c for c in opponent_characters]
         matchups = []
-        for stage, ego_character, opponent_character in zip(stage, ego_character, opponent_character):
-            matchups.append(Matchup(stage=stage, ego_character=ego_character, opponent_character=opponent_character))
+        for stage, opponent_character in zip(stages, opponent_characters):
+            matchups.append(Matchup(stage=stage, ego_character="FOX", opponent_character=opponent_character))
+        return matchups
+
+    @classmethod
+    def rainbow(cls, n: int, seed: int = 42) -> List["Matchup"]:
+        """Deterministically generate `n` random matchups."""
+        rng = np.random.default_rng(seed)
+        stages = rng.choice(
+            list(PRIOR_STAGE_LIKELIHOODS.keys()),
+            size=n,
+            replace=True,
+            p=list(PRIOR_STAGE_LIKELIHOODS.values()),
+        )
+        ego_characters = rng.choice(
+            list(PRIOR_CHARACTER_LIKELIHOODS.keys()),
+            size=n,
+            replace=True,
+            p=list(PRIOR_CHARACTER_LIKELIHOODS.values()),
+        )
+        opponent_characters = rng.choice(
+            list(PRIOR_CHARACTER_LIKELIHOODS.keys()),
+            size=n,
+            replace=True,
+            p=list(PRIOR_CHARACTER_LIKELIHOODS.values()),
+        )
+        # We can't force CPU to pick Sheik, so we replace all Sheik with Zelda
+        opponent_characters = ["ZELDA" if c == "SHEIK" else c for c in opponent_characters]
+        matchups = []
+        for stages, ego_characters, opponent_characters in zip(stages, ego_characters, opponent_characters):
+            matchups.append(
+                Matchup(stage=stages, ego_character=ego_characters, opponent_character=opponent_characters)
+            )
         return matchups
 
 
