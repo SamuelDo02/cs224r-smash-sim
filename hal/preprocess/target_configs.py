@@ -170,6 +170,46 @@ def baseline_finer() -> TargetConfig:
     )
 
 
+def fine_main_coarser_cstick() -> TargetConfig:
+    return TargetConfig(
+        transformation_by_target={
+            "main_stick": encode_main_stick_one_hot_fine,
+            "c_stick": encode_c_stick_one_hot_coarser,
+            "buttons": encode_buttons_one_hot,
+        },
+        frame_offsets_by_target={
+            "main_stick": 0,
+            "c_stick": 0,
+            "buttons": 0,
+        },
+        target_shapes_by_head={
+            "main_stick": (len(STICK_XY_CLUSTER_CENTERS_V2),),
+            "c_stick": (len(STICK_XY_CLUSTER_CENTERS_V0_1),),
+            "buttons": (len(INCLUDED_BUTTONS),),
+        },
+    )
+
+
+def fine_orig_buttons() -> TargetConfig:
+    return TargetConfig(
+        transformation_by_target={
+            "main_stick": encode_main_stick_one_hot_fine,
+            "c_stick": encode_c_stick_one_hot_coarse,
+            "buttons": encode_buttons_one_hot,
+        },
+        frame_offsets_by_target={
+            "main_stick": 0,
+            "c_stick": 0,
+            "buttons": 0,
+        },
+        target_shapes_by_head={
+            "main_stick": (len(STICK_XY_CLUSTER_CENTERS_V0),),
+            "c_stick": (len(STICK_XY_CLUSTER_CENTERS_V0),),
+            "buttons": (len(INCLUDED_BUTTONS),),
+        },
+    )
+
+
 TargetConfigRegistry.register("baseline_coarse", baseline_coarse())
 TargetConfigRegistry.register("coarse_shoulder", coarse_shoulder())
 TargetConfigRegistry.register("baseline_fine", baseline_fine())

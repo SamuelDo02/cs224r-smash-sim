@@ -218,6 +218,7 @@ def encode_c_stick_one_hot_fine(sample: TensorDict, player: str) -> torch.Tensor
 
 
 def encode_buttons_one_hot(sample: TensorDict, player: str) -> torch.Tensor:
+    """Combine X/Y and L/R buttons, simplify overlapping button presses by taking the most recent press."""
     button_a = sample[f"{player}_button_a"].bool()
     button_b = sample[f"{player}_button_b"].bool()
     button_x = sample[f"{player}_button_x"].bool()
