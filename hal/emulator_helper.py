@@ -20,7 +20,7 @@ import melee
 from loguru import logger
 from melee import enums
 
-from hal.constants import INCLUDED_BUTTONS
+from hal.constants import ORIGINAL_BUTTONS
 from hal.constants import PLAYER_1_PORT
 from hal.constants import PLAYER_2_PORT
 from hal.constants import Player
@@ -260,11 +260,10 @@ def send_controller_inputs(controller: melee.Controller, inputs: Dict[str, Any])
             inputs["shoulder"],
         )
 
-    for button_str in INCLUDED_BUTTONS:
-        if button_str == "NO_BUTTON":
-            continue
+    buttons_to_press: List[str] = inputs.get("buttons", [])
+    for button_str in ORIGINAL_BUTTONS:
         button = getattr(melee.Button, button_str.upper())
-        if inputs.get("buttons", None) == button_str:
+        if button_str in buttons_to_press:
             controller.press_button(button)
         else:
             controller.release_button(button)

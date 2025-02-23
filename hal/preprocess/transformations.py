@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Callable
 from typing import Dict
+from typing import List
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -333,18 +334,28 @@ def sample_c_stick_fine(pred_C: TensorDict, temperature: float = 1.0) -> tuple[f
     return c_stick_x.item(), c_stick_y.item()
 
 
-def sample_buttons(pred_C: TensorDict, temperature: float = 1.0) -> str:
+def sample_single_button(pred_C: TensorDict, temperature: float = 1.0) -> List[str]:
     button_probs = torch.softmax(pred_C["buttons"] / temperature, dim=-1)
     button_idx = int(torch.multinomial(button_probs, num_samples=1).item())
     button = INCLUDED_BUTTONS[button_idx]
-    return button
+    return [button]
 
 
-def sample_buttons_no_shoulder(pred_C: TensorDict, temperature: float = 1.0) -> str:
+def sample_single_button_no_shoulder(pred_C: TensorDict, temperature: float = 1.0) -> List[str]:
     button_probs = torch.softmax(pred_C["buttons"] / temperature, dim=-1)
     button_idx = int(torch.multinomial(button_probs, num_samples=1).item())
     button = INCLUDED_BUTTONS_NO_SHOULDER[button_idx]
-    return button
+    return [button]
+
+
+def threshold_independent_buttons(pred_C: TensorDict, threshold: float = 0.5) -> List[str]:
+    """Take the logits of the buttons and threshold them independently."""
+    button_logits = pred_C["buttons"]
+    button_probs = torch.sigmoid(button_logits)
+    button_thresholds = torch.threshold(button_probs, threshold, 0)
+    button_indices = torch.nonzero(button_thresholds, as_tuple=True)
+    buttons = [INCLUDED_BUTTONS[i] for i in button_indices]
+    return buttons
 
 
 def sample_shoulder(pred_C: TensorDict, temperature: float = 1.0) -> float:
