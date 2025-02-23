@@ -196,7 +196,7 @@ def fine_orig_buttons() -> TargetConfig:
     return TargetConfig(
         transformation_by_target={
             "main_stick": encode_main_stick_one_hot_fine,
-            "c_stick": encode_c_stick_one_hot_coarse,
+            "c_stick": encode_c_stick_one_hot_coarser,
             "buttons": encode_original_buttons_multi_hot,
         },
         frame_offsets_by_target={
