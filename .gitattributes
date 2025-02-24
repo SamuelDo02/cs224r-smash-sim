@@ -1,0 +1,1 @@
+emulator/Slippi_Online-Ubuntu20.04-Exi-x86_64.AppImage filter=lfs diff=lfs merge=lfs -text
