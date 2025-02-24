@@ -1,8 +1,10 @@
-# HAL2
+# HAL
 
 Training superhuman AI for *Super Smash Bros. Melee*. 
 
 This project is under active development and is not ready for public use. 
+
+Blog post: https://ericyuegu.com/melee-pt1
 
 # Setup
 
