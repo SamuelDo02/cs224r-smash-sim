@@ -15,6 +15,7 @@ from typing import Tuple
 import melee
 import numpy as np
 from constants import NP_MASK_VALUE
+from data.calculate_stats import calculate_statistics_for_mds
 from loguru import logger
 from streaming import MDSWriter
 from tqdm import tqdm
@@ -226,6 +227,6 @@ if __name__ == "__main__":
         check_damage=not args.disable_check_damage,
     )
 
-    # # Calculate stats
-    # stats_path = Path(args.output_dir) / "stats.json"
-    # calculate_statistics_for_mds(args.output_dir, str(stats_path))
+    # Calculate stats
+    stats_path = Path(args.output_dir) / "stats.json"
+    calculate_statistics_for_mds(args.output_dir, str(stats_path), max_examples=100000)
