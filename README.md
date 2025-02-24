@@ -35,7 +35,11 @@ python hal/data/process_replays.py --replay_dir /path/to/replays --output_dir /p
 ## Training
 
 ```bash
-python hal/training/simple_trainer.py --help
-
 python hal/training/simple_trainer.py --n_gpus 1 --data.data_dir /path/to/mds --arch GPTv5Controller-512-6-8-dropout
+```
+
+## Evaluation
+
+```bash
+python hal/eval/eval.py --model_dir /path/to/model_dir --n_workers 1
 ```
