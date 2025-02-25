@@ -138,35 +138,32 @@ def convert_multi_hot_to_one_hot_early_release(buttons_LD: np.ndarray) -> np.nda
     """
     assert buttons_LD.ndim == 2, "Input array must be 2D"
     _, D = buttons_LD.shape
-    row_sums = buttons_LD.sum(axis=1)
-    multi_pressed = np.argwhere(row_sums > 1).flatten()
+    # row_sums = buttons_LD.sum(axis=1)
+    # multi_pressed = np.argwhere(row_sums > 1).flatten()
+    prev_buttons = set()
 
-    for i in multi_pressed:
-        if i - 1 not in multi_pressed:
-            prev_press = buttons_LD[i - 1] if i > 0 else np.zeros(D)
-            prev_buttons = set(np.where(prev_press == 1)[0])
-
+    for i in range(len(buttons_LD)):
         curr_press = buttons_LD[i]
         curr_buttons = set(np.where(curr_press == 1)[0])
 
         print(f"{i}: {prev_buttons=} {curr_buttons=}")
 
-        if curr_buttons == prev_buttons:
-            # copy over previous one-hot
-            buttons_LD[i] = buttons_LD[i - 1]
-            continue
-        else:
+        if not curr_buttons or curr_buttons != prev_buttons:
             new_buttons = curr_buttons - prev_buttons
             new_button_idx = min(new_buttons) if new_buttons else -1
             buttons_LD[i] = np.zeros(D)
             buttons_LD[i, new_button_idx] = 1
             prev_buttons = curr_buttons
+            print(f"Set {i} to {buttons_LD[i]}")
+            continue
+        else:
+            # copy over previous one-hot
+            buttons_LD[i] = buttons_LD[i - 1]
+            print(f"Set {i} to {buttons_LD[i]}")
 
-        print(f"Set {i} to {buttons_LD[i]}")
-
-    # Handle rows with no presses
-    no_press = np.argwhere(row_sums == 0).flatten()
-    buttons_LD[no_press, -1] = 1
+    # # Handle rows with no presses
+    # no_press = np.argwhere(row_sums == 0).flatten()
+    # buttons_LD[no_press, -1] = 1
 
     return buttons_LD
 
@@ -294,6 +291,20 @@ def encode_original_buttons_multi_hot(sample: TensorDict, player: str) -> torch.
     button_l = sample[f"{player}_button_l"].float()
     button_r = sample[f"{player}_button_r"].float()
     return torch.stack((button_a, button_b, button_x, button_y, button_z, button_l, button_r), dim=-1)
+
+
+def encode_original_buttons_one_hot_no_shoulder(sample: TensorDict, player: str) -> torch.Tensor:
+    button_a = sample[f"{player}_button_a"].bool()
+    button_b = sample[f"{player}_button_b"].bool()
+    button_x = sample[f"{player}_button_x"].bool()
+    button_y = sample[f"{player}_button_y"].bool()
+    button_z = sample[f"{player}_button_z"].bool()
+
+    no_button = ~(button_a | button_b | button_x | button_y | button_z)
+
+    stacked_buttons = torch.stack((button_a, button_b, button_x, button_y, button_z, no_button), dim=-1)
+    one_hot_buttons = convert_multi_hot_to_one_hot_early_release(stacked_buttons.numpy())
+    return torch.tensor(one_hot_buttons, dtype=torch.float32)
 
 
 def encode_buttons_one_hot_no_shoulder(sample: TensorDict, player: str) -> torch.Tensor:

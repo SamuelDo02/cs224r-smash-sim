@@ -1,6 +1,7 @@
 from hal.constants import INCLUDED_BUTTONS
 from hal.constants import INCLUDED_BUTTONS_NO_SHOULDER
 from hal.constants import ORIGINAL_BUTTONS
+from hal.constants import ORIGINAL_BUTTONS_NO_SHOULDER
 from hal.constants import SHOULDER_CLUSTER_CENTERS_V0
 from hal.constants import STICK_XY_CLUSTER_CENTERS_V0
 from hal.constants import STICK_XY_CLUSTER_CENTERS_V0_1
@@ -19,6 +20,7 @@ from hal.preprocess.transformations import encode_main_stick_one_hot_coarse
 from hal.preprocess.transformations import encode_main_stick_one_hot_fine
 from hal.preprocess.transformations import encode_main_stick_one_hot_finer
 from hal.preprocess.transformations import encode_original_buttons_multi_hot
+from hal.preprocess.transformations import encode_original_buttons_one_hot_no_shoulder
 from hal.preprocess.transformations import encode_shoulder_one_hot_coarse
 
 
@@ -212,6 +214,27 @@ def fine_orig_buttons() -> TargetConfig:
     )
 
 
+def fine_orig_buttons_one_hot_no_shoulder() -> TargetConfig:
+    return TargetConfig(
+        transformation_by_target={
+            "main_stick": encode_main_stick_one_hot_fine,
+            "c_stick": encode_c_stick_one_hot_coarser,
+            "buttons": encode_original_buttons_one_hot_no_shoulder,
+            "shoulder": encode_shoulder_one_hot_coarse,
+        },
+        frame_offsets_by_target={
+            "main_stick": 0,
+            "c_stick": 0,
+            "buttons": 0,
+        },
+        target_shapes_by_head={
+            "main_stick": (len(STICK_XY_CLUSTER_CENTERS_V2),),
+            "c_stick": (len(STICK_XY_CLUSTER_CENTERS_V0_1),),
+            "buttons": (len(ORIGINAL_BUTTONS_NO_SHOULDER),),
+        },
+    )
+
+
 TargetConfigRegistry.register("baseline_coarse", baseline_coarse())
 TargetConfigRegistry.register("coarse_shoulder", coarse_shoulder())
 TargetConfigRegistry.register("baseline_fine", baseline_fine())
@@ -221,3 +244,4 @@ TargetConfigRegistry.register("fine_main_analog_shoulder", fine_main_analog_shou
 TargetConfigRegistry.register("baseline_finer", baseline_finer())
 TargetConfigRegistry.register("fine_main_coarser_cstick", fine_main_coarser_cstick())
 TargetConfigRegistry.register("fine_orig_buttons", fine_orig_buttons())
+TargetConfigRegistry.register("fine_orig_buttons_one_hot_no_shoulder", fine_orig_buttons_one_hot_no_shoulder())

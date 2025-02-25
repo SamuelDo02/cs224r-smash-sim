@@ -85,6 +85,14 @@ ORIGINAL_BUTTONS: Tuple[str, ...] = (
     "BUTTON_L",
     "BUTTON_R",
 )
+ORIGINAL_BUTTONS_NO_SHOULDER: Tuple[str, ...] = (
+    "BUTTON_A",
+    "BUTTON_B",
+    "BUTTON_X",
+    "BUTTON_Y",
+    "BUTTON_Z",
+    "NO_BUTTON",
+)
 INCLUDED_BUTTONS: Tuple[str, ...] = (
     "BUTTON_A",
     "BUTTON_B",
@@ -93,7 +101,6 @@ INCLUDED_BUTTONS: Tuple[str, ...] = (
     "BUTTON_L",
     "NO_BUTTON",
 )
-
 INCLUDED_BUTTONS_NO_SHOULDER: Tuple[str, ...] = (
     "BUTTON_A",
     "BUTTON_B",
