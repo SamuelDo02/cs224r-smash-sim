@@ -11,8 +11,10 @@ from tensordict import TensorDict
 
 from hal.constants import INCLUDED_BUTTONS
 from hal.constants import INCLUDED_BUTTONS_NO_SHOULDER
+from hal.constants import ORIGINAL_BUTTONS_NO_SHOULDER
 from hal.constants import Player
 from hal.constants import SHOULDER_CLUSTER_CENTERS_V0
+from hal.constants import SHOULDER_CLUSTER_CENTERS_V1
 from hal.constants import STICK_XY_CLUSTER_CENTERS_V0
 from hal.constants import STICK_XY_CLUSTER_CENTERS_V0_1
 from hal.constants import STICK_XY_CLUSTER_CENTERS_V1
@@ -146,20 +148,16 @@ def convert_multi_hot_to_one_hot_early_release(buttons_LD: np.ndarray) -> np.nda
         curr_press = buttons_LD[i]
         curr_buttons = set(np.where(curr_press == 1)[0])
 
-        print(f"{i}: {prev_buttons=} {curr_buttons=}")
-
         if not curr_buttons or curr_buttons != prev_buttons:
             new_buttons = curr_buttons - prev_buttons
             new_button_idx = min(new_buttons) if new_buttons else -1
             buttons_LD[i] = np.zeros(D)
             buttons_LD[i, new_button_idx] = 1
             prev_buttons = curr_buttons
-            print(f"Set {i} to {buttons_LD[i]}")
             continue
         else:
             # copy over previous one-hot
             buttons_LD[i] = buttons_LD[i - 1]
-            print(f"Set {i} to {buttons_LD[i]}")
 
     # # Handle rows with no presses
     # no_press = np.argwhere(row_sums == 0).flatten()
@@ -182,6 +180,28 @@ def get_closest_1D_cluster(x: np.ndarray, cluster_centers: np.ndarray) -> np.nda
     x_reshaped = x.reshape(-1, 1)  # Shape: (L, 1)
     distances = (cluster_centers - x_reshaped) ** 2  # Shape: (L, C)
     return np.argmin(distances, axis=1)  # Shape: (L,)
+
+
+def get_closest_1D_clusters(x: np.ndarray, cluster_centers: np.ndarray) -> np.ndarray:
+    """
+    Calculate the closest point in cluster_centers for given x values.
+
+    Args:
+        x (np.ndarray): (L, D) Input values
+        cluster_centers (np.ndarray): (C,) Cluster center values
+
+    Returns:
+        np.ndarray: (L, D) Indices of the closest cluster centers
+    """
+    L, D = x.shape
+    result = np.zeros((L, D), dtype=int)
+
+    for d in range(D):
+        x_d = x[:, d].reshape(-1, 1)  # Shape: (L, 1)
+        distances = (cluster_centers - x_d) ** 2  # Shape: (L, C)
+        result[:, d] = np.argmin(distances, axis=1)  # Shape: (L,)
+
+    return result
 
 
 def get_closest_2D_cluster(x: np.ndarray, y: np.ndarray, cluster_centers: np.ndarray) -> np.ndarray:
@@ -331,6 +351,15 @@ def encode_shoulder_one_hot_coarse(sample: TensorDict, player: str) -> torch.Ten
     return torch.tensor(one_hot_shoulder, dtype=torch.float32)
 
 
+def encode_shoulder_original_coarse(sample: TensorDict, player: str) -> torch.Tensor:
+    shoulder_l = sample[f"{player}_l_shoulder"]
+    shoulder_r = sample[f"{player}_r_shoulder"]
+    shoulder = np.stack([shoulder_l, shoulder_r], axis=-1)
+    shoulder_clusters = get_closest_1D_clusters(shoulder, SHOULDER_CLUSTER_CENTERS_V1)
+    one_hot_shoulder = one_hot_from_int(shoulder_clusters, len(SHOULDER_CLUSTER_CENTERS_V1))
+    return torch.tensor(one_hot_shoulder, dtype=torch.float32)
+
+
 def concat_controller_inputs(sample_T: TensorDict, ego: Player, target_config: TargetConfig) -> torch.Tensor:
     controller_feats = preprocess_target_features(sample_T, ego, target_config)
     return torch.cat(list(controller_feats.values()), dim=-1)
@@ -404,6 +433,13 @@ def sample_single_button_no_shoulder(pred_C: TensorDict, temperature: float = 1.
     button_probs = torch.softmax(pred_C["buttons"] / temperature, dim=-1)
     button_idx = int(torch.multinomial(button_probs, num_samples=1).item())
     button = INCLUDED_BUTTONS_NO_SHOULDER[button_idx]
+    return [button]
+
+
+def sample_original_single_button_no_shoulder(pred_C: TensorDict, temperature: float = 1.0) -> List[str]:
+    button_probs = torch.softmax(pred_C["buttons"] / temperature, dim=-1)
+    button_idx = int(torch.multinomial(button_probs, num_samples=1).item())
+    button = ORIGINAL_BUTTONS_NO_SHOULDER[button_idx]
     return [button]
 
 

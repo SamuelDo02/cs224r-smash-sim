@@ -214,7 +214,7 @@ def fine_orig_buttons() -> TargetConfig:
     )
 
 
-def fine_orig_buttons_one_hot_no_shoulder() -> TargetConfig:
+def fine_orig_buttons_one_hot_shoulder_one_hot() -> TargetConfig:
     return TargetConfig(
         transformation_by_target={
             "main_stick": encode_main_stick_one_hot_fine,
@@ -226,11 +226,13 @@ def fine_orig_buttons_one_hot_no_shoulder() -> TargetConfig:
             "main_stick": 0,
             "c_stick": 0,
             "buttons": 0,
+            "shoulder": 0,
         },
         target_shapes_by_head={
             "main_stick": (len(STICK_XY_CLUSTER_CENTERS_V2),),
             "c_stick": (len(STICK_XY_CLUSTER_CENTERS_V0_1),),
             "buttons": (len(ORIGINAL_BUTTONS_NO_SHOULDER),),
+            "shoulder": (len(SHOULDER_CLUSTER_CENTERS_V0),),
         },
     )
 
@@ -244,4 +246,6 @@ TargetConfigRegistry.register("fine_main_analog_shoulder", fine_main_analog_shou
 TargetConfigRegistry.register("baseline_finer", baseline_finer())
 TargetConfigRegistry.register("fine_main_coarser_cstick", fine_main_coarser_cstick())
 TargetConfigRegistry.register("fine_orig_buttons", fine_orig_buttons())
-TargetConfigRegistry.register("fine_orig_buttons_one_hot_no_shoulder", fine_orig_buttons_one_hot_no_shoulder())
+TargetConfigRegistry.register(
+    "fine_orig_buttons_one_hot_shoulder_one_hot", fine_orig_buttons_one_hot_shoulder_one_hot()
+)

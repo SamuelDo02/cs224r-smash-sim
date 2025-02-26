@@ -167,6 +167,9 @@ TARGET_FEATURES_TO_ONE_HOT_ENCODE: Tuple[str, ...] = (
 SHOULDER_CLUSTER_CENTERS_V0: np.ndarray = np.array([0.0, 0.4, 1.0])
 SHOULDER_CLUSTER_CENTERS_V0.flags.writeable = False
 
+SHOULDER_CLUSTER_CENTERS_V1: np.ndarray = np.array([0.0, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
+SHOULDER_CLUSTER_CENTERS_V1.flags.writeable = False
+
 STICK_XY_CLUSTER_CENTERS_V0: np.ndarray = np.array(
     [
         [0.5, 0.5],

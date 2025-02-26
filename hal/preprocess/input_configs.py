@@ -10,7 +10,7 @@ from hal.preprocess.target_configs import baseline_finer
 from hal.preprocess.target_configs import fine_main_analog_shoulder
 from hal.preprocess.target_configs import fine_main_coarser_cstick
 from hal.preprocess.target_configs import fine_orig_buttons
-from hal.preprocess.target_configs import fine_orig_buttons_one_hot_no_shoulder
+from hal.preprocess.target_configs import fine_orig_buttons_one_hot_shoulder_one_hot
 from hal.preprocess.transformations import cast_int32
 from hal.preprocess.transformations import concat_controller_inputs
 from hal.preprocess.transformations import invert_and_normalize
@@ -403,7 +403,9 @@ def baseline_fine_orig_buttons_one_hot_no_shoulder() -> InputConfig:
         base_config,
         transformation_by_feature_name={
             **base_config.transformation_by_feature_name,
-            "controller": partial(concat_controller_inputs, target_config=fine_orig_buttons_one_hot_no_shoulder()),
+            "controller": partial(
+                concat_controller_inputs, target_config=fine_orig_buttons_one_hot_shoulder_one_hot()
+            ),
         },
         frame_offsets_by_input={
             **base_config.frame_offsets_by_input,
@@ -415,7 +417,7 @@ def baseline_fine_orig_buttons_one_hot_no_shoulder() -> InputConfig:
         },
         input_shapes_by_head={
             **base_config.input_shapes_by_head,
-            "controller": (fine_orig_buttons_one_hot_no_shoulder().target_size,),
+            "controller": (fine_orig_buttons_one_hot_shoulder_one_hot().target_size,),
         },
     )
     return config

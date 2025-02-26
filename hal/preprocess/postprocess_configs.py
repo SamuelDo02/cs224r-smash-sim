@@ -6,6 +6,7 @@ from hal.preprocess.transformations import sample_c_stick_fine
 from hal.preprocess.transformations import sample_main_stick_coarse
 from hal.preprocess.transformations import sample_main_stick_fine
 from hal.preprocess.transformations import sample_main_stick_finer
+from hal.preprocess.transformations import sample_original_single_button_no_shoulder
 from hal.preprocess.transformations import sample_shoulder
 from hal.preprocess.transformations import sample_single_button
 from hal.preprocess.transformations import sample_single_button_no_shoulder
@@ -75,11 +76,23 @@ def fine_main_coarser_cstick() -> PostprocessConfig:
 
 
 def fine_orig_buttons() -> PostprocessConfig:
+    # independent buttons
     return PostprocessConfig(
         transformation_by_controller_input={
             "main_stick": sample_main_stick_fine,
             "c_stick": sample_c_stick_coarser,
             "buttons": threshold_independent_buttons,
+        }
+    )
+
+
+def fine_orig_buttons_one_hot_shoulder_one_hot() -> PostprocessConfig:
+    return PostprocessConfig(
+        transformation_by_controller_input={
+            "main_stick": sample_main_stick_fine,
+            "c_stick": sample_c_stick_coarser,
+            "buttons": sample_original_single_button_no_shoulder,
+            "shoulder": sample_shoulder,
         }
     )
 
@@ -91,3 +104,6 @@ PostprocessConfigRegistry.register("fine_main_analog_shoulder", fine_main_analog
 PostprocessConfigRegistry.register("baseline_finer", baseline_finer())
 PostprocessConfigRegistry.register("fine_main_coarser_cstick", fine_main_coarser_cstick())
 PostprocessConfigRegistry.register("fine_orig_buttons", fine_orig_buttons())
+PostprocessConfigRegistry.register(
+    "fine_orig_buttons_one_hot_shoulder_one_hot", fine_orig_buttons_one_hot_shoulder_one_hot()
+)
