@@ -170,19 +170,25 @@ def gpu_worker(
         model(context_window_BL)
     logger.info("Warmup step finished")
 
-    iteration = 0
-    while not all(event.is_set() for event in stop_events):
-        iteration_start = time.perf_counter()
-
+    def wait_for_cpu_workers(timeout: float = 5.0) -> None:
         # Wait for all CPU workers to signal that data is ready
         flag_wait_start = time.perf_counter()
         for i, (input_flag, stop_event) in enumerate(zip(model_input_ready_flags, stop_events)):
             while not input_flag.is_set() and not stop_event.is_set():
-                if not input_flag.is_set() and time.perf_counter() - flag_wait_start > cpu_flag_timeout:
+                if not input_flag.is_set() and time.perf_counter() - flag_wait_start > timeout:
                     logger.warning(f"CPU worker {i} input flag wait took too long, stopping episode")
                     input_flag.set()
                     stop_event.set()
                 time.sleep(0.0001)  # Sleep briefly to avoid busy waiting
+
+    # Longer timeout on init to allow for emulators to start
+    wait_for_cpu_workers(timeout=30.0)
+
+    iteration = 0
+    while not all(event.is_set() for event in stop_events):
+        iteration_start = time.perf_counter()
+
+        wait_for_cpu_workers(timeout=cpu_flag_timeout)
 
         if all(event.is_set() for event in stop_events):
             break

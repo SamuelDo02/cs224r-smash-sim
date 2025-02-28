@@ -222,11 +222,12 @@ def console_manager(console: melee.Console, console_logger: melee.Logger | None 
     except KeyboardInterrupt:
         logger.info("Received interrupt, shutting down...")
     except TimeoutError:
-        pass
+        raise
     except Exception as e:
         logger.error(
             f"Stopping console due to exception: {e}\nTraceback:\n{''.join(traceback.format_tb(e.__traceback__))}"
         )
+        raise
     finally:
         if console_logger is not None:
             console_logger.writelog()
