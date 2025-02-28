@@ -329,6 +329,7 @@ def encode_original_buttons_one_hot_no_shoulder(sample: TensorDict, player: str)
 
 
 def encode_buttons_one_hot_no_shoulder(sample: TensorDict, player: str) -> torch.Tensor:
+    """Combine X/Y, omit L/R, take most recent button press when overlapping but return to old value otherwise."""
     button_a = sample[f"{player}_button_a"].bool()
     button_b = sample[f"{player}_button_b"].bool()
     button_x = sample[f"{player}_button_x"].bool()
@@ -340,6 +341,22 @@ def encode_buttons_one_hot_no_shoulder(sample: TensorDict, player: str) -> torch
 
     stacked_buttons = torch.stack((button_a, button_b, jump, button_z, no_button), dim=-1)
     one_hot_buttons = convert_multi_hot_to_one_hot(stacked_buttons.numpy())
+    return torch.tensor(one_hot_buttons, dtype=torch.float32)
+
+
+def encode_buttons_one_hot_no_shoulder_early_release(sample: TensorDict, player: str) -> torch.Tensor:
+    """Combine X/Y, omit L/R, take most recent button press and release all older button presses."""
+    button_a = sample[f"{player}_button_a"].bool()
+    button_b = sample[f"{player}_button_b"].bool()
+    button_x = sample[f"{player}_button_x"].bool()
+    button_y = sample[f"{player}_button_y"].bool()
+    button_z = sample[f"{player}_button_z"].bool()
+
+    jump = button_x | button_y
+    no_button = ~(button_a | button_b | jump | button_z)
+
+    stacked_buttons = torch.stack((button_a, button_b, jump, button_z, no_button), dim=-1)
+    one_hot_buttons = convert_multi_hot_to_one_hot_early_release(stacked_buttons.numpy())
     return torch.tensor(one_hot_buttons, dtype=torch.float32)
 
 
