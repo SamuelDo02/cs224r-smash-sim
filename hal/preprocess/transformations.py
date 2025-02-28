@@ -479,7 +479,7 @@ def sample_original_single_button_no_shoulder(pred_C: TensorDict, temperature: f
 def sample_buttons_with_separate_shoulders(pred_C: TensorDict, temperature: float = 1.0) -> List[str]:
     button_probs = torch.softmax(pred_C["buttons"] / temperature, dim=-1)
     button_idx = int(torch.multinomial(button_probs, num_samples=1).item())
-    buttons = [ORIGINAL_BUTTONS_NO_SHOULDER[button_idx]]
+    buttons = [INCLUDED_BUTTONS_NO_SHOULDER[button_idx]]
     shoulder_l_prob = torch.sigmoid(pred_C["shoulder_l"])
     shoulder_r_prob = torch.sigmoid(pred_C["shoulder_r"])
     if shoulder_l_prob.item() > 0.5:

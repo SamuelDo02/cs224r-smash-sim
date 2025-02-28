@@ -6,8 +6,6 @@ from hal.preprocess.transformations import sample_buttons_with_separate_shoulder
 from hal.preprocess.transformations import sample_c_stick_coarse
 from hal.preprocess.transformations import sample_c_stick_coarser
 from hal.preprocess.transformations import sample_c_stick_fine
-from hal.preprocess.transformations import sample_digital_shoulder_l
-from hal.preprocess.transformations import sample_digital_shoulder_r
 from hal.preprocess.transformations import sample_main_stick_coarse
 from hal.preprocess.transformations import sample_main_stick_fine
 from hal.preprocess.transformations import sample_main_stick_finer
