@@ -19,6 +19,7 @@ globs:
     - I generally don't prioritize DRY across input/target configs or model versions
 - Please feel free to test code by creating new scratch files in notebooks/ at the root of the repo
 - Please help me keep the code readable, composable, and modular without sacrificing reproducibility and experimental isolation
+- When generating edits to code, do not add comments or references to previous code or current instruction, unless you are explicitly told to do so
 
 # Running experiments
 

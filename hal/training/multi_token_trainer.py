@@ -40,12 +40,18 @@ class MultiTokenTrainer(Trainer):
         }
 
         for target_feature, loss_fn in loss_fns.items():
+            feature_losses = []
+
             for frame in self.multi_token_heads:
                 feature_name = f"{target_feature}_{frame}"
 
                 if feature_name in pred and feature_name in target:
-                    frame_losses = loss_fn(pred[feature_name], target[feature_name])
-                    loss_dict[f"loss_{feature_name}"] = frame_losses
+                    frame_loss = loss_fn(pred[feature_name], target[feature_name])
+                    loss_dict[f"loss_{feature_name}"] = frame_loss
+                    feature_losses.append(frame_loss)
+
+            if feature_losses:
+                loss_dict[f"loss_{target_feature}"] = torch.mean(torch.stack(feature_losses)).detach()
 
         return loss_dict
 
