@@ -51,8 +51,13 @@ class Preprocessor:
 
         self.frame_offsets_by_input = self.input_config.frame_offsets_by_input
         self.frame_offsets_by_target = self.target_config.frame_offsets_by_target
-        self.max_abs_offset = max((abs(offset) for offset in self.frame_offsets_by_input.values()), default=0)
-        self.min_offset = min((offset for offset in self.frame_offsets_by_input.values()), default=0)
+        self.max_offset = max(
+            (*self.frame_offsets_by_input.values(), *self.frame_offsets_by_target.values()), default=0
+        )
+        self.min_offset = min(
+            (*self.frame_offsets_by_input.values(), *self.frame_offsets_by_target.values()), default=0
+        )
+        self.total_offset_size = self.max_offset - self.min_offset
 
     @property
     def eval_warmup_frames(self) -> int:
@@ -65,7 +70,7 @@ class Preprocessor:
     def trajectory_sampling_len(self) -> int:
         """Calculates number of frames needed from a full episode to preprocess a supervised training example."""
         trajectory_len = self.seq_len
-        trajectory_len += self.max_abs_offset
+        trajectory_len += self.total_offset_size
         return trajectory_len
 
     @property
