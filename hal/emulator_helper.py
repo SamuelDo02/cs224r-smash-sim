@@ -143,7 +143,7 @@ def get_gui_console_kwargs(
     console_kwargs = {
         "path": emulator_path,
         "is_dolphin": True,
-        "tmp_home_directory": False,
+        "tmp_home_directory": True,
         "copy_home_directory": False,
         "replay_dir": str(replay_dir),
         "blocking_input": False,

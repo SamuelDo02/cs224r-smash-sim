@@ -9,9 +9,9 @@ from gamestate_utils import extract_eval_gamestate_as_tensordict
 from loguru import logger
 from tensordict import TensorDict
 
+from hal.emulator_helper import MatchupMenuHelper
 from hal.emulator_helper import console_manager
 from hal.emulator_helper import get_gui_console_kwargs
-from hal.emulator_helper import self_play_menu_helper
 from hal.emulator_helper import send_controller_inputs
 from hal.eval.eval_helper import mock_framedata_as_tensordict
 from hal.preprocess.preprocessor import Preprocessor
@@ -80,14 +80,21 @@ def play(artifact_dir: str):
         sys.exit(-1)
     logger.debug("Controller 2 connected")
 
-    i = 0
-    match_started = False
+    menu_helper = MatchupMenuHelper(
+        controller_1=ego_controller,
+        controller_2=opponent_controller,
+        character_1=melee.Character.FOX,
+        character_2=None,
+        stage=None,
+        opponent_cpu_level=0,
+    )
 
     # Wrap console manager inside a thread for timeouts
     # Important that console manager context goes second to gracefully handle keyboard interrupts, timeouts, and all other exceptions
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor, console_manager(console=console):
+        i = 0
         logger.debug("Starting episode")
-        while i < 30000:
+        while True:
             # Wrap `console.step()` in a thread with timeout
             future = executor.submit(console.step)
             try:
@@ -104,29 +111,9 @@ def play(artifact_dir: str):
                 logger.debug("Last frame took " + str(console.processingtime * 1000) + "ms to process.")
 
             if gamestate.menu_state not in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
-                if match_started:
-                    logger.debug("Match ended")
-                    break
-
-                self_play_menu_helper(
-                    gamestate=gamestate,
-                    controller_1=ego_controller,
-                    controller_2=opponent_controller,
-                    character_1=melee.Character.FOX,
-                    character_2=melee.Character.FOX,
-                    stage_selected=melee.Stage.BATTLEFIELD,
-                    opponent_cpu_level=9,
-                    # character_2=None,  # allow human player to select character
-                    # stage_selected=None,  # allow human player to select stage
-                    # opponent_cpu_level=0,  # human
-                )
+                menu_helper.select_character_and_stage(gamestate)
+                i = 0
             else:
-                if not match_started:
-                    match_started = True
-                    logger.debug("Match started")
-
-                # Yield gamestate and receive controller inputs
-                # logger.debug(f"Yielding gamestate {i}")
                 gamestate_td = extract_eval_gamestate_as_tensordict(gamestate)
                 model_inputs = preprocessor.preprocess_inputs(gamestate_td, BOT_PLAYER)
 
