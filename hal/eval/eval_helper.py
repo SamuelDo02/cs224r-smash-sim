@@ -69,6 +69,20 @@ class Matchup:
         return [Matchup(stage="YOSHIS_STORY", ego_character="FOX", opponent_character="FOX")] * n
 
     @classmethod
+    def fox_dittos(cls, n: int, seed: int = 42) -> List["Matchup"]:
+        rng = np.random.default_rng(seed)
+        stages = rng.choice(
+            list(PRIOR_STAGE_LIKELIHOODS.keys()),
+            size=n,
+            replace=True,
+            p=list(PRIOR_STAGE_LIKELIHOODS.values()),
+        )
+        matchups = []
+        for stage in stages:
+            matchups.append(Matchup(stage=stage, ego_character="FOX", opponent_character="FOX"))
+        return matchups
+
+    @classmethod
     def spacies(cls, n: int) -> List["Matchup"]:
         """Generate `n` spacies matchups"""
         matchups: List[Matchup] = []
