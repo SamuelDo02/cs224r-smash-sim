@@ -8,7 +8,6 @@ from tensordict import TensorDict
 from torch.nn import functional as F
 
 from hal.preprocess.preprocessor import Preprocessor
-from hal.training.config import TrainConfig
 from hal.training.models.registry import Arch
 
 
@@ -1309,22 +1308,6 @@ class GPTv7(GPTv4Controller):
             },
             batch_size=(B, L),
         )
-
-
-@attr.s(auto_attribs=True, frozen=True)
-class MultiTokenGPTConfig(GPTConfig):
-    n_lookahead: int = 4
-
-
-class MultiTokenGPT(GPTv1):
-    """Predict `n_lookahead` tokens from input sequence."""
-
-    def __init__(self, train_config: TrainConfig, gpt_config: MultiTokenGPTConfig) -> None:
-        super().__init__()
-        ...
-
-    def forward(self, inputs: TensorDict) -> None:
-        ...
 
 
 # Shallow output heads, absolute position embeddings
