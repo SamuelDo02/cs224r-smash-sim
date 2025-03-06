@@ -3,6 +3,7 @@ import random
 
 import numpy as np
 import torch
+from streaming import StreamingDataLoader
 from tensordict import TensorDict
 from torch.nn import functional as F
 
@@ -16,32 +17,52 @@ from hal.training.streaming_dataloader import get_dataloaders
 from hal.training.trainer import Trainer
 
 
-class SimpleTrainer(Trainer):
+class ValueTrainer(Trainer):
     """
-    Trains behavior cloning using cross-entropy loss on next-token prediction.
+    Trains behavior cloning using cross-entropy loss on next-/multi-token prediction and value function loss.
     """
+
+    def __init__(
+        self, config: TrainConfig, train_loader: StreamingDataLoader, val_loader: StreamingDataLoader
+    ) -> None:
+        super().__init__(config, train_loader, val_loader)
+        assert self.preprocessor.target_config.multi_token_heads is not None
+        self.multi_token_heads = self.preprocessor.target_config.multi_token_heads
 
     def loss(self, pred: TensorDict, target: TensorDict) -> TensorDict:
         loss_dict: TensorDict = TensorDict({})
+
         loss_fns = {
-            "buttons": F.cross_entropy,
-            "main_stick": F.cross_entropy,
-            "c_stick": F.cross_entropy,
             "shoulder": F.cross_entropy,
-            "analog_shoulder": F.cross_entropy,
-            "shoulder_l": F.binary_cross_entropy_with_logits,
-            "shoulder_r": F.binary_cross_entropy_with_logits,
+            "c_stick": F.cross_entropy,
+            "main_stick": F.cross_entropy,
+            "buttons": F.cross_entropy,
         }
 
+        # Multi-token prediction
         for target_feature, loss_fn in loss_fns.items():
-            if target_feature in pred and target_feature in target:
-                frame_losses = loss_fn(pred[target_feature], target[target_feature])
-                loss_dict[f"loss_{target_feature}"] = frame_losses
+            feature_losses = []
+
+            for frame in self.multi_token_heads:
+                feature_name = f"{target_feature}_{frame}"
+
+                if feature_name in pred and feature_name in target:
+                    frame_loss = loss_fn(pred[feature_name], target[feature_name])
+                    loss_dict[f"loss_{feature_name}"] = frame_loss
+                    feature_losses.append(frame_loss)
+
+            if feature_losses:
+                loss_dict[f"loss_{target_feature}"] = torch.mean(torch.stack(feature_losses)).detach()
+
+        # Value function loss
+        loss_dict["loss_value"] = F.mse_loss(pred["value"], target["value"])
 
         return loss_dict
 
     def sum_losses(self, loss_by_head: TensorDict) -> torch.Tensor:
-        return sum(v for k, v in loss_by_head.items() if k.startswith("loss"))
+        # TODO add weights as CLI arg
+        loss_total = sum(0.5 * v if k == "loss_value" else v for k, v in loss_by_head.items() if k.startswith("loss"))
+        return loss_total
 
 
 @auto_distribute
@@ -53,7 +74,7 @@ def main(train_config: TrainConfig) -> None:
     torch.manual_seed(seed)
 
     train_loader, val_loader = get_dataloaders(train_config)
-    trainer = SimpleTrainer(config=train_config, train_loader=train_loader, val_loader=val_loader)
+    trainer = ValueTrainer(config=train_config, train_loader=train_loader, val_loader=val_loader)
     trainer.train_loop(train_loader, val_loader)
 
 

@@ -112,15 +112,26 @@ class Trainer(torch.nn.Module, abc.ABC):
     def loss(self, pred: TensorDict, target: TensorDict) -> TensorDict:
         ...
 
-    @abc.abstractmethod
     def forward_loop(self, batch: TensorDict) -> TensorDict:
+        inputs: TensorDict = batch["inputs"]
+        targets: TensorDict = batch["targets"]
+
+        pred: TensorDict = self.model(inputs)
+        B, L, *_ = pred.shape
+        # Important! Reshape the batch to 2D for proper CE loss calculation
+        loss_by_head = self.loss(pred.view(B * L, -1).squeeze(), targets.view(B * L, -1).squeeze())
+
+        return loss_by_head
+
+    @abc.abstractmethod
+    def sum_losses(self, loss_by_head: TensorDict) -> TensorDict:
         ...
 
     def train_op(self, batch: TensorDict) -> MetricsDict:
         self.opt.zero_grad(set_to_none=True)
         loss_by_head = self.forward_loop(batch)
 
-        loss_total = sum(v for k, v in loss_by_head.items() if k.startswith("loss"))
+        loss_total = self.sum_losses(loss_by_head)
         loss_total.backward()  # type: ignore
 
         grad_norm_total = torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.config.grad_clip_norm)

@@ -175,8 +175,6 @@ class GPTMultiTokenValue(GPTMultiToken):
             x_BLD = block(x_BLD)
         x_BLD = self.transformer.ln_f(x_BLD)
 
-        value = self.value_head(x_BLD)
-
         # Process all time steps at once for each output mode, autoregressively decode next head
         # (B,L,D) -> (B,L,N*C)
         shoulder: torch.Tensor = self.shoulder_head(x_BLD)
@@ -199,7 +197,10 @@ class GPTMultiTokenValue(GPTMultiToken):
             result[f"c_stick_{offset}"] = c_stick[:, :, i, :]
             result[f"main_stick_{offset}"] = main_stick[:, :, i, :]
             result[f"buttons_{offset}"] = button[:, :, i, :]
+
+        value = self.value_head(x_BLD)
         result["value"] = value
+
         return TensorDict(result, batch_size=(B, L))
 
 

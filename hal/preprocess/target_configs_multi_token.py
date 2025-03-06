@@ -47,11 +47,11 @@ def multi_token_value(frames: tuple[int, ...]) -> TargetConfig:
     transformation_by_target = {
         f"{k}_{frame}": transformation_by_target[k] for k in transformation_by_target for frame in frames
     }
-    transformation_by_target["returns"] = get_returns
+    transformation_by_target["value"] = get_returns
 
     modalities = ("main_stick", "c_stick", "buttons", "shoulder")
     frame_offsets_by_target = {f"{k}_{frame}": frame - 1 for k in modalities for frame in frames}
-    frame_offsets_by_target["returns"] = 1
+    frame_offsets_by_target["value"] = 1
 
     target_shapes_by_head = {
         "main_stick": (len(STICK_XY_CLUSTER_CENTERS_V2),),
@@ -62,7 +62,7 @@ def multi_token_value(frames: tuple[int, ...]) -> TargetConfig:
     target_shapes_by_head = {
         f"{k}_{frame}": target_shapes_by_head[k] for k in target_shapes_by_head for frame in frames
     }
-    target_shapes_by_head["returns"] = (1,)
+    target_shapes_by_head["value"] = (1,)
 
     return TargetConfig(
         transformation_by_target=transformation_by_target,

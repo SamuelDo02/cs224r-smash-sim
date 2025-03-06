@@ -55,16 +55,8 @@ class MultiTokenTrainer(Trainer):
 
         return loss_dict
 
-    def forward_loop(self, batch: TensorDict) -> TensorDict:
-        inputs: TensorDict = batch["inputs"]
-        targets: TensorDict = batch["targets"]
-
-        pred: TensorDict = self.model(inputs)
-        B, L, *_ = pred.shape
-        # Important! Reshape the batch to 2D for proper CE loss calculation
-        loss_by_head = self.loss(pred.view(B * L, -1).squeeze(), targets.view(B * L, -1).squeeze())
-
-        return loss_by_head
+    def sum_losses(self, loss_by_head: TensorDict) -> torch.Tensor:
+        return sum(v for k, v in loss_by_head.items() if k.startswith("loss"))
 
 
 @auto_distribute
