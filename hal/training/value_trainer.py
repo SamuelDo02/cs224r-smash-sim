@@ -55,7 +55,7 @@ class ValueTrainer(Trainer):
                 loss_dict[f"loss_{target_feature}"] = torch.mean(torch.stack(feature_losses)).detach()
 
         # Value function loss
-        loss_dict["loss_value"] = F.mse_loss(pred["value"], target["value"])
+        loss_dict["loss_value"] = F.mse_loss(pred["value"].squeeze(-1), target["value"])
 
         return loss_dict
 
