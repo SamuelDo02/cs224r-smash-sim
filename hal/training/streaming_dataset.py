@@ -31,10 +31,13 @@ class HALStreamingDataset(StreamingDataset):
         super().__init__(streams=streams, local=local, remote=remote, batch_size=batch_size, shuffle=shuffle, **kwargs)
         self.preprocessor = Preprocessor(data_config=data_config)
         self.seq_len = self.preprocessor.seq_len
+        self.data_config = data_config
         self.debug = debug
 
-    def __getitem__(self, idx: int | slice | list[int] | np.ndarray) -> TensorDict:
-        """Expects episode features to match data/schema.py."""
+        if self.data_config.debug_repeat_batch:
+            self.debug_sample = self._get_item(0)
+
+    def _get_item(self, idx: int | slice | list[int] | np.ndarray) -> TensorDict:
         episode_features_by_name = super().__getitem__(idx)
         episode_features_by_name = add_reward_to_episode(episode_features_by_name)
         episode_td = convert_ndarray_to_tensordict(episode_features_by_name)
@@ -56,3 +59,9 @@ class HALStreamingDataset(StreamingDataset):
             },
             batch_size=(self.seq_len,),
         )
+
+    def __getitem__(self, idx: int | slice | list[int] | np.ndarray) -> TensorDict:
+        """Expects episode features to match data/schema.py."""
+        if self.data_config.debug_repeat_batch:
+            return self.debug_sample
+        return self._get_item(idx)
