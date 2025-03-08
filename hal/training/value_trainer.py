@@ -4,6 +4,7 @@ import random
 import attr
 import numpy as np
 import torch
+from loguru import logger
 from streaming import StreamingDataLoader
 from tensordict import TensorDict
 from torch.nn import functional as F
@@ -21,7 +22,10 @@ from hal.training.trainer import Trainer
 @attr.s(auto_attribs=True, frozen=True)
 class ValueTrainerConfig(TrainConfig):
     value_fn_loss_weight: float = 0.5
+
     advantage_weighted_loss: bool = False
+    beta: float = 0.05
+    weight_clip: float = 20.0
 
 
 class ValueTrainer(Trainer):
@@ -47,6 +51,18 @@ class ValueTrainer(Trainer):
             "buttons": F.cross_entropy,
         }
 
+        # Value function loss
+        pred_value: torch.Tensor = pred["value"].squeeze(-1)
+        loss_dict["loss_value"] = F.mse_loss(pred_value, target["value"])
+
+        if self.config.advantage_weighted_loss:
+            # Advantage weighted regression
+            advantages = target["value"] - pred_value.detach()
+            weights = torch.exp(advantages / self.config.beta)
+            weights = torch.clamp(weights, 1e-8, self.config.weight_clip)  # Clip to avoid exploding gradients
+        else:
+            weights = 1.0
+
         # Multi-token prediction
         for target_feature, loss_fn in loss_fns.items():
             feature_losses = []
@@ -55,15 +71,13 @@ class ValueTrainer(Trainer):
                 feature_name = f"{target_feature}_{frame}"
 
                 if feature_name in pred and feature_name in target:
-                    frame_loss = loss_fn(pred[feature_name], target[feature_name])
+                    frame_loss = weights * loss_fn(pred[feature_name], target[feature_name], reduction="none")
+                    frame_loss = frame_loss.mean()
                     loss_dict[f"loss_{feature_name}"] = frame_loss
                     feature_losses.append(frame_loss)
 
             if feature_losses:
                 loss_dict[f"loss_{target_feature}"] = torch.mean(torch.stack(feature_losses)).detach()
-
-        # Value function loss
-        loss_dict["loss_value"] = F.mse_loss(pred["value"].squeeze(-1), target["value"])
 
         return loss_dict
 
@@ -83,6 +97,8 @@ def main(train_config: ValueTrainerConfig) -> None:
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
+
+    logger.info(train_config)
 
     train_loader, val_loader = get_dataloaders(train_config)
     trainer = ValueTrainer(config=train_config, train_loader=train_loader, val_loader=val_loader)
