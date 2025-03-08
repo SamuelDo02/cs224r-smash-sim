@@ -1,15 +1,12 @@
 import functools
 import subprocess
 from pathlib import Path
-from typing import Dict
 from typing import Iterable
 from typing import Iterator
 from typing import TypeVar
 
 import numpy as np
-import pyarrow as pa
 import torch
-from tensordict import TensorDict
 
 T = TypeVar("T")
 
@@ -64,19 +61,3 @@ def move_tensors_to_device(inputs: T, device: str, non_blocking=True) -> T:
         return inputs.to(device, non_blocking=non_blocking)
     else:
         return inputs
-
-
-def pyarrow_table_to_np_dict(table: pa.Table) -> Dict[str, np.ndarray]:
-    """
-    Convert pyarrow table to dictionary of numpy arrays.
-
-    Use copy=True to ensure that the numpy arrays are not views of the original data for safe downstream processing.
-    """
-    return {name: np.array(col.to_numpy(), copy=True) for name, col in zip(table.column_names, table.columns)}
-
-
-def pyarrow_table_to_tensordict(table: pa.Table) -> TensorDict:
-    return TensorDict(
-        {name: torch.from_numpy(col.to_numpy()) for name, col in zip(table.column_names, table.columns)},
-        batch_size=len(table),
-    )
