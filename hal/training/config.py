@@ -8,7 +8,6 @@ from typing import Tuple
 from typing import Type
 
 import attr
-from data.streams import StreamRegistry
 from streaming import Stream
 
 from hal.constants import IDX_BY_ACTION
@@ -16,6 +15,7 @@ from hal.constants import IDX_BY_CHARACTER
 from hal.constants import IDX_BY_STAGE
 from hal.constants import INCLUDED_CHARACTERS
 from hal.constants import INCLUDED_STAGES
+from hal.data.streams import StreamRegistry
 
 
 @attr.s(auto_attribs=True, frozen=True)
