@@ -136,8 +136,7 @@ def get_gui_console_kwargs(
         "copy_home_directory": False,
         "replay_dir": str(replay_dir),
         "blocking_input": False,
-        # "slippi_port": find_open_udp_ports(1)[0],
-        "slippi_port": 51441,
+        "slippi_port": 51441,  # must use default port for local mainline/Ishiiruka
         "online_delay": 0,  # 0 frame delay for local evaluation
         "logger": console_logger,
         "setup_gecko_codes": True,
