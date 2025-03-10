@@ -9,6 +9,7 @@ from multiprocessing.synchronize import Event as EventType
 from pathlib import Path
 from typing import List
 from typing import Optional
+from typing import Tuple
 
 import torch
 import torch.multiprocessing as mp
@@ -31,6 +32,70 @@ from hal.training.io import load_config_from_artifact_dir
 from hal.training.io import load_model_from_artifact_dir
 
 
+class SharedBufferManager:
+    """Helper class to manage shared buffers and synchronization flags between GPU and CPU workers."""
+
+    def __init__(self, n_workers: int, preprocessor: Preprocessor, player: Player) -> None:
+        """Initialize shared buffers and synchronization flags.
+
+        Args:
+            n_workers: Number of CPU workers
+            preprocessor: Preprocessor instance for creating mock inputs/outputs
+        """
+        # Create mock data to initialize buffer shapes
+        mock_framedata_L = mock_framedata_as_tensordict(preprocessor.trajectory_sampling_len)
+        mock_model_inputs_ = preprocessor.preprocess_inputs(mock_framedata_L, player)[-1]
+
+        # Initialize shared input buffer (n_workers,)
+        self.shared_model_input_B: TensorDict = torch.stack(
+            [mock_model_inputs_ for _ in range(n_workers)], dim=0  # type: ignore
+        )
+        self.shared_model_input_B = share_and_pin_memory(self.shared_model_input_B)
+
+        # Initialize shared output buffer (n_workers,)
+        mock_preds = preprocessor.mock_preds_as_tensordict()
+        self.shared_model_output_B: TensorDict = torch.stack(
+            [mock_preds for _ in range(n_workers)], dim=0  # type: ignore
+        )
+        self.shared_model_output_B = share_and_pin_memory(self.shared_model_output_B)
+
+        # Create synchronization flags
+        self.model_input_ready_flags: List[EventType] = [mp.Event() for _ in range(n_workers)]
+        self.model_output_ready_flags: List[EventType] = [mp.Event() for _ in range(n_workers)]
+        self.stop_events: List[EventType] = [mp.Event() for _ in range(n_workers)]
+
+    def get_worker_buffers(self, rank: int) -> Tuple[TensorDict, TensorDict, EventType, EventType, EventType]:
+        """Get buffers and flags for a specific worker rank.
+
+        Args:
+            rank: Worker rank to get buffers for
+
+        Returns:
+            Tuple of (model_input, model_output, input_ready_flag, output_ready_flag, stop_event)
+        """
+        return (
+            self.shared_model_input_B[rank],
+            self.shared_model_output_B[rank],
+            self.model_input_ready_flags[rank],
+            self.model_output_ready_flags[rank],
+            self.stop_events[rank],
+        )
+
+    def get_all_buffers(self) -> Tuple[TensorDict, TensorDict, List[EventType], List[EventType], List[EventType]]:
+        """Get all buffers and flags.
+
+        Returns:
+            Tuple of (model_input, model_output, input_ready_flags, output_ready_flags, stop_events)
+        """
+        return (
+            self.shared_model_input_B,
+            self.shared_model_output_B,
+            self.model_input_ready_flags,
+            self.model_output_ready_flags,
+            self.stop_events,
+        )
+
+
 def setup_cpu_logger(debug: bool = False) -> None:
     logger.remove()
     logger_format = (
@@ -44,17 +109,13 @@ def setup_cpu_logger(debug: bool = False) -> None:
 
 
 def cpu_worker(
-    shared_batched_model_input: TensorDict,
-    shared_batched_model_output: TensorDict,
+    shared_buffer_manager: SharedBufferManager,
     rank: int,
-    port: int,
+    udp_port: int,
     player: Player,
     matchup: Matchup,
     replay_dir: Path,
     preprocessor: Preprocessor,
-    model_input_ready_flag: EventType,
-    model_output_ready_flag: EventType,
-    stop_event: EventType,
     episode_stats_queue: mp.Queue,
     enable_ffw: bool = True,
     debug: bool = False,
@@ -67,8 +128,16 @@ def cpu_worker(
 
     with logger.contextualize(rank=rank):
         try:
+            (
+                shared_model_input,
+                shared_model_output,
+                model_input_ready_flag,
+                model_output_ready_flag,
+                stop_event,
+            ) = shared_buffer_manager.get_worker_buffers(rank)
+
             emulator_manager = EmulatorManager(
-                udp_port=port,
+                udp_port=udp_port,
                 player=player,
                 replay_dir=replay_dir,
                 opponent_cpu_level=9,
@@ -91,9 +160,8 @@ def cpu_worker(
                 preprocess_time = time.perf_counter() - preprocess_start
 
                 transfer_start = time.perf_counter()
-                sharded_model_input: TensorDict = shared_batched_model_input[rank]
                 # Update our rank of the shared buffer with the last frame
-                sharded_model_input.update_(model_inputs[-1], non_blocking=True)
+                shared_model_input.update_(model_inputs[-1], non_blocking=True)
                 transfer_time = time.perf_counter() - transfer_start
 
                 model_input_ready_flag.set()
@@ -106,7 +174,7 @@ def cpu_worker(
                     break
 
                 # Read model output and postprocess
-                model_output = shared_batched_model_output[rank].clone()
+                model_output = shared_model_output.clone()
                 postprocess_start = time.perf_counter()
                 controller_inputs = preprocessor.postprocess_preds(model_output)
                 postprocess_time = time.perf_counter() - postprocess_start
@@ -137,12 +205,8 @@ def cpu_worker(
 
 
 def gpu_worker(
-    shared_batched_model_input_B: TensorDict,  # (n_workers,)
-    shared_batched_model_output_B: TensorDict,  # (n_workers,)
-    model_input_ready_flags: List[EventType],
-    model_output_ready_flags: List[EventType],
+    shared_buffer_manager: SharedBufferManager,
     seq_len: int,
-    stop_events: List[EventType],
     artifact_dir: Path,
     device: torch.device | str,
     checkpoint_idx: Optional[int] = None,
@@ -157,6 +221,14 @@ def gpu_worker(
     model, _ = load_model_from_artifact_dir(Path(artifact_dir), idx=checkpoint_idx)
     model.eval()
     model.to(device)
+
+    (
+        shared_batched_model_input_B,
+        shared_batched_model_output_B,
+        model_input_ready_flags,
+        model_output_ready_flags,
+        stop_events,
+    ) = shared_buffer_manager.get_all_buffers()
 
     # Stack along time dimension
     # shape: (n_workers, seq_len)
@@ -199,16 +271,13 @@ def gpu_worker(
             context_window_BL[:, iteration].copy_(shared_batched_model_input_B, non_blocking=True)
         else:
             # Update the context window by rolling frame data left and adding new data on the right
-            # TODO move this to line 178 to overlap with waiting on CPU workers
             context_window_BL[:, :-1].copy_(context_window_BL[:, 1:].clone())
             context_window_BL[:, -1].copy_(shared_batched_model_input_B, non_blocking=True)
-        # context_window_BL.save(f"/tmp/multishine_debugging/model_inputs_{iteration:06d}")
         transfer_time = time.perf_counter() - transfer_start
 
         inference_start = time.perf_counter()
         with torch.no_grad():
             outputs_BL: TensorDict = model(context_window_BL)
-        # outputs_BL.save(f"/tmp/multishine_debugging/model_outputs_{iteration:06d}")
         seq_idx = min(seq_len - 1, iteration)
         outputs_B: TensorDict = outputs_BL[:, seq_idx]
         inference_time = time.perf_counter() - inference_start
@@ -277,36 +346,13 @@ def run_closed_loop_evaluation(
     train_config: TrainConfig = load_config_from_artifact_dir(artifact_dir)
     preprocessor = Preprocessor(data_config=train_config.data)
     n_workers = eval_config.n_workers
-
-    # Create events to signal when cpu and gpu workers are ready
-    model_input_ready_flags: List[EventType] = [mp.Event() for _ in range(n_workers)]
-    model_output_ready_flags: List[EventType] = [mp.Event() for _ in range(n_workers)]
-    # Create events to signal when emulator episodes end
-    stop_events: List[EventType] = [mp.Event() for _ in range(n_workers)]
-
-    # Share and pin buffers in CPU memory for transferring model inputs and outputs
-    mock_framedata_L = mock_framedata_as_tensordict(preprocessor.trajectory_sampling_len)
-    # Store only a single time step to minimize copying
-    mock_model_inputs_ = preprocessor.preprocess_inputs(mock_framedata_L, player)[-1]
-    # batch_size == n_workers
-    shared_batched_model_input_B: TensorDict = torch.stack(
-        [mock_model_inputs_ for _ in range(n_workers)], dim=0  # type: ignore
-    )
-    shared_batched_model_input_B = share_and_pin_memory(shared_batched_model_input_B)
-    shared_batched_model_output_B: TensorDict = torch.stack(
-        [preprocessor.mock_preds_as_tensordict() for _ in range(n_workers)], dim=0  # type: ignore
-    )
-    shared_batched_model_output_B = share_and_pin_memory(shared_batched_model_output_B)
+    shared_buffer_manager = SharedBufferManager(n_workers, preprocessor, player)
 
     gpu_process: mp.Process = mp.Process(
         target=gpu_worker,
         kwargs={
-            "shared_batched_model_input_B": shared_batched_model_input_B,
-            "shared_batched_model_output_B": shared_batched_model_output_B,
-            "model_input_ready_flags": model_input_ready_flags,
-            "model_output_ready_flags": model_output_ready_flags,
+            "shared_buffer_manager": shared_buffer_manager,
             "seq_len": preprocessor.seq_len,
-            "stop_events": stop_events,
             "artifact_dir": artifact_dir,
             "device": device,
             "checkpoint_idx": checkpoint_idx,
@@ -321,7 +367,7 @@ def run_closed_loop_evaluation(
     logger.info(f"Replays will be saved to {base_replay_dir}")
 
     cpu_processes: List[mp.Process] = []
-    ports = find_open_udp_ports(n_workers)
+    udp_ports = find_open_udp_ports(n_workers)
     episode_stats_queue: mp.Queue = mp.Queue()
     for i, matchup in enumerate(matchups):
         replay_dir = base_replay_dir / f"{i:03d}"
@@ -329,17 +375,13 @@ def run_closed_loop_evaluation(
         p: mp.Process = mp.Process(
             target=cpu_worker,
             kwargs={
-                "shared_batched_model_input": shared_batched_model_input_B,
-                "shared_batched_model_output": shared_batched_model_output_B,
+                "shared_buffer_manager": shared_buffer_manager,
                 "rank": i,
-                "port": ports[i],
+                "udp_port": udp_ports[i],
                 "player": player,
                 "matchup": matchup,
                 "replay_dir": replay_dir,
                 "preprocessor": preprocessor,
-                "model_input_ready_flag": model_input_ready_flags[i],
-                "model_output_ready_flag": model_output_ready_flags[i],
-                "stop_event": stop_events[i],
                 "episode_stats_queue": episode_stats_queue,
                 "enable_ffw": enable_ffw,
                 "debug": debug,

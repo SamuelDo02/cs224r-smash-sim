@@ -168,8 +168,8 @@ class EpisodeStats:
         return EpisodeStats(
             p1_damage=self.p1_damage + other.p1_damage,
             p2_damage=self.p2_damage + other.p2_damage,
-            p1_stocks_lost=self.p1_stocks_lost + other.p1_stocks_lost,
-            p2_stocks_lost=self.p2_stocks_lost + other.p2_stocks_lost,
+            p1_stocks_lost=int(self.p1_stocks_lost + other.p1_stocks_lost),
+            p2_stocks_lost=int(self.p2_stocks_lost + other.p2_stocks_lost),
             frames=self.frames + other.frames,
             episodes=self.episodes + other.episodes,
         )

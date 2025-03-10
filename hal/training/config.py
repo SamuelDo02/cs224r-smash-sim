@@ -135,6 +135,15 @@ class TrainConfig(BaseConfig):
     resume_idx: Optional[int] = None
 
 
+@attr.s(auto_attribs=True, frozen=True)
+class ValueTrainerConfig(TrainConfig):
+    value_fn_loss_weight: float = 0.5
+
+    advantage_weighted_loss: bool = False
+    beta: float = 0.05
+    weight_clip: float = 20.0
+
+
 def create_parser_for_attrs_class(
     cls: Type[Any], parser: argparse.ArgumentParser, prefix: str = ""
 ) -> argparse.ArgumentParser:

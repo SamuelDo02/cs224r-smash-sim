@@ -1,7 +1,6 @@
 import argparse
 import random
 
-import attr
 import numpy as np
 import torch
 from loguru import logger
@@ -10,6 +9,7 @@ from tensordict import TensorDict
 from torch.nn import functional as F
 
 from hal.training.config import TrainConfig
+from hal.training.config import ValueTrainerConfig
 from hal.training.config import create_parser_for_attrs_class
 from hal.training.config import parse_args_to_attrs_instance
 from hal.training.distributed import auto_distribute
@@ -17,15 +17,6 @@ from hal.training.distributed import get_device_id
 from hal.training.distributed import wrap_multiprocessing
 from hal.training.streaming_dataloader import get_dataloaders
 from hal.training.trainer import Trainer
-
-
-@attr.s(auto_attribs=True, frozen=True)
-class ValueTrainerConfig(TrainConfig):
-    value_fn_loss_weight: float = 0.5
-
-    advantage_weighted_loss: bool = False
-    beta: float = 0.05
-    weight_clip: float = 20.0
 
 
 class ValueTrainer(Trainer):
