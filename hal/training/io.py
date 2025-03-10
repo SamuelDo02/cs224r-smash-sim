@@ -96,7 +96,7 @@ def load_config_from_artifact_dir(artifact_dir: Path) -> TrainConfig:
 def override_stats_path(config: TrainConfig, stats_path: Path) -> TrainConfig:
     return attr.evolve(
         config,
-        data=attr.evolve(config.data, stats_path=str(stats_path.absolute())),
+        data=attr.evolve(config.data, stream_stats=str(stats_path.absolute())),
     )
 
 

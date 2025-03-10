@@ -133,7 +133,7 @@ def play(artifact_dir: str):
                     context_window_BL[:, -1].copy_(model_inputs, non_blocking=True)
 
                 seq_idx = min(seq_len - 1, i)
-                model_outputs_B = model(model_inputs)[:, seq_idx]
+                model_outputs_B = model(context_window_BL)[:, seq_idx]
                 controller_inputs = preprocessor.postprocess_preds(model_outputs_B)
                 if controller_inputs is None:
                     logger.error("Controller inputs are None")
