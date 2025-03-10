@@ -23,10 +23,13 @@ from hal.training.io import load_model_from_artifact_dir
 from hal.training.io import override_stats_path
 from hal.training.utils import get_git_repo_root
 
+# torch._dynamo.config.suppress_errors = True
+
 REPO_ROOT = get_git_repo_root()
 EMULATOR_PATH = "/Users/ericgu/Library/Application Support/Slippi Launcher/netplay"
 CISO_PATH = "/Users/ericgu/data/ssbm/ssbm.ciso"
 STATS_PATH = REPO_ROOT / "hal/data/stats.json"
+REPLAY_DIR = "/Users/ericgu/data/ssbm/replays"
 BOT_PLAYER = "p1"
 
 
@@ -48,19 +51,22 @@ def play(artifact_dir: str):
     seq_len = preprocessor.seq_len
 
     model = load_model(artifact_dir, device)
+    logger.info(model)
+    logger.info(f"Model loaded on device: {device}")
 
-    context_window_BL: TensorDict = mock_framedata_as_tensordict(preprocessor.trajectory_sampling_len).unsqueeze(0)
+    mock_framedata_L: TensorDict = mock_framedata_as_tensordict(preprocessor.trajectory_sampling_len)
+    context_window_BL = preprocessor.preprocess_inputs(mock_framedata_L, BOT_PLAYER).unsqueeze(0)
     context_window_BL = context_window_BL.to(device)
     logger.info(f"Context window shape: {context_window_BL.shape}, device: {context_window_BL.device}")
 
     # Warmup CUDA graphs with dummy inputs
     logger.info("Compiling model...")
-    model = torch.compile(model, mode="default")
+    model = torch.compile(model, backend="aot_eager", mode="default")
     with torch.no_grad():
         model(context_window_BL)
     logger.info("Warmup step finished")
 
-    console_kwargs = get_gui_console_kwargs(EMULATOR_PATH)
+    console_kwargs = get_gui_console_kwargs(EMULATOR_PATH, replay_dir=Path(REPLAY_DIR))
     console = melee.Console(**console_kwargs)
     ego_controller = melee.Controller(console=console, port=1, type=melee.ControllerType.STANDARD)
     opponent_controller = melee.Controller(console=console, port=2, type=melee.ControllerType.STANDARD)
