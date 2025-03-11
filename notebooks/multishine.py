@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 import melee
+from loguru import logger
 
 from hal.emulator_helper import MatchupMenuHelper
 from hal.emulator_helper import console_manager
@@ -60,8 +61,9 @@ def main():
     #   Through this object, we can get "GameState" objects per-frame so that your
     #       bot can actually "see" what's happening in the game
     console_kwargs = get_gui_console_kwargs(emulator_path=emulator_path, replay_dir=Path(MAC_REPLAY_DIR))
+    logger.info(f"Console kwargs: {console_kwargs}")
     console = melee.Console(**console_kwargs)
-    print(f"Saving replay to {console_kwargs['replay_dir']}")
+    logger.debug(f"Saving replay to {console_kwargs['replay_dir']}")
 
     # Create our Controller object
     #   The controller is the second primary object your bot will interact with
@@ -76,9 +78,9 @@ def main():
         console.stop()
         if log:
             log.writelog()
-            print("")  # because the ^C will be on the terminal
-            print("Log file created: " + log.filename)
-        print("Shutting down cleanly...")
+            logger.debug("")  # because the ^C will be on the terminal
+            logger.debug("Log file created: " + log.filename)
+        logger.debug("Shutting down cleanly...")
         sys.exit(0)
 
     signal.signal(signal.SIGINT, signal_handler)
@@ -87,26 +89,26 @@ def main():
     console.run(iso_path=iso_path)
 
     # Connect to the console
-    print("Connecting to console...")
+    logger.debug("Connecting to console...")
     if not console.connect():
-        print("ERROR: Failed to connect to the console.")
+        logger.debug("ERROR: Failed to connect to the console.")
         sys.exit(-1)
-    print("Console connected")
+    logger.debug("Console connected")
 
     # Plug our controller in
     #   Due to how named pipes work, this has to come AFTER running dolphin
     #   NOTE: If you're loading a movie file, don't connect the controller,
     #   dolphin will hang waiting for input and never receive it
-    print("Connecting controller 1 to console...")
+    logger.debug("Connecting controller 1 to console...")
     if not controller.connect():
-        print("ERROR: Failed to connect the controller.")
+        logger.debug("ERROR: Failed to connect the controller.")
         sys.exit(-1)
-    print("Controller 1 connected")
-    print("Connecting controller 2 to console...")
+    logger.debug("Controller 1 connected")
+    logger.debug("Connecting controller 2 to console...")
     if not controller_opponent.connect():
-        print("ERROR: Failed to connect the controller.")
+        logger.debug("ERROR: Failed to connect the controller.")
         sys.exit(-1)
-    print("Controller 2 connected")
+    logger.debug("Controller 2 connected")
 
     costume = 0
     framedata = melee.framedata.FrameData()
@@ -130,23 +132,23 @@ def main():
             try:
                 gamestate = future.result(timeout=2.0)
             except concurrent.futures.TimeoutError:
-                print("console.step() timed out")
+                logger.debug("console.step() timed out")
                 raise
             if gamestate is None:
-                print("Gamestate is None")
+                logger.debug("Gamestate is None")
                 continue
 
-            # print(f"{gamestate.menu_state=}")
+            # logger.debug(f"{gamestate.menu_state=}")
 
             # The console object keeps track of how long your bot is taking to process frames
             #   And can warn you if it's taking too long
             if console.processingtime * 1000 > 12:
-                print("WARNING: Last frame took " + str(console.processingtime * 1000) + "ms to process.")
+                logger.debug("WARNING: Last frame took " + str(console.processingtime * 1000) + "ms to process.")
 
             # What menu are we in?
             if gamestate.menu_state in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
                 if not match_started:
-                    print("Match started")
+                    logger.debug("Match started")
                     match_started = True
                 # Slippi Online matches assign you a random port once you're in game that's different
                 #   than the one you're physically plugged into. This helper will autodiscover what
@@ -170,7 +172,7 @@ def main():
 
                 i += 1
                 if i % 60 == 0:
-                    print(f"Frame {i}")
+                    logger.debug(f"Frame {i}")
                 if i > 1800:
                     break
 
