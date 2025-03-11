@@ -6,6 +6,7 @@ from typing import List
 from typing import Optional
 from typing import Tuple
 from typing import Type
+from typing import Union
 
 import attr
 from streaming import Stream
@@ -142,6 +143,9 @@ class ValueTrainerConfig(TrainConfig):
     advantage_weighted_loss: bool = False
     beta: float = 0.05
     weight_clip: float = 20.0
+
+
+TrainerConfigT = Union[TrainConfig, ValueTrainerConfig]
 
 
 def create_parser_for_attrs_class(

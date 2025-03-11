@@ -27,7 +27,7 @@ from hal.eval.eval_helper import share_and_pin_memory
 from hal.gamestate_utils import extract_eval_gamestate_as_tensordict
 from hal.preprocess.preprocessor import Preprocessor
 from hal.training.config import EvalConfig
-from hal.training.config import TrainConfig
+from hal.training.config import TrainerConfigT
 from hal.training.io import load_config_from_artifact_dir
 from hal.training.io import load_model_from_artifact_dir
 
@@ -343,7 +343,7 @@ def run_closed_loop_evaluation(
     except RuntimeError:
         pass
     device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    train_config: TrainConfig = load_config_from_artifact_dir(artifact_dir)
+    train_config: TrainerConfigT = load_config_from_artifact_dir(artifact_dir)
     preprocessor = Preprocessor(data_config=train_config.data)
     n_workers = eval_config.n_workers
     shared_buffer_manager = SharedBufferManager(n_workers, preprocessor, player)

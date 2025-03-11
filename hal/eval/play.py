@@ -75,7 +75,8 @@ def play(artifact_dir: str, character: str):
     logger.info(f"Console kwargs: {console_kwargs}")
     console = melee.Console(**console_kwargs)
     ego_controller = melee.Controller(console=console, port=1, type=melee.ControllerType.STANDARD)
-    opponent_controller = melee.Controller(console=console, port=2, type=melee.ControllerType.GCN_ADAPTER)
+    # opponent_controller = melee.Controller(console=console, port=2, type=melee.ControllerType.GCN_ADAPTER)
+    opponent_controller = melee.Controller(console=console, port=2, type=melee.ControllerType.STANDARD)
     console.run(iso_path=CISO_PATH)  # Do not pass dolphin_user_path to avoid overwriting init kwargs
     # Connect to the console
     logger.debug("Connecting to console...")
@@ -103,10 +104,18 @@ def play(artifact_dir: str, character: str):
         controller_1=ego_controller,
         controller_2=opponent_controller,
         character_1=ego_character_enum,
-        character_2=None,
-        stage=None,
-        opponent_cpu_level=0,
+        character_2=ego_character_enum,
+        stage=melee.Stage.BATTLEFIELD,
+        opponent_cpu_level=9,
     )
+    # menu_helper = MatchupMenuHelper(
+    #     controller_1=ego_controller,
+    #     controller_2=opponent_controller,
+    #     character_1=ego_character_enum,
+    #     character_2=None,
+    #     stage=None,
+    #     opponent_cpu_level=0,
+    # )
 
     # Wrap console manager inside a thread for timeouts
     # Important that console manager context goes second to gracefully handle keyboard interrupts, timeouts, and all other exceptions
