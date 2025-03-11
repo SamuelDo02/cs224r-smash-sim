@@ -16,6 +16,9 @@ from hal.emulator_helper import get_gui_console_kwargs
 from hal.emulator_helper import send_controller_inputs
 from hal.eval.eval_helper import mock_framedata_as_tensordict
 from hal.gamestate_utils import extract_eval_gamestate_as_tensordict
+from hal.local_paths import MAC_CISO_PATH
+from hal.local_paths import MAC_EMULATOR_PATH
+from hal.local_paths import MAC_REPLAY_DIR
 from hal.preprocess.preprocessor import Preprocessor
 from hal.training.config import TrainConfig
 from hal.training.config import ValueTrainerConfig
@@ -24,13 +27,8 @@ from hal.training.io import load_model_from_artifact_dir
 from hal.training.io import override_stats_path
 from hal.training.utils import get_git_repo_root
 
-# torch._dynamo.config.suppress_errors = True
-
 REPO_ROOT = get_git_repo_root()
-EMULATOR_PATH = "/Users/ericgu/Library/Application Support/Slippi Launcher/netplay/Slippi Dolphin.app"
-CISO_PATH = "/Users/ericgu/data/ssbm/ssbm.ciso"
 STATS_PATH = REPO_ROOT / "hal/data/stats.json"
-REPLAY_DIR = "/Users/ericgu/data/ssbm/replays"
 BOT_PLAYER = "p1"
 
 
@@ -71,13 +69,13 @@ def play(artifact_dir: str, character: str):
         model(context_window_BL)
     logger.info("Warmup step finished")
 
-    console_kwargs = get_gui_console_kwargs(Path(EMULATOR_PATH), Path(REPLAY_DIR))
+    console_kwargs = get_gui_console_kwargs(Path(MAC_EMULATOR_PATH), Path(MAC_REPLAY_DIR))
     logger.info(f"Console kwargs: {console_kwargs}")
     console = melee.Console(**console_kwargs)
     ego_controller = melee.Controller(console=console, port=1, type=melee.ControllerType.STANDARD)
     # opponent_controller = melee.Controller(console=console, port=2, type=melee.ControllerType.GCN_ADAPTER)
     opponent_controller = melee.Controller(console=console, port=2, type=melee.ControllerType.STANDARD)
-    console.run(iso_path=CISO_PATH)  # Do not pass dolphin_user_path to avoid overwriting init kwargs
+    console.run(iso_path=MAC_CISO_PATH)  # Do not pass dolphin_user_path to avoid overwriting init kwargs
     # Connect to the console
     logger.debug("Connecting to console...")
     if not console.connect():

@@ -90,6 +90,7 @@ def get_replay_dir(artifact_dir: Path | None = None, step: int | None = None) ->
 
 
 def get_headless_console_kwargs(
+    emulator_path: str | Path = EMULATOR_PATH,
     enable_ffw: bool = True,
     udp_port: int | None = None,
     replay_dir: Path | None = None,
@@ -101,14 +102,13 @@ def get_headless_console_kwargs(
         "use_exi_inputs": enable_ffw,
         "enable_ffw": enable_ffw,
     }
-    emulator_path = EMULATOR_PATH
     if replay_dir is None:
         replay_dir = get_replay_dir()
     replay_dir.mkdir(exist_ok=True, parents=True)
     if udp_port is None:
         udp_port = find_open_udp_ports(1)[0]
     console_kwargs = {
-        "path": emulator_path,
+        "path": str(emulator_path),
         "is_dolphin": True,
         "tmp_home_directory": True,
         "copy_home_directory": False,

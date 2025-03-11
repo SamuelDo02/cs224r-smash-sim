@@ -1,4 +1,6 @@
 #!/usr/bin/python3
+"""This example program demonstrates how to use the Melee API to run a console,
+setup controllers, and send button presses over to a console."""
 import argparse
 import concurrent.futures
 import random
@@ -7,13 +9,17 @@ import sys
 
 import melee
 
+from hal.emulator_helper import MatchupMenuHelper
 from hal.emulator_helper import console_manager
 from hal.emulator_helper import get_headless_console_kwargs
-from hal.emulator_helper import self_play_menu_helper
+from hal.local_paths import EMULATOR_PATH
 from hal.local_paths import ISO_PATH
+from hal.local_paths import MAC_CISO_PATH
+from hal.local_paths import MAC_EMULATOR_PATH
 
-# This example program demonstrates how to use the Melee API to run a console,
-#   setup controllers, and send button presses over to a console
+is_darwin = sys.platform == "darwin"
+iso_path = MAC_CISO_PATH if is_darwin else ISO_PATH
+emulator_path = MAC_EMULATOR_PATH if is_darwin else EMULATOR_PATH
 
 
 def check_port(value):
@@ -48,7 +54,7 @@ if args.debug:
 #   The Console represents the virtual or hardware system Melee is playing on.
 #   Through this object, we can get "GameState" objects per-frame so that your
 #       bot can actually "see" what's happening in the game
-console_kwargs = get_headless_console_kwargs(enable_ffw=False)
+console_kwargs = get_headless_console_kwargs(emulator_path=emulator_path, enable_ffw=False)
 console = melee.Console(**console_kwargs)
 print(f"Saving replay to {console_kwargs['replay_dir']}")
 
@@ -75,7 +81,7 @@ def signal_handler(sig, frame) -> None:
 signal.signal(signal.SIGINT, signal_handler)
 
 # Run the console
-console.run(iso_path=ISO_PATH)
+console.run(iso_path=iso_path)
 
 # Connect to the console
 print("Connecting to console...")
@@ -101,6 +107,15 @@ print("Controller 2 connected")
 
 costume = 0
 framedata = melee.framedata.FrameData()
+
+menu_helper = MatchupMenuHelper(
+    controller_1=controller,
+    controller_2=controller_opponent,
+    character_1=melee.Character.FOX,
+    character_2=melee.Character.FOX,
+    stage=melee.Stage.BATTLEFIELD,
+    opponent_cpu_level=0,
+)
 
 # Main loop
 i = 0
@@ -157,15 +172,7 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor, console_m
                 break
 
         else:
-            self_play_menu_helper(
-                gamestate,
-                controller,
-                controller_opponent,
-                melee.Character.FOX,
-                melee.Character.FOX,
-                melee.Stage.BATTLEFIELD,
-                opponent_cpu_level=0,
-            )
+            menu_helper.select_character_and_stage(gamestate)
 
             # If we're not in game, don't log the frame
             if log:
