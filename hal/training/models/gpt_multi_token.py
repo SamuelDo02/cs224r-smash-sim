@@ -402,6 +402,18 @@ Arch.register(
         multi_token_heads=(1, 12),
     ),
 )
+Arch.register(
+    "MultiTokenValue-512-6-8_1-12-dropout0.05",
+    GPTMultiTokenValue,
+    gpt_config=MultiTokenGPTConfig(
+        block_size=1024,
+        n_embd=512,
+        n_layer=6,
+        n_head=8,
+        dropout=0.05,
+        multi_token_heads=(1, 12),
+    ),
+)
 
 Arch.register(
     "MultiTokenValueWithCache-512-6-8_1-12",
