@@ -229,8 +229,8 @@ class CausalSelfAttentionRelativePositionWithCache(CausalSelfAttentionRelativePo
         # Use cached KV if provided
         if layer_cache is not None:
             k_cache, v_cache = layer_cache
-            k = torch.cat([k_cache, k], dim=2)
-            v = torch.cat([v_cache, v], dim=2)
+            k = torch.cat([k_cache, k], dim=2)[:, :, -L:]
+            v = torch.cat([v_cache, v], dim=2)[:, :, -L:]
 
         # relative positional embeddings
         start = self.block_size - L
@@ -253,7 +253,7 @@ class CausalSelfAttentionRelativePositionWithCache(CausalSelfAttentionRelativePo
         y = self.resid_dropout(self.c_proj(y))
 
         if return_kv:
-            return y, (k[:, :, -L:], v[:, :, -L:])
+            return y, (k, v)
         return y
 
 

@@ -1,4 +1,5 @@
 """Test KV cache implementation for transformer models."""
+import argparse
 import time
 from typing import List
 from typing import Tuple
@@ -98,7 +99,7 @@ class KVCacheManager:
         self.cache_pos = 0
 
 
-def test_kv_cache_correctness() -> None:
+def test_kv_cache_correctness(n_trials: int = 100) -> None:
     """Test that KV cache produces identical outputs to non-cached forward pass."""
     logger.info("Testing KV cache correctness...")
 
@@ -184,10 +185,8 @@ def test_kv_cache_correctness() -> None:
             logger.error("Cached model forward and forward_with_kv_cache outputs do not match!")
         # raise ValueError("KV cache implementation is incorrect")
 
-    n_trials = 100
-
     # Benchmark non-cached forward pass
-    logger.info("Benchmarking non-cached forward pass...")
+    logger.info(f"Benchmarking non-cached forward pass with {n_trials} forward passes...")
     torch.cuda.synchronize()
     start_time = time.perf_counter()
     for _ in range(n_trials):
@@ -197,7 +196,7 @@ def test_kv_cache_correctness() -> None:
     no_cache_time = (time.perf_counter() - start_time) / n_trials
     logger.info(f"Non-cached forward pass: {no_cache_time*1000:.2f}ms per sequence")
 
-    logger.info("Benchmarking cached forward pass...")
+    logger.info(f"Benchmarking cached forward pass with {n_trials} forward passes...")
     torch.cuda.synchronize()
     start_time = time.perf_counter()
     for _ in range(n_trials):
@@ -218,5 +217,7 @@ def test_kv_cache_correctness() -> None:
 
 
 if __name__ == "__main__":
-    # Test correctness
-    test_kv_cache_correctness()
+    args = argparse.ArgumentParser()
+    args.add_argument("--n_trials", "-n", type=int, default=100)
+    args = args.parse_args()
+    test_kv_cache_correctness(args.n_trials)
