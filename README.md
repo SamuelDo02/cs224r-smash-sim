@@ -1,56 +1,39 @@
-# HAL
+# smash-sim
+## Creating and emulating Slippi files
+### Set up emulator
+* Install Slippi Dolphin emulator from [download](https://slippi.gg/downloads)
+* Download melee iso from [Google drive link](https://drive.google.com/drive/u/1/folders/1JYTWe0uDXC9w49NOPqWBP2-KFzlJ0Gqj)
+    * Request if you don't have access
+* Create a Slippi account and log in on the desktop app
+* Provide app with downloaded iso file when prompted
+    * If you miss this, go to settings and game tab on left sidebar to load iso
 
-Training superhuman AI for *Super Smash Bros. Melee*. 
+### Set up keyboard controls
+* Click the gear icon on the top right of the launcher
+* Under Settings/Game, press the “Launch Dolphin” button.
+* Back on the home screen, press Play
+* In Dolphin:
+    - Go to `Controllers` on the top right
+    - For Port 1, choose Standard Controller, then click Configure
+    - In the popup:
+        - Set Device to something like `Keyboard/0/Internal Apple Keyboard...`
+        - If it doesn't work when you load the game, you might need some trial and error
+* Select and launch the game directly in Dolphin
 
-This project is under active development and is not ready for public use. 
+### Get video frames from .slp replay
+* The .slp replay should automatically be saved when you finish the match
+* Find the folder where your relevant .slp is saved
+* Use [this tool](https://github.com/cbartsch/Slippipedia) to extract .slp to .mp4
 
-Blog post: https://ericyuegu.com/melee-pt1
+## Existing datasets
+The Slippi machine learning community already has a 200GB dataset of .slp files that we 
+can use ([link here](https://drive.google.com/file/d/1ab6ovA46tfiPZ2Y3a_yS1J3k3656yQ8f/view)).
+![Slippi ML dataset info](images/slippi_dataset_info.png)
 
-# Setup
-
-This project has been tested for Python 3.11 on Ubuntu 20.04 LTS. 
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+## Setup
+### Environment setup
 ```
-
-For macOS, `libmelee` requires a system installation of enet. 
-```bash
-brew install enet
-CFLAGS="-I/opt/homebrew/Cellar/enet/1.3.18/include" LDFLAGS="-L/opt/homebrew/Cellar/enet/1.3.18/lib -lenet" pip install melee --no-cache-dir
-pip install -r requirements_macos.txt
-```
-
-## Building Dolphin emulator
-
-An AppImage is provided in the `emulator` directory and can be called directly from `libmelee`. 
-
-To build the emulator from source, follow the instructions [here](https://github.com/ericyuegu/slippi-Ishiiruka/tree/ubuntu-20.04).
-
-## Downloading data
-
-You can obtain raw `.slp` files from the [Slippi Discord](https://discord.gg/qaHgPwpr) server.
-
-# HOW-TO
-
-I recommend modifying the constants in `hal/local_paths.py` to point to your local directories for the repo, Dolphin, and the Melee ISO.
-
-## Processing replays to MDS format
-
-```bash
-python hal/data/process_replays.py --replay_dir /path/to/replays --output_dir /path/to/mds
-```
-
-## Training
-
-```bash
-python hal/training/simple_trainer.py --n_gpus 1 --data.data_dir /path/to/mds --arch GPTv5Controller-512-6-8-dropout
-```
-
-## Evaluation
-
-```bash
-python hal/eval/eval.py --model_dir /path/to/model_dir --n_workers 1
+conda create -n melee python=3.11
+conda activate melee
+python -m pip install -r requirements.txt
 ```
