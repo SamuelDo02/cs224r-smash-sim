@@ -1,7 +1,7 @@
 """
 Behavior cloning agent for Melee
 """
-from src.policies.MLP_policy import MLPPolicySL
+from policies.MLP_policy import MLPPolicySL
 
 class BCAgent:
     """

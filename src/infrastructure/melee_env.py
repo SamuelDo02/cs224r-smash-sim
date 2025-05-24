@@ -1,7 +1,7 @@
 import gym
 import numpy as np
 from gym import spaces
-
+import melee
 class MeleeEnv(gym.Env):
     """
     A gym environment wrapper for Super Smash Bros. Melee

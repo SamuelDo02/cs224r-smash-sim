@@ -4,3 +4,4 @@ gym>=0.26.0
 tensorboardX>=2.6.0
 setuptools>=65.6.3
 wandb==0.19.11
+melee==0.1.0

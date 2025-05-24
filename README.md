@@ -37,3 +37,8 @@ conda create -n melee python=3.11
 conda activate melee
 python -m pip install -r requirements.txt
 ```
+
+### Example usage
+```
+python src/scripts/train_melee.py --data_dir=data --exp_name=initial_train
+```

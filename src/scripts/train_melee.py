@@ -11,9 +11,9 @@ import torch
 import numpy as np
 import wandb
 
-from src.agents.bc_agent import BCAgent
-from src.infrastructure.melee_env import MeleeEnv
-from src.data.pkl_replay_buffer import PKLReplayBuffer
+from agents.bc_agent import BCAgent
+from infrastructure.melee_env import MeleeEnv
+from data.pkl_replay_buffer import PKLReplayBuffer
 
 def train_bc(params):
     """
