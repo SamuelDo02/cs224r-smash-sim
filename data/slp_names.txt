@@ -1,0 +1,525 @@
+training_data/($O6P) Fox vs Marth (R) [PS] Game_20200129T214753.slp
+training_data/(...) Fox vs Falcon (L$) [FD] Game_20200226T211056.slp
+training_data/(...) Fox vs Falcon (L$) [FoD] Game_20200226T210545.slp
+training_data/(...) Fox vs Falcon (L$) [PS] Game_20200226T211356.slp
+training_data/(...) Fox vs Fox [BF] Game_20200122T221006.slp
+training_data/(...) Fox vs Fox [BF] Game_20200122T221201.slp
+training_data/(...) Fox vs Fox [BF] Game_20200122T222336.slp
+training_data/(...) Fox vs Fox [BF] Game_20200122T222614.slp
+training_data/(...) Fox vs Fox [DL] Game_20200122T222856.slp
+training_data/(...) Fox vs Fox [FD] Game_20200122T222048.slp
+training_data/(...) Fox vs Fox [YS] Game_20200122T221530.slp
+training_data/(AAAA) Fox vs Falco [BF] Game_20200212T213630.slp
+training_data/(AAAA) Fox vs Falco [BF] Game_20200212T214259.slp
+training_data/(AAAA) Fox vs Falco [DL] Game_20200212T213331.slp
+training_data/(AAAA) Fox vs Falco [FD] Game_20200212T213937.slp
+training_data/(AAAA) Fox vs Falco [PS] Game_20200212T213043.slp
+training_data/(AAAA) Fox vs Falco [YS] Game_20200212T214630.slp
+training_data/(AAAA) Fox vs Pikachu (YOTR) [BF] Game_20200226T213612.slp
+training_data/(AAAA) Fox vs Pikachu (YOTR) [FoD] Game_20200226T213249.slp
+training_data/(AAAA) Fox vs Pikachu (YOTR) [PS] Game_20200226T213015.slp
+training_data/(AAAA) Fox vs Pikachu (YOTR) [PS] Game_20200226T213940.slp
+training_data/(ACAB) Fox vs ICs [BF] Game_20191129T011207.slp
+training_data/(ACAB) Fox vs ICs [DL] Game_20191129T010757.slp
+training_data/(ACAB) Fox vs Luigi [BF] Game_20180107T044404.slp
+training_data/(ACAB) Fox vs Luigi [FoD] Game_20180107T044754.slp
+training_data/(ANT) Fox vs Falco [BF] Game_000000000000_20200304T194812.slp
+training_data/(ANT) Fox vs Falco [PS] Game_000000000000_20200304T195002.slp
+training_data/(BABE) Fox vs Puff [BF] Game_20200129T231132.slp
+training_data/(BABE) Fox vs Puff [FoD] Game_20200129T231831.slp
+training_data/(BABE) Fox vs Puff [YS] Game_20200129T231519.slp
+training_data/(BR) Fox vs Marth [FoD] Game_20200222T110639.slp
+training_data/(BRO.) Fox vs DK [PS] Game_8C56C529AEAA_20200311T192409.slp
+training_data/(BRO.) Fox vs Fox [BF] Game_0017ABEA4C5A_20200311T194621.slp
+training_data/(BRO.) Fox vs Fox [FoD] Game_0017ABEA4C5A_20200311T194914.slp
+training_data/(BRO.) Fox vs Fox [PS] Game_0017ABEA4C5A_20200311T194304.slp
+training_data/(BRO.) Fox vs Marth (PH8) [FoD] Game_0017ABEA4C5A_20200311T193710.slp
+training_data/(BRO.) Fox vs Marth (PH8) [YS] Game_0017ABEA4C5A_20200311T193920.slp
+training_data/(BRO.) Fox vs Pikachu (YOTR) [BF] Game_20200311T205824.slp
+training_data/(BRO.) Fox vs Pikachu (YOTR) [DL] Game_20200311T210702.slp
+training_data/(BRO.) Fox vs Pikachu (YOTR) [FoD] Game_20200311T210250.slp
+training_data/(BRO.) Fox vs Samus [BF] Game_00224CCD4B5E_20200311T190509.slp
+training_data/(BRO.) Fox vs Samus [FoD] Game_00224CCD4B5E_20200311T190935.slp
+training_data/(BRO.) Fox vs Samus [YS] Game_00224CCD4B5E_20200311T191352.slp
+training_data/(BRO.) Fox vs Sheik [BF] Game_8C56C529AEAA_20200311T192803.slp
+training_data/(BRO.) Fox vs Sheik [BF] Game_8C56C529AEAA_20200311T193004.slp
+training_data/(CLM) Fox vs Falco [FoD] Game_20210222T152052.slp
+training_data/(CLM) Fox vs Fox (FNTM) [BF] Game_20210222T182747.slp
+training_data/(CLM) Fox vs Fox (FNTM) [DL] Game_20210222T182224.slp
+training_data/(CLM) Fox vs Fox (FNTM) [FD] Game_20210222T183020.slp
+training_data/(CLM) Fox vs Fox (FNTM) [YS] Game_20210222T182531.slp
+training_data/(CWU) Fox vs Falco (DODO) [BF] Game_A4C0E160C02F_20190307T150721.slp
+training_data/(CWU) Fox vs Falco (DODO) [YS] Game_A4C0E160C02F_20190307T150539.slp
+training_data/(CWU) Fox vs Marth [BF] Game_A4C0E160C02F_20190307T143906.slp
+training_data/(CWU) Fox vs Marth [YS] Game_A4C0E160C02F_20190307T144225.slp
+training_data/(CWU) Fox vs Peach [BF] Game_A4C0E160C02F_20190307T145755.slp
+training_data/(CWU) Fox vs Peach [DL] Game_A4C0E160C02F_20190307T150050.slp
+training_data/(DOOM) Fox vs Falcon (STMP) [BF] Game_20200405T134751.slp
+training_data/(DOOM) Fox vs Falcon (STMP) [PS] Game_20200405T135035.slp
+training_data/(EDGE) Fox vs Falco (SHI) [BF] Game_20181118T003303.slp
+training_data/(FATE) Fox vs Fox [PS] Game_20200122T200709.slp
+training_data/(FNTM) Fox vs YLink [BF] Game_20200222T154836.slp
+training_data/(FNTM) Fox vs YLink [DL] Game_20200222T154431.slp
+training_data/(FNTM) Fox vs YLink [FD] Game_20200222T155243.slp
+training_data/(FNTM) Fox vs YLink [FoD] Game_20200222T155634.slp
+training_data/(FNTM) Fox vs YLink [YS] Game_20200222T155955.slp
+training_data/(GOAT) Fox vs Falcon [BF] Game_20200222T124539.slp
+training_data/(GOAT) Fox vs Falcon [DL] Game_20200222T125005.slp
+training_data/(GOAT) Fox vs Falcon [FD] Game_20200222T125209.slp
+training_data/(GOAT) Fox vs Falcon [FoD] Game_20200222T124732.slp
+training_data/(GOAT) Fox vs Falcon [YS] Game_20200222T124303.slp
+training_data/(GOAT) Fox vs Sheik [BF] Game_20200222T181108.slp
+training_data/(GOAT) Fox vs Sheik [DL] Game_20200222T180651.slp
+training_data/(GOAT) Fox vs Sheik [FD] Game_20200222T181412.slp
+training_data/(GOAT) Fox vs Sheik [FoD] Game_20200222T181811.slp
+training_data/(GOAT) Fox vs Sheik [PS] Game_20200222T182123.slp
+training_data/(HATZ) Fox vs Marth [BF] Game_20210125T001921.slp
+training_data/(HATZ) Fox vs Marth [FoD] Game_20210125T002143.slp
+training_data/(HGOD) Fox vs DK [BF] Game_20180218T225920.slp
+training_data/(HGOD) Fox vs DK [FoD] Game_20180218T230601.slp
+training_data/(HGOD) Fox vs DK [PS] Game_20180218T230212.slp
+training_data/(HGOD) Fox vs Fox (PNUT) [FoD] Game_20180218T211305.slp
+training_data/(HGOD) Fox vs Link [BF] Game_20200219T190318.slp
+training_data/(HGOD) Fox vs Link [FD] Game_20200219T212259.slp
+training_data/(HGOD) Fox vs Peach [BF] Game_20200219T205404.slp
+training_data/(HGOD) Fox vs Peach [FD] Game_20200219T205717.slp
+training_data/(HGOD) Fox vs Puff [BF] Game_20200219T201939.slp
+training_data/(HGOD) Fox vs Puff [FoD] Game_20200219T202326.slp
+training_data/(HGOD) Fox vs Sheik [BF] Game_20200219T211550.slp
+training_data/(HGOD) Fox vs Sheik [FoD] Game_20200219T211959.slp
+training_data/(HGOD) Fox vs Sheik [PS] Game_20200219T212949.slp
+training_data/(HGOD) Fox vs Sheik [YS] Game_20200219T212657.slp
+training_data/(JAX!) Fox vs Falco (CAN) [BF] Game_20200222T195558.slp
+training_data/(JAX!) Fox vs Falco (CAN) [FD] Game_20200222T195044.slp
+training_data/(JAX!) Fox vs Falco (CAN) [FD] Game_20200222T195321.slp
+training_data/(JAX!) Fox vs Falco (CAN) [PS] Game_20200222T200153.slp
+training_data/(JAX!) Fox vs Falco (CAN) [YS] Game_20200222T195855.slp
+training_data/(MAC$) Fox vs Falcon (CAPT) [FD] Game_20200222T150645.slp
+training_data/(MAC$) Fox vs Falcon (CAPT) [PS] Game_20200222T150901.slp
+training_data/(MAC$) Fox vs Fox [DL] Game_20200222T153930.slp
+training_data/(MAC$) Fox vs Fox [DL] Game_20200222T163852.slp
+training_data/(MAC$) Fox vs Fox [FD] Game_20200222T154157.slp
+training_data/(MAC$) Fox vs Fox [FD] Game_20200222T154401.slp
+training_data/(MAC$) Fox vs Fox [FD] Game_20200222T164204.slp
+training_data/(MAC$) Fox vs Fox [YS] Game_20200222T164506.slp
+training_data/(MAC$) Fox vs Marth (NULL) [BF] Game_20200222T152228.slp
+training_data/(MAC$) Fox vs Marth (NULL) [FoD] Game_20200222T152035.slp
+training_data/(MAC$) Fox vs Marth [BF] Game_20200222T152604.slp
+training_data/(MAC$) Fox vs Marth [BF] Game_20200222T152850.slp
+training_data/(MILO) Fox vs Puff [BF] Game_20200219T193419.slp
+training_data/(MNTY) Fox vs Falco [FD] Game_20200222T114157.slp
+training_data/(MNTY) Fox vs Falco [PS] Game_20200222T114741.slp
+training_data/(MNTY) Fox vs Falco [YS] Game_20200222T114533.slp
+training_data/(MNTY) Fox vs Marth [BF] Game_20200222T134352.slp
+training_data/(OG1) Fox vs Fox (HATZ) [BF] Game_20180701T021423.slp
+training_data/(PNUT) Fox vs Falco [DL] Game_20200122T214516.slp
+training_data/(PNUT) Fox vs Falco [YS] Game_20200122T214234.slp
+training_data/(PNUT) Fox vs Fox [FoD] Game_20200122T214907.slp
+training_data/(PNUT) Fox vs Fox [FoD] Game_20210124T182253.slp
+training_data/(PNUT) Fox vs Fox [YS] Game_20210124T182502.slp
+training_data/(PNUT) Fox vs Link [PS] Game_20200212T222513.slp
+training_data/(PNUT) Fox vs Peach [FD] Game_20200304T191426.slp
+training_data/(PNUT) Fox vs Peach [FD] Game_20200304T192534.slp
+training_data/(PNUT) Fox vs Zelda [DL] Game_20200222T152014.slp
+training_data/(PNUT) Fox vs Zelda [FoD] Game_20200222T152303.slp
+training_data/(STMP) Fox vs Link [PS] Game_20200222T181206.slp
+training_data/(UHOH) Fox vs Falco [DL] Game_20200226T195025.slp
+training_data/(UHOH) Fox vs Falco [YS] Game_20200226T195350.slp
+training_data/(US 2) Fox vs Fox [BF] Game_20200222T212949.slp
+training_data/(US 2) Fox vs Fox [BF] Game_20200222T213626.slp
+training_data/(US 2) Fox vs Fox [BF] Game_20200222T213942.slp
+training_data/(US 2) Fox vs Fox [DL] Game_20200222T213323.slp
+training_data/(US 2) Fox vs Fox [DL] Game_20200222T214603.slp
+training_data/(US 2) Fox vs Fox [FD] Game_20200222T213123.slp
+training_data/(US 2) Fox vs Fox [YS] Game_20200222T214323.slp
+training_data/(WU) Fox vs Falco (KUB) [BF] Game_20200115T195502.slp
+training_data/(WU) Fox vs Falco (KUB) [BF] Game_20200115T200034.slp
+training_data/(WU) Fox vs Falco (KUB) [PS] Game_20200115T200345.slp
+training_data/(WU) Fox vs Falco (PNUT) [DL] Game_20200307T151157.slp
+training_data/(WU) Fox vs Falco (PNUT) [FD] Game_20200307T151539.slp
+training_data/(WU) Fox vs Falco [BF] Game_20200307T162555.slp
+training_data/(WU) Fox vs Falco [FoD] Game_20200307T161837.slp
+training_data/(WU) Fox vs Falco [YS] Game_20200307T162909.slp
+training_data/(WU) Fox vs Fox [BF] Game_20200307T161151.slp
+training_data/(WU) Fox vs Fox [FD] Game_20200307T161440.slp
+training_data/(WU) Fox vs Puff [BF] Game_20200115T201850.slp
+training_data/(WU) Fox vs Puff [YS] Game_20200115T202217.slp
+training_data/(YESS) Fox vs Falco (BABE) [BF] Game_20200115T225519.slp
+training_data/(YESS) Fox vs Falco (BABE) [DL] Game_20200115T230528.slp
+training_data/(YESS) Fox vs Falco (BABE) [FoD] Game_20200115T230132.slp
+training_data/(YESS) Fox vs Falco (BABE) [PS] Game_20200115T230945.slp
+training_data/(YESS) Fox vs Falco (BABE) [YS] Game_20200115T225812.slp
+training_data/(YOTB) Fox vs Falco [BF] Game_20180825T002528.slp
+training_data/(YOTB) Fox vs Falco [BF] Game_20190703T205825.slp
+training_data/(YOTB) Fox vs Falco [BF] Game_20190703T230716.slp
+training_data/(YOTB) Fox vs Falco [BF] Game_20200222T151901.slp
+training_data/(YOTB) Fox vs Falco [DL] Game_20180825T002309.slp
+training_data/(YOTB) Fox vs Falco [DL] Game_20190703T230902.slp
+training_data/(YOTB) Fox vs Falco [DL] Game_20190703T231147.slp
+training_data/(YOTB) Fox vs Falco [DL] Game_20190703T231407.slp
+training_data/(YOTB) Fox vs Falco [FD] Game_001AE9AB885E_20200307T145358.slp
+training_data/(YOTB) Fox vs Falco [FD] Game_20180825T002046.slp
+training_data/(YOTB) Fox vs Falco [FD] Game_20190703T231707.slp
+training_data/(YOTB) Fox vs Falco [FD] Game_20190703T231926.slp
+training_data/(YOTB) Fox vs Falco [FD] Game_20200222T152254.slp
+training_data/(YOTB) Fox vs Falco [FoD] Game_20200222T151557.slp
+training_data/(YOTB) Fox vs Falco [PS] Game_001AE9AB885E_20200307T145027.slp
+training_data/(YOTB) Fox vs Falco [PS] Game_20180825T002836.slp
+training_data/(YOTB) Fox vs Falco [PS] Game_20190703T230413.slp
+training_data/(YOTB) Fox vs Falco [YS] Game_20180825T005339.slp
+training_data/(YOTB) Fox vs Falco [YS] Game_20190703T232145.slp
+training_data/(YOTB) Fox vs Falcon (MN) [BF] Game_20200222T153505.slp
+training_data/(YOTB) Fox vs Falcon (MN) [FD] Game_20200222T152806.slp
+training_data/(YOTB) Fox vs Falcon (MN) [FD] Game_20200222T153115.slp
+training_data/(YOTB) Fox vs Falcon (STMP) [BF] Game_20200625T162155.slp
+training_data/(YOTB) Fox vs Falcon (STMP) [FD] Game_20200625T162459.slp
+training_data/(YOTB) Fox vs Falcon (STMP) [PS] Game_20200625T162751.slp
+training_data/(YOTB) Fox vs Falcon [PS] Game_20180825T013118.slp
+training_data/(YOTB) Fox vs Fox [FoD] Game_20190703T232654.slp
+training_data/(YOTB) Fox vs Fox [PS] Game_20190703T232417.slp
+training_data/(YOTB) Fox vs Marth (PUTSU) [BF] Game_20190703T204719.slp
+training_data/(YOTB) Fox vs Marth (PUTSU) [BF] Game_20190703T205053.slp
+training_data/(YOTB) Fox vs Marth (PUTSU) [DL] Game_20190703T205405.slp
+training_data/(YOTB) Fox vs Marth (R) [BF] Game_20180825T001248.slp
+training_data/(YOTB) Fox vs Marth (R) [PS] Game_20180825T001526.slp
+training_data/(YOTB) Fox vs Marth [BF] Game_20180825T004534.slp
+training_data/(YOTB) Fox vs Marth [DL] Game_20180825T004832.slp
+training_data/(YOTB) Fox vs Marth [PS] Game_20180825T005104.slp
+training_data/(YOTB) Fox vs Peach [DL] Game_20200222T111638.slp
+training_data/(YOTB) Fox vs Peach [FD] Game_20200222T111336.slp
+training_data/(YOTB) Fox vs Pikachu (YOTR) [BF] Game_001AE9AB885E_20200307T140800.slp
+training_data/(YOTB) Fox vs Pikachu (YOTR) [FoD] Game_001AE9AB885E_20200307T141207.slp
+training_data/(YOTB) Fox vs Pikachu (YOTR) [PS] Game_001AE9AB885E_20200307T141712.slp
+training_data/(YOTB) Fox vs Sheik [BF] Game_20200222T110934.slp
+training_data/(YOTB) Fox vs Sheik [BF] Game_20200222T150718.slp
+training_data/(YOTB) Fox vs Sheik [FoD] Game_20200222T110118.slp
+training_data/(YOTB) Fox vs Sheik [FoD] Game_20200222T150956.slp
+training_data/(YOTB) Fox vs Sheik [PS] Game_20200222T110344.slp
+training_data/(YOTB) Fox vs Sheik [YS] Game_20200222T110704.slp
+training_data/00_02_34.227Z Fox + Falco (BF).slp
+training_data/00_04_34 Fox + Luigi (FD).slp
+training_data/00_05_46 Fox + Fox (YI).slp
+training_data/00_05_49.459Z Fox + Falco (YI).slp
+training_data/00_06_32 Fox + Marth (YI).slp
+training_data/00_08_39.667Z Fox + Falco (YI).slp
+training_data/00_18_55 Fox + Fox (YI).slp
+training_data/00_20_16.684Z [C2] Fox + Link (FoD).slp
+training_data/00_21_45 Fox + Falco (PS).slp
+training_data/00_22_24 Fox + Fox (YI).slp
+training_data/00_23_06.526Z [C2] Fox + Falco (YS).slp
+training_data/00_28_32 Fox + [TITP] Captain Falcon (YI).slp
+training_data/00_29_09 Fox + Fox (YI).slp
+training_data/00_31_09 Fox + [TITP] Captain Falcon (FoD).slp
+training_data/00_34_55 Fox + [TITP] Captain Falcon (BF).slp
+training_data/00_37_01.564Z [314] Fox + Sheik (FoD).slp
+training_data/00_40_07.217Z [314] Fox + Sheik (DL).slp
+training_data/00_45_18.826Z [NELL] Fox + [LUST] Sheik (BF).slp
+training_data/00_47_41.425Z Fox + Fox (PS).slp
+training_data/00_48_34.428Z [NELL] Fox + [LUST] Sheik (YS).slp
+training_data/00_52_36.243Z Fox + [TITP] Captain Falcon (BF).slp
+training_data/00_54_31.912Z Fox + [TITP] Captain Falcon (YS).slp
+training_data/00_58_24.242Z [EASY] Fox + [LUST] Sheik (BF).slp
+training_data/01_01_39.822Z [EASY] Fox + [LUST] Sheik (FoD).slp
+training_data/01_04_11.432Z [EASY] Fox + [LUST] Sheik (PS).slp
+training_data/01_08_09.539Z [EASY] Fox + [=P] Marth (BF).slp
+training_data/01_12_03.932Z [EASY] Fox + [=P] Marth (FD).slp
+training_data/01_14_37.489Z [EASY] Fox + [=P] Marth (YS).slp
+training_data/01_15_46.571Z Fox + Marth (FoD).slp
+training_data/01_17_23.016Z [EASY] Fox + [=P] Marth (YS).slp
+training_data/01_19_47.530Z [EASY] Fox + [=P] Marth (PS).slp
+training_data/01_21_07 Fox + Sheik (YI).slp
+training_data/01_23_04 Fox + Sheik (FD).slp
+training_data/01_34_07.126Z [EASY] Fox + [LITS] Fox (YS).slp
+training_data/01_36_36.213Z [EASY] Fox + [LITS] Fox (FD).slp
+training_data/01_38_54.245Z [EASY] Fox + [LITS] Fox (BF).slp
+training_data/01_40_07 Fox + [TITP] Captain Falcon (FoD).slp
+training_data/01_41_44.754Z [EASY] Fox + [LITS] Fox (DL).slp
+training_data/01_44_04 Fox + [TITP] Captain Falcon (BF).slp
+training_data/01_45_52.151Z [314] Fox + [TITP] Captain Falcon (DL).slp
+training_data/01_48_38.123Z [314] Fox + [TITP] Captain Falcon (FD).slp
+training_data/01_51_21.616Z [314] Fox + [TITP] Captain Falcon (FD).slp
+training_data/01_54_15.003Z [314] Fox + [TITP] Captain Falcon (BF).slp
+training_data/01_54_18.030Z [C2] Fox + [DARK] Dr. Mario (YS).slp
+training_data/01_58_13.288Z [CUTE] Fox + [WS] Fox (BF).slp
+training_data/01_58_59 Fox + Captain Falcon (YI).slp
+training_data/02_01_51.364Z [CUTE] Fox + [WS] Fox (YS).slp
+training_data/02_02_26 Fox + Captain Falcon (YI).slp
+training_data/02_05_15.841Z [CUTE] Fox + [WS] Fox (YS).slp
+training_data/02_07_44.720Z [MARS] Fox + [WS] Fox (YS).slp
+training_data/02_10_44.138Z [MARS] Fox + [WS] Fox (YS).slp
+training_data/02_14_03.043Z [EASY] Fox + [TITP] Captain Falcon (BF).slp
+training_data/02_16_42.641Z [EASY] Fox + [TITP] Captain Falcon (DL).slp
+training_data/02_19_46.509Z [EASY] Fox + [TITP] Captain Falcon (YS).slp
+training_data/02_25_54.526Z [EASY] Fox + [=P] Marth (BF).slp
+training_data/02_28_58.183Z [EASY] Fox + [=P] Marth (DL).slp
+training_data/02_35_05.561Z [EASY] Fox + [=P] Marth (YS).slp
+training_data/03_26_41 [RUDE] Fox + [INFP] Marth (PS).slp
+training_data/03_29_13 [RUDE] Fox + [INFP] Marth (YI).slp
+training_data/03_31_48 [RUDE] Fox + [INFP] Marth (BF).slp
+training_data/03_33_26 [RUDE] Fox + [INFP] Marth (FoD).slp
+training_data/03_36_08 [RUDE] Fox + [INFP] Marth (FD).slp
+training_data/03_39_21 [RUDE] Fox + [INFP] Marth (DL).slp
+training_data/03_42_14 [RUDE] Fox + [INFP] Captain Falcon (DL).slp
+training_data/03_44_11 [RUDE] Fox + [INFP] Captain Falcon (BF).slp
+training_data/04_03_29 [RUDE] Fox + [INFP] Ice Climbers (PS).slp
+training_data/04_05_55 [RUDE] Fox + [INFP] Ice Climbers (FD).slp
+training_data/04_09_24 [RUDE] Fox + [INFP] Ice Climbers (FoD).slp
+training_data/04_12_58 [RUDE] Fox + [INFP] Ice Climbers (YI).slp
+training_data/04_16_37 [RUDE] Fox + [INFP] Fox (YI).slp
+training_data/04_20_17 [RUDE] Fox + [INFP] Fox (FoD).slp
+training_data/04_22_43 [RUDE] Fox + [INFP] Fox (DL).slp
+training_data/04_26_02 [RUDE] Fox + [INFP] Sheik (BF).slp
+training_data/04_29_15 [RUDE] Fox + [INFP] Sheik (FD).slp
+training_data/07_22_48 [NELL] Fox + Falco (DL).slp
+training_data/07_26_05 [NELL] Fox + Falco (BF).slp
+training_data/07_28_51 [NELL] Fox + Falco (FoD).slp
+training_data/07_32_03 [NELL] Fox + Falco (PS).slp
+training_data/07_34_07 [NELL] Fox + Falco (FoD).slp
+training_data/07_42_32 Fox + Falco (FD).slp
+training_data/07_51_31 Fox + Falco (PS).slp
+training_data/07_59_51 Fox + Falco (FoD).slp
+training_data/08_06_33 Fox + Falco (PS).slp
+training_data/09_21_32 Fox + Luigi (FD).slp
+training_data/09_25_47 Fox + Ganondorf (YS).slp
+training_data/09_47_40 Fox + [ALLY] Yoshi (BF).slp
+training_data/09_50_42 Fox + [ALLY] Yoshi (PS).slp
+training_data/09_57_52 Fox + [C2] Marth (BF).slp
+training_data/10_04_53 Fox + Marth (PS).slp
+training_data/10_06_40 Fox + Marth (BF).slp
+training_data/10_14_15 Fox + Marth (YS).slp
+training_data/10_16_08 Fox + Marth (PS).slp
+training_data/10_17_56 Fox + Ganondorf (FoD).slp
+training_data/10_21_35 Fox + Marth (FD).slp
+training_data/10_24_50 Fox + Marth (YS).slp
+training_data/10_26_55 Fox + Fox (DL).slp
+training_data/10_30_23 Fox + Fox (BF).slp
+training_data/10_30_37 Fox + Marth (DL).slp
+training_data/10_31_16 Fox + Jigglypuff (FD).slp
+training_data/10_33_30 Fox + Marth (BF).slp
+training_data/10_33_33 Fox + Fox (FD).slp
+training_data/10_34_20 Fox + Sheik (YS).slp
+training_data/10_34_25 Fox + Jigglypuff (PS).slp
+training_data/10_35_13 Fox + Captain Falcon (FoD).slp
+training_data/10_36_40 Fox + Fox (PS).slp
+training_data/10_37_07 Fox + Captain Falcon (DL).slp
+training_data/10_37_23 Fox + Marth (YS).slp
+training_data/10_37_37 Fox + Jigglypuff (YS).slp
+training_data/10_38_20 Fox + Sheik (FD).slp
+training_data/10_39_21 Fox + [OASI] Captain Falcon (BF).slp
+training_data/10_39_29 Fox + Captain Falcon (PS).slp
+training_data/10_39_39 Fox + Fox (YS).slp
+training_data/10_39_52 Fox + Captain Falcon (FD).slp
+training_data/10_39_55 Fox + Jigglypuff (DL).slp
+training_data/10_40_02 Fox + Marth (FD).slp
+training_data/10_40_02 Fox + Ness (BF).slp
+training_data/10_41_00 Fox + Falco (DL).slp
+training_data/10_41_01 Fox + Sheik (DL).slp
+training_data/10_41_50 Fox + Captain Falcon (BF).slp
+training_data/10_42_12 [L] Fox + [= @] Fox (YS).slp
+training_data/10_43_46 Fox + Captain Falcon (YS).slp
+training_data/10_44_32 Fox + Sheik (FoD).slp
+training_data/10_44_48 Fox + Marth (FoD).slp
+training_data/10_45_37 Fox + Fox (FD).slp
+training_data/10_46_35 Fox + Fox (PS).slp
+training_data/10_48_04 Fox + Marth (BF).slp
+training_data/10_48_12 Fox + Sheik (BF).slp
+training_data/10_49_24 Fox + Sheik (YS).slp
+training_data/10_49_36 Fox + Jigglypuff (PS).slp
+training_data/10_50_00 Fox + Fox (FoD).slp
+training_data/10_50_29 Fox + Falco (DL).slp
+training_data/10_51_20 Fox + Jigglypuff (DL).slp
+training_data/10_52_10 Fox + [C2] Marth (BF).slp
+training_data/10_52_21 Fox + Sheik (YS).slp
+training_data/10_52_42 Fox + [C2] Marth (YS).slp
+training_data/10_53_07 Fox + Marth (FD).slp
+training_data/10_53_30 Fox + Fox (FD).slp
+training_data/10_53_33 Fox + Jigglypuff (FoD).slp
+training_data/10_54_38 Fox + Sheik (DL).slp
+training_data/10_55_09 Fox + [C2] Marth (FoD).slp
+training_data/10_55_34 Fox + Marth (FoD).slp
+training_data/10_55_48 Fox + [C2] Marth (PS).slp
+training_data/10_56_35 Fox + Sheik (FD).slp
+training_data/10_56_44 Fox + Fox (DL).slp
+training_data/10_56_50 Fox + Fox (FD).slp
+training_data/10_57_06 Fox + Sheik (BF).slp
+training_data/10_57_24 Fox + Marth (FD).slp
+training_data/10_58_47 Fox + Jigglypuff (PS).slp
+training_data/10_58_50 Fox + Sheik (FD).slp
+training_data/11_00_36 Fox + Fox (BF).slp
+training_data/11_00_53 Fox + Fox (FD).slp
+training_data/11_01_13 Fox + Falco (DL).slp
+training_data/11_02_11 Fox + Falco (FoD).slp
+training_data/11_02_16 Fox + Jigglypuff (FoD).slp
+training_data/11_02_45 Fox + Fox (FD).slp
+training_data/11_02_45 Fox + Link (PS).slp
+training_data/11_03_04 Fox + Fox (YS).slp
+training_data/11_03_22 Fox + Marth (BF).slp
+training_data/11_05_32 Fox + Peach (PS).slp
+training_data/11_05_33 Fox + Falco (FD).slp
+training_data/11_06_35 Fox + [CUMB] Fox (BF).slp
+training_data/11_07_05 Fox + Roy (PS).slp
+training_data/11_07_28 Fox + Peach (BF).slp
+training_data/11_07_53 Fox + Falco (BF).slp
+training_data/11_08_55 Fox + Fox (DL).slp
+training_data/11_09_46 Fox + Peach (DL).slp
+training_data/11_09_51 Fox + Falco (PS).slp
+training_data/11_11_36 Fox + Fox (PS).slp
+training_data/11_12_14 Fox + Falco (DL).slp
+training_data/11_12_32 Fox + Marth (BF).slp
+training_data/11_14_21 Fox + Fox (YS).slp
+training_data/11_14_26 Fox + Fox (DL).slp
+training_data/11_14_39 Fox + Sheik (FD).slp
+training_data/11_15_07 Fox + Fox (FD).slp
+training_data/11_15_19 Fox + Marth (BF).slp
+training_data/11_15_59 Fox + Marth (PS).slp
+training_data/11_16_09 Fox + Fox (FoD).slp
+training_data/11_16_49 Fox + Marth (FD).slp
+training_data/11_16_58 Fox + Falco (FoD).slp
+training_data/11_17_18 Fox + Falco (PS).slp
+training_data/11_17_22 Fox + Sheik (YS).slp
+training_data/11_17_47 Fox + Fox (BF).slp
+training_data/11_18_08 Fox + Fox (PS).slp
+training_data/11_18_18 Fox + Pichu (FoD).slp
+training_data/11_19_42 Fox + Sheik (YS).slp
+training_data/11_19_49 Fox + Fox (FoD).slp
+training_data/11_19_53 Fox + Marth (BF).slp
+training_data/11_20_01 Fox + Fox (FoD).slp
+training_data/11_20_26 Fox + Sheik (FoD).slp
+training_data/11_20_36 Fox + Fox (FD).slp
+training_data/11_20_53 Fox + Fox (FD).slp
+training_data/11_21_17 Fox + Captain Falcon (BF).slp
+training_data/11_21_47 Fox + [C2] Marth (FoD).slp
+training_data/11_21_53 Fox + Fox (YI).slp
+training_data/11_22_38 Fox + Sheik (BF).slp
+training_data/11_22_39 Fox + Fox (BF).slp
+training_data/11_22_49 Fox + Marth (BF).slp
+training_data/11_23_30 Fox + Falco (FD).slp
+training_data/11_23_32 Fox + Marth (FoD).slp
+training_data/11_23_51 Fox + Fox (DL).slp
+training_data/11_23_56 Fox + Marth (FD).slp
+training_data/11_24_05 Fox + [C2] Marth (BF).slp
+training_data/11_24_13 Fox + Captain Falcon (PS).slp
+training_data/11_24_31 Fox + Falco (YS).slp
+training_data/11_25_18 Fox + Fox (YS).slp
+training_data/11_25_21 Fox + Sheik (BF).slp
+training_data/11_25_37 Fox + Falco (PS).slp
+training_data/11_25_40 Fox + Marth (DL).slp
+training_data/11_25_41 Fox + Fox (FoD).slp
+training_data/11_25_54 Fox + Peach (BF).slp
+training_data/11_26_10 Fox + Marth (YS).slp
+training_data/11_26_11 Fox + Falco (FoD).slp
+training_data/11_26_42 Fox + Marth (DL).slp
+training_data/11_27_33 [CC] Fox + Jigglypuff (BF).slp
+training_data/11_27_34 Fox + Zelda (BF).slp
+training_data/11_27_59 Fox + Marth (PS).slp
+training_data/11_28_09 Fox + Fox (PS).slp
+training_data/11_28_14 Fox + Marth (FD).slp
+training_data/11_28_18 Fox + Fox (BF).slp
+training_data/11_28_43 Fox + Captain Falcon (DL).slp
+training_data/11_28_47 Fox + Fox (FD).slp
+training_data/11_28_56 Fox + Marth (DL).slp
+training_data/11_30_00 Fox + Marth (FD).slp
+training_data/11_30_04 Fox + Fox (YS).slp
+training_data/11_30_36 Fox + Zelda (PS).slp
+training_data/11_30_52 Fox + Captain Falcon (FoD).slp
+training_data/11_30_59 Fox + Marth (FD).slp
+training_data/11_31_04 Fox + Marth (FoD).slp
+training_data/11_31_15 Fox + Fox (DL).slp
+training_data/11_31_54 Fox + Marth (FD).slp
+training_data/11_32_27 Fox + Peach (PS).slp
+training_data/11_33_02 Fox + Zelda (FoD).slp
+training_data/11_33_09 Fox + Falco (YI).slp
+training_data/11_33_14 Fox + Fox (YS).slp
+training_data/11_33_22 Fox + Marth (PS).slp
+training_data/11_33_45 [B_X] Fox + [TBOY] Fox (BF).slp
+training_data/11_33_59 Fox + Marth (FD).slp
+training_data/11_33_59 Fox + Marth (PS).slp
+training_data/11_34_44 Fox + Falco (DL).slp
+training_data/11_34_49 Fox + Marth (PS).slp
+training_data/11_34_51 Fox + Fox (PS).slp
+training_data/11_35_19 Fox + Zelda (YS).slp
+training_data/11_36_13 Fox + Falco (BF).slp
+training_data/11_36_24 [B_X] Fox + [B_K] Fox (DL).slp
+training_data/11_36_27 Fox + Fox (FD).slp
+training_data/11_36_29 Fox + Fox (PS).slp
+training_data/11_36_44 Fox + Falco (FD).slp
+training_data/11_36_52 Fox + Jigglypuff (PS).slp
+training_data/11_37_20 Fox + Marth (FD).slp
+training_data/11_37_41 Fox + Fox (YI).slp
+training_data/11_38_00 Fox + Fox (YI).slp
+training_data/11_38_11 Fox + Falco (YS).slp
+training_data/11_38_15 Fox + Fox (BF).slp
+training_data/11_38_16 Fox + Marth (FD).slp
+training_data/11_38_36 Fox + Captain Falcon (BF).slp
+training_data/11_38_38 Fox + Zelda (YS).slp
+training_data/11_38_42 Fox + Falco (YI).slp
+training_data/11_39_01 Fox + Luigi (DL).slp
+training_data/11_39_10 Fox + Marth (YS).slp
+training_data/11_39_45 Fox + Falco (FoD).slp
+training_data/11_40_07 Fox + Falco (FD).slp
+training_data/11_40_23 Fox + Fox (BF).slp
+training_data/11_40_25 Fox + Jigglypuff (BF).slp
+training_data/11_40_33 Fox + Mario (PS).slp
+training_data/11_40_39 [NIG] Fox + [IKUM] Samus (PS).slp
+training_data/11_40_43 Fox + Marth (DL).slp
+training_data/11_41_01 Fox + Falco (DL).slp
+training_data/11_41_05 Fox + Fox (DL).slp
+training_data/11_41_09 Fox + Fox (YS).slp
+training_data/11_41_20 Fox + Fox (DL).slp
+training_data/11_41_47 Fox + Fox (FD).slp
+training_data/11_41_48 Fox + Fox (DL).slp
+training_data/11_41_55 Fox + Marth (BF).slp
+training_data/11_42_36 Fox + Jigglypuff (YS).slp
+training_data/11_42_47 Fox + Mario (BF).slp
+training_data/11_43_09 Fox + Falco (FoD).slp
+training_data/11_43_35 Fox + Marth (FoD).slp
+training_data/11_43_37 Fox + Fox (FD).slp
+training_data/11_43_38 Fox + Fox (FD).slp
+training_data/11_43_40 Fox + Fox (DL).slp
+training_data/11_43_54 Fox + Falco (YS).slp
+training_data/11_44_27 Fox + Jigglypuff (FoD).slp
+training_data/11_44_32 Fox + Marth (YS).slp
+training_data/11_44_36 Fox + Marth (BF).slp
+training_data/11_44_43 Fox + Falco (FD).slp
+training_data/11_44_43 Fox + Fox (BF).slp
+training_data/11_44_48 Fox + Fox (FD).slp
+training_data/11_45_00 Fox + Falco (YS).slp
+training_data/11_45_18 Fox + Fox (YS).slp
+training_data/11_45_20 Fox + Marth (BF).slp
+training_data/11_45_49 Fox + Falco (DL).slp
+training_data/11_46_14 [NIG] Fox + [IKUM] Samus (FD).slp
+training_data/11_46_30 Fox + Marth (YS).slp
+training_data/11_46_49 Fox + Marth (DL).slp
+training_data/11_47_06 Fox + Fox (YI).slp
+training_data/11_47_12 Fox + Marth (FD).slp
+training_data/11_47_13 Fox + Fox (FoD).slp
+training_data/11_47_20 Fox + Fox (PS).slp
+training_data/11_47_22 Fox + Falco (PS).slp
+training_data/11_47_29 Fox + Falco (DL).slp
+training_data/11_47_32 Fox + Fox (FoD).slp
+training_data/11_47_42 Fox + Falco (DL).slp
+training_data/11_47_58 Fox + Fox (BF).slp
+training_data/11_48_04 Fox + Marth (BF).slp
+training_data/11_48_25 Fox + Mario.slp
+training_data/11_49_14 Fox + Marth (PS).slp
+training_data/11_49_44 Fox + Marth (BF).slp
+training_data/11_49_52 Fox + Marth (PS).slp
+training_data/11_50_05 Fox + Fox (FD).slp
+training_data/11_50_10 [TITP] Fox + Marth (PS).slp
+training_data/11_50_20 Fox + Fox (PS).slp
+training_data/11_50_22 Fox + Falco (FD).slp
+training_data/11_50_23 Fox + Fox (BF).slp
+training_data/11_50_35 Fox + Fox (BF).slp
+training_data/11_50_43 Fox + Captain Falcon (FoD).slp
+training_data/11_50_45 Fox + Falco (YS).slp
+training_data/11_50_45 Fox + Fox (FD).slp
+training_data/11_52_02 Fox + Fox (DL).slp
+training_data/11_52_10 Fox + Fox (BF).slp
+training_data/11_53_03 [TITP] Fox + Link (BF).slp
+training_data/11_53_12 Fox + Marth (DL).slp
+training_data/11_53_13 Fox + Marth (BF).slp
+training_data/11_53_21 Fox + Falco (FoD).slp
+training_data/11_54_03 Fox + Fox (BF).slp
+training_data/11_54_11 Fox + Captain Falcon (DL).slp
+training_data/11_54_13 Fox + Fox (YS).slp
+training_data/11_54_20 Fox + Falco (FoD).slp
