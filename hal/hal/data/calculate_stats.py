@@ -4,7 +4,7 @@ from typing import Optional
 
 import numpy as np
 import numpy.ma as ma
-from constants import NP_MASK_VALUE
+from hal.constants import NP_MASK_VALUE
 from loguru import logger
 from streaming import StreamingDataset
 

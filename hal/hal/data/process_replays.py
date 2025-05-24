@@ -12,10 +12,11 @@ from typing import Dict
 from typing import Optional
 from typing import Tuple
 
+import pickle
 import melee
 import numpy as np
-from constants import NP_MASK_VALUE
-from data.calculate_stats import calculate_statistics_for_mds
+from hal.constants import NP_MASK_VALUE
+from hal.data.calculate_stats import calculate_statistics_for_mds
 from loguru import logger
 from streaming import MDSWriter
 from tqdm import tqdm
@@ -173,9 +174,17 @@ def process_replays(
                 with mp.Pool(max_parallelism) as pool:
                     samples = pool.imap_unordered(process_replay_partial, split_replay_paths)
                     for sample in tqdm(samples, total=num_replays, desc=f"Processing {split} split"):
-                        if sample is not None:
-                            out.write(sample)
-                            actual += 1
+                        if sample is None:
+                            continue
+                        
+                        # Override original writer and write pkl file instead
+                        uuid = int(sample["replay_uuid"][0])
+                        pkl_path = split_output_dir / f"{uuid}.pkl"
+                        with open (pkl_path, 'wb') as pf:
+                            pickle.dump(sample, pf)
+
+                        # out.write(sample)
+                        actual += 1
             logger.info(f"Wrote {actual} replays ({actual / num_replays:.2%}) to {split_output_dir}")
 
 
