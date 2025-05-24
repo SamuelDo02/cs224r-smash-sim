@@ -119,25 +119,40 @@ class PKLReplayBuffer:
             self.add_pkl_file(pkl_file)
         print(f"Loaded {self.current_size} total frames")
 
-    def sample(self, batch_size: int) -> Tuple[np.ndarray, np.ndarray]:
+    def sample(
+        self,
+        batch_size: int,
+        frame_window: int
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Sample a batch of transitions
-        
+        Sample a batch of transitions, each consisting of `frame_window`-frame stacks.
+
         Args:
-            batch_size: Number of transitions to sample
-            
+            batch_size:   Number of transition-stacks to sample.
+            frame_window:   How many consecutive observations to concatenate per sample.
+
         Returns:
-            Tuple of (observations, actions)
+            observations: np.ndarray of shape (batch_size, frame_window * obs_dim)
+            actions:      np.ndarray of shape (batch_size, action_dim)
         """
-        if self.current_size == 0:
-            raise ValueError("Buffer is empty!")
-            
-        indices = np.random.randint(0, self.current_size, size=batch_size)
-        
-        return (
-            np.stack([self.observations[i] for i in indices]),
-            np.stack([self.actions[i] for i in indices])
-        )
+        if self.current_size < frame_window:
+            raise ValueError(
+                f"Need at least {frame_window} frames to stack, "
+                f"but buffer only has {self.current_size}."
+            )
+
+        # valid start indices are 0 .. (current_size - frame_window)
+        max_start = self.current_size - frame_window + 1
+        starts = np.random.randint(0, max_start, size=batch_size)
+
+        obs_batch = []
+        act_batch = []
+        for t in starts:
+            frames = [self.observations[t + k] for k in range(frame_window)]
+            obs_batch.append(np.concatenate(frames, axis=-1))
+            act_batch.append(self.actions[t + frame_window - 1])
+
+        return np.stack(obs_batch), np.stack(act_batch)
 
     def save(self, save_path: str) -> None:
         """Save the replay buffer to a file"""

@@ -66,7 +66,7 @@ def train_bc(params):
 
     agent_params = {
         'ac_dim': env.action_space.shape[0],
-        'ob_dim': env.observation_space.shape[0],
+        'ob_dim': env.observation_space.shape[0] * params['frame_window'],
         'n_layers': params['n_layers'],
         'size': params['size'],
         'learning_rate': params['learning_rate'],
@@ -88,7 +88,8 @@ def train_bc(params):
         print(f'\nIteration {itr + 1}/{params["n_iter"]}')
         
         # Sample training data
-        observations, actions = replay_buffer.sample(params['batch_size'])
+        observations, actions = replay_buffer.sample(params['batch_size'], 
+                                                     frame_window=params['frame_window'])
         
         # Train the agent
         train_log = agent.train(observations, actions)
@@ -106,7 +107,8 @@ def train_bc(params):
         
         # Validate if we have validation data
         if val_buffer is not None and (itr + 1) % params['val_freq'] == 0:
-            val_observations, val_actions = val_buffer.sample(params['batch_size'])
+            val_observations, val_actions = val_buffer.sample(params['batch_size'],
+                                                              frame_window=params['frame_window'])
             val_log = agent.train(val_observations, val_actions, train=False)
             val_loss = val_log["Training Loss"]
             print(f'Validation Loss: {val_loss:.4f}')
@@ -158,6 +160,8 @@ def main():
                       help='How often to run validation')
     parser.add_argument('--seed', type=int, default=1,
                       help='Random seed')
+    parser.add_argument('--frame_window', type=int, default=5,
+                      help='How many frames to use per observation')
     args = parser.parse_args()
 
     # Create experiment directory
