@@ -116,8 +116,16 @@ def train_bc(params):
         # Log to wandb
         wandb.log({
             "train/loss": train_log["Training Loss"],
+            "train/success_rate": train_log["Success Rate"],
             "train/steps": steps_so_far
         })
+        
+        # Log all accuracy metrics
+        for metric_name, metric_value in train_log.items():
+            if metric_name not in ["Training Loss", "Success Rate"]:
+                wandb.log({
+                    f"train/{metric_name}": metric_value
+                })
         
         # Validate if we have validation data
         if val_buffer is not None and (itr + 1) % params['val_freq'] == 0:
@@ -126,12 +134,22 @@ def train_bc(params):
             val_log = agent.train(val_observations, val_actions, train=False)
             val_loss = val_log["Training Loss"]
             # print(f'Validation Loss: {val_loss:.4f}')
+            print(f'Validation Loss: {val_loss:.4f}')
+            print(f'Validation Success Rate: {val_log["Success Rate"]:.4f}')
             
             # Log validation metrics
             wandb.log({
                 "val/loss": val_loss,
+                "val/success_rate": val_log["Success Rate"],
                 "val/best_loss": best_val_loss
             })
+            
+            # Log all validation accuracy metrics
+            for metric_name, metric_value in val_log.items():
+                if metric_name not in ["Training Loss", "Success Rate"]:
+                    wandb.log({
+                        f"val/{metric_name}": metric_value
+                    })
             
             # Save best model
             if val_loss < best_val_loss:

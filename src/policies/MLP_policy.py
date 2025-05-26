@@ -6,6 +6,7 @@ import torch
 from torch import nn
 from torch import distributions
 import numpy as np
+from .metrics import compute_action_accuracy, compute_success_rate
 
 _str_to_activation = {
     'relu': nn.ReLU(),
@@ -167,8 +168,20 @@ class MLPPolicySL(nn.Module):
             loss.backward()
             self.optimizer.step()
 
-        return {
+        # Get predicted actions (mean of distribution)
+        pred_actions = dist.mean
+        
+        # Compute accuracy metrics
+        thresholds = [0.05, 0.1, 0.2]  # Thresholds for accuracy computation
+        accuracy_metrics = compute_action_accuracy(pred_actions, actions, thresholds)
+        success_rate = compute_success_rate(pred_actions, actions)
+
+        metrics = {
             'Training Loss': loss.item(),
             'Log Probs': log_probs.mean().item(),
+            'Success Rate': success_rate,
         }
+        metrics.update(accuracy_metrics)
+
+        return metrics
 

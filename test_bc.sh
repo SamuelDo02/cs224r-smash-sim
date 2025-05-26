@@ -10,6 +10,7 @@ BASE_EXP="melee_bc"
 LRS=(1e-3)
 
 # Number of layers to test
+
 LAYERS=(15 20 30)
 
 # Hidden layer sizes to test
