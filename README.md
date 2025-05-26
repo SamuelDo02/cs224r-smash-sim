@@ -31,12 +31,28 @@ can use ([link here](https://drive.google.com/file/d/1ab6ovA46tfiPZ2Y3a_yS1J3k36
 ![Slippi ML dataset info](images/slippi_dataset_info.png)
 
 ## Setup
-### Environment setup
+### Instance
+Use the AWS AMI from HW4: https://us-west-2.console.aws.amazon.com/ec2/home?region=us-west-2#LaunchInstances:ami=ami-0b9cb966e6b0bdcf8
+
+After setting up an instance, make sure to delete the two pre-existing conda environments to make space.
+
+### CS224R-Smash-Sim Repo
 ```
+git clone https://github.com/SamuelDo02/cs224r-smash-sim.git
 conda create -n melee python=3.11
 conda activate melee
 python -m pip install -r requirements.txt
+python -m pip install -e .
+pip install "git+https://github.com/vladfi1/libmelee"
 ```
+
+### Slippi-Ishiiruka Setup
+Follow README instructions here: https://github.com/ericyuegu/slippi-Ishiiruka/tree/ubuntu-20.04?tab=readme-ov-file
+Note that if the setup script cannot find RUSTC or CARGO, add this line to the setup script:
+```
+CMAKE_FLAGS+=' -DRust_CARGO=/home/ubuntu/.cargo/bin/cargo -DRust_COMPILER=/home/ubuntu/.cargo/bin/rustc'
+```
+
 
 ### Example usage
 ```
