@@ -10,24 +10,25 @@ BASE_EXP="melee_bc"
 LRS=(1e-3)
 
 # Number of layers to test
-LAYERS=(2 4 8)
+
+LAYERS=(15 20 30)
 
 # Hidden layer sizes to test
-SIZES=(32)
+SIZES=(1024 2048)
 
-# Replay buffer sizes to test (in thousands)
-BUFFER_SIZES=(1000000)
+# Policy types to test
+POLICIES=(mlp)
 
 # Run ablation studies
 for lr in "${LRS[@]}"; do
     for n_layers in "${LAYERS[@]}"; do
         for size in "${SIZES[@]}"; do
-            for buf_size in "${BUFFER_SIZES[@]}"; do
+            for policy in "${POLICIES[@]}"; do
                 # Calculate actual buffer size (convert from thousands)
-                actual_buf_size=$((buf_size * 1000))
+                # actual_buf_size=$((buf_size * 1000))
                 
                 # Create experiment name
-                exp_name="${BASE_EXP}_lr=${lr}_layers=${n_layers}_size=${size}"
+                exp_name="${BASE_EXP}_${policy}_lr=${lr}_layers=${n_layers}_size=${size}"
                 
                 echo "Running experiment: ${exp_name}"
                 
@@ -40,10 +41,10 @@ for lr in "${LRS[@]}"; do
                     --learning_rate ${lr} \
                     --n_layers ${n_layers} \
                     --size ${size} \
-                    --max_replay_buffer_size ${actual_buf_size} \
+                    --max_replay_buffer_size 1000000 \
                     --save_freq 10 \
                     --val_freq 5 \
-                    --seed 1
+                    --policy_type ${policy}
                 
                 echo "Completed experiment: ${exp_name}"
                 echo "----------------------------------------"
