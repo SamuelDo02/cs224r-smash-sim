@@ -2,6 +2,7 @@
 Behavior cloning agent for Melee
 """
 from policies.MLP_policy import MLPPolicySL
+from policies.Transformer_policy import TransformerPolicySL
 
 class BCAgent:
     """
@@ -18,13 +19,22 @@ class BCAgent:
         self.agent_params = agent_params
 
         # Create policy class as our actor
-        self.actor = MLPPolicySL(
-            self.agent_params['ac_dim'],
-            self.agent_params['ob_dim'],
-            self.agent_params['n_layers'],
-            self.agent_params['size'],
-            learning_rate=self.agent_params['learning_rate'],
-        )
+        if self.agent_params['policy_type'] == 'transformer':
+            self.actor = TransformerPolicySL(
+                self.agent_params['ac_dim'],
+                self.agent_params['ob_dim'],
+                self.agent_params['n_layers'],
+                self.agent_params['size'],
+                learning_rate=self.agent_params['learning_rate'],
+            )
+        else:
+            self.actor = MLPPolicySL(
+                self.agent_params['ac_dim'],
+                self.agent_params['ob_dim'],
+                self.agent_params['n_layers'],
+                self.agent_params['size'],
+                learning_rate=self.agent_params['learning_rate'],
+            )
 
     def train(self, ob_no, ac_na, train=True):
         """
