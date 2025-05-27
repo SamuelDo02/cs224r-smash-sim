@@ -38,7 +38,6 @@ After setting up an instance, make sure to delete the two pre-existing conda env
 
 ### CS224R-Smash-Sim Repo
 ```
-git clone https://github.com/SamuelDo02/cs224r-smash-sim.git
 conda create -n melee python=3.11
 conda activate melee
 python -m pip install -r requirements.txt
@@ -46,15 +45,20 @@ python -m pip install -e .
 pip install "git+https://github.com/vladfi1/libmelee"
 ```
 
-### Slippi-Ishiiruka Setup
-Follow README instructions here: https://github.com/ericyuegu/slippi-Ishiiruka/tree/ubuntu-20.04?tab=readme-ov-file
-Note that if the setup script cannot find RUSTC or CARGO, add this line to the setup script:
+### Emulator
+Get the prebuilt emulator Linux AppImage from vladfi1 here: https://github.com/vladfi1/slippi-Ishiiruka/releases/download/exi-ai-0.1.0/Slippi_Online-x86_64-ExiAI.AppImage 
+
+Run the following to extract the AppImage into binaries in a squashfs-root folder
 ```
-CMAKE_FLAGS+=' -DRust_CARGO=/home/ubuntu/.cargo/bin/cargo -DRust_COMPILER=/home/ubuntu/.cargo/bin/rustc'
+./Slippi_Online-x86_64-ExiAI.AppImage --appimage-extract
 ```
 
+Get melee.iso and squashfs-root and put them at the root of the directory (i.e. cs224r-smash-sim/)
 
-### Example usage
+### Example of running the emulator
+Checkout test_melee_env.py
+
+### Example of training
 ```
 python src/scripts/train_melee.py --data_dir=data --exp_name=initial_train
 ```
