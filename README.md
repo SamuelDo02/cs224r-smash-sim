@@ -31,14 +31,34 @@ can use ([link here](https://drive.google.com/file/d/1ab6ovA46tfiPZ2Y3a_yS1J3k36
 ![Slippi ML dataset info](images/slippi_dataset_info.png)
 
 ## Setup
-### Environment setup
+### Instance
+Use the AWS AMI from HW4: https://us-west-2.console.aws.amazon.com/ec2/home?region=us-west-2#LaunchInstances:ami=ami-0b9cb966e6b0bdcf8
+
+After setting up an instance, make sure to delete the two pre-existing conda environments to make space.
+
+### CS224R-Smash-Sim Repo
 ```
 conda create -n melee python=3.11
 conda activate melee
 python -m pip install -r requirements.txt
+python -m pip install -e .
+pip install "git+https://github.com/vladfi1/libmelee"
 ```
 
-### Example usage
+### Emulator
+Get the prebuilt emulator Linux AppImage from vladfi1 here: https://github.com/vladfi1/slippi-Ishiiruka/releases/download/exi-ai-0.1.0/Slippi_Online-x86_64-ExiAI.AppImage 
+
+Run the following to extract the AppImage into binaries in a squashfs-root folder
+```
+./Slippi_Online-x86_64-ExiAI.AppImage --appimage-extract
+```
+
+Get melee.iso and squashfs-root and put them at the root of the directory (i.e. cs224r-smash-sim/)
+
+### Example of running the emulator
+Checkout test_melee_env.py
+
+### Example of training
 ```
 python src/scripts/train_melee.py --data_dir=data --exp_name=initial_train
 ```

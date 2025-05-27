@@ -1,75 +1,24 @@
 """
-Defines a pytorch policy for Melee behavior cloning.
+Defines a transformer policy for Melee behavior cloning.
 """
 
 import torch
 from torch import nn
 from torch import distributions
 import numpy as np
-from .metrics import compute_action_accuracy, compute_success_rate
 
-_str_to_activation = {
-    'relu': nn.ReLU(),
-    'tanh': nn.Tanh(),
-    'leaky_relu': nn.LeakyReLU(),
-    'sigmoid': nn.Sigmoid(),
-    'selu': nn.SELU(),
-    'softplus': nn.Softplus(),
-    'identity': nn.Identity(),
-}
-
-def build_mlp(
-        input_size: int,
-        output_size: int,
-        n_layers: int,
-        size: int,
-        activation: str = 'tanh',
-        output_activation: str = 'identity',
-) -> nn.Module:
+class TransformerPolicySL(nn.Module):
     """
-    Builds a feedforward neural network
-    
-    Arguments:
-        n_layers: number of hidden layers
-        size: dimension of each hidden layer
-        activation: activation of each hidden layer
-        input_size: size of the input layer
-        output_size: size of the output layer
-        output_activation: activation of the output layer
-        
-    Returns:
-        MLP (nn.Module)
-    """
-    if isinstance(activation, str):
-        activation = _str_to_activation[activation]
-    if isinstance(output_activation, str):
-        output_activation = _str_to_activation[output_activation]
-
-    layers = []
-    
-    # First layer
-    layers.append(nn.Linear(input_size, size))
-    layers.append(activation)
-    
-    # Hidden layers
-    for _ in range(n_layers - 1):
-        layers.append(nn.Linear(size, size))
-        layers.append(activation)
-    
-    # Output layer
-    layers.append(nn.Linear(size, output_size))
-    layers.append(output_activation)
-
-    return nn.Sequential(*layers)
-
-class MLPPolicySL(nn.Module):
-    """
-    Defines an MLP for supervised learning which maps observations to actions
+    Defines a Transformer for supervised learning which maps observations to actions
 
     Attributes
     ----------
-    mean_net: nn.Sequential
-        A neural network that outputs the mean for continuous actions
+    transformer: nn.TransformerEncoder
+        A transformer encoder that processes the input sequence
+    input_proj: nn.Linear
+        Projects input observations to transformer dimension
+    output_proj: nn.Linear
+        Projects transformer output to action dimension
     logstd: nn.Parameter
         A separate parameter to learn the standard deviation of actions
     """
@@ -78,6 +27,8 @@ class MLPPolicySL(nn.Module):
                  ob_dim,
                  n_layers,
                  size,
+                 n_heads=4,
+                 dropout=0.1,
                  learning_rate=1e-4,
                  **kwargs
                  ):
@@ -88,28 +39,47 @@ class MLPPolicySL(nn.Module):
         self.ob_dim = ob_dim
         self.n_layers = n_layers
         self.size = size
+        self.n_heads = n_heads
+        self.dropout = dropout
         self.learning_rate = learning_rate
         
         # Set device
         self.device = torch.device('mps' if torch.backends.mps.is_available() else ('cuda' if torch.cuda.is_available() else 'cpu'))
 
-        # Create networks
-        self.mean_net = build_mlp(
-            input_size=self.ob_dim,
-            output_size=self.ac_dim,
-            n_layers=self.n_layers,
-            size=self.size,
-        )
-        self.mean_net.to(self.device)
+        # Input projection
+        self.input_proj = nn.Linear(ob_dim, size)
         
-        self.logstd = nn.Parameter(
-            torch.zeros(self.ac_dim, dtype=torch.float32, device=self.device)
+        # Positional encoding
+        self.pos_encoder = nn.Parameter(torch.zeros(1, 1, size))
+        
+        # Transformer encoder
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=size,
+            nhead=n_heads,
+            dim_feedforward=size * 4,
+            dropout=dropout,
+            activation='gelu',
+            batch_first=True
         )
-        self.logstd.to(self.device)
+        self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=n_layers)
+        
+        # Output projection
+        self.output_proj = nn.Sequential(
+            *[nn.Linear(size, size) for _ in range(n_layers-1)],
+            nn.Linear(size, ac_dim)
+        )
+        
+        # Log standard deviation
+        self.logstd = nn.Parameter(
+            torch.zeros(ac_dim, dtype=torch.float32, device=self.device)
+        )
+        
+        # Move to device
+        self.to(self.device)
         
         # Initialize optimizer
         self.optimizer = torch.optim.Adam(
-            list(self.mean_net.parameters()) + [self.logstd],
+            list(self.parameters()),
             self.learning_rate
         )
 
@@ -139,8 +109,25 @@ class MLPPolicySL(nn.Module):
         """
         Forward pass through the network
         """
-        mean = self.mean_net(observation)
+        # Add sequence dimension if needed
+        if len(observation.shape) == 2:
+            observation = observation.unsqueeze(1)
+            
+        # Project input
+        x = self.input_proj(observation)
+        
+        # Add positional encoding
+        x = x + self.pos_encoder
+        
+        # Apply transformer
+        x = self.transformer(x)
+        
+        # Project to action space
+        mean = self.output_proj(x).squeeze(1)  # Remove sequence dimension
+        
+        # Get standard deviation
         std = torch.exp(self.logstd)
+        
         return distributions.Normal(mean, std)
 
     def update(self, observations, actions, train=True):
@@ -160,7 +147,6 @@ class MLPPolicySL(nn.Module):
         dist = self.forward(observations)
         # print(actions, dist)
         log_probs = dist.log_prob(actions)
-
         loss = -log_probs.sum(dim=-1).mean()
     
         if train:
@@ -168,20 +154,6 @@ class MLPPolicySL(nn.Module):
             loss.backward()
             self.optimizer.step()
 
-        # Get predicted actions (mean of distribution)
-        pred_actions = dist.mean
-        
-        # Compute accuracy metrics
-        thresholds = [0.05, 0.1, 0.2]  # Thresholds for accuracy computation
-        accuracy_metrics = compute_action_accuracy(pred_actions, actions, thresholds)
-        success_rate = compute_success_rate(pred_actions, actions)
-
-        metrics = {
+        return {
             'Training Loss': loss.item(),
-            'Log Probs': log_probs.mean().item(),
-            'Success Rate': success_rate,
         }
-        metrics.update(accuracy_metrics)
-
-        return metrics
-
