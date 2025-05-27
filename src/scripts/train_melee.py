@@ -101,6 +101,7 @@ def train_bc(params):
                                                      frame_window=params['frame_window'])
         # Train the agent
         train_log = agent.train(observations, actions)
+        # print(train_log)
         # Print log probs every 500 iterations
         # if (itr + 1) % 500 == 0:
         #     print(agent.actor.get_action(observations[0]), actions[0], observations[0])
@@ -133,8 +134,8 @@ def train_bc(params):
             val_log = agent.train(val_observations, val_actions, train=False)
             val_loss = val_log["Training Loss"]
             # print(f'Validation Loss: {val_loss:.4f}')
-            print(f'Validation Loss: {val_loss:.4f}')
-            print(f'Validation Success Rate: {val_log["Success Rate"]:.4f}')
+            # print(f'Validation Loss: {val_loss:.4f}')
+            # print(f'Validation Success Rate: {val_log["Success Rate"]:.4f}')
             
             # Log validation metrics
             wandb.log({

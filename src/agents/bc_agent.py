@@ -1,8 +1,11 @@
 """
 Behavior cloning agent for Melee
 """
+from policies.GPT_AR_policy import GPTARPolicy
+from policies.GPT_policy import GPTPolicy
 from policies.MLP_policy import MLPPolicySL
 from policies.Transformer_policy import TransformerPolicySL
+from policies.preprocessor import Preprocessor
 
 class BCAgent:
     """
@@ -26,6 +29,14 @@ class BCAgent:
                 self.agent_params['n_layers'],
                 self.agent_params['size'],
                 learning_rate=self.agent_params['learning_rate'],
+            )
+        elif self.agent_params['policy_type'] == 'gpt':
+            self.actor = GPTPolicy(
+                preprocessor=Preprocessor()
+            )
+        elif self.agent_params['policy_type'] == 'gpt_ar':
+            self.actor = GPTARPolicy(
+                preprocessor=Preprocessor()
             )
         else:
             self.actor = MLPPolicySL(

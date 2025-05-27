@@ -11,13 +11,13 @@ LRS=(1e-3)
 
 # Number of layers to test
 
-LAYERS=(15 20 30)
+LAYERS=(15)
 
 # Hidden layer sizes to test
-SIZES=(1024 2048)
+SIZES=(1024)
 
 # Policy types to test
-POLICIES=(mlp)
+POLICIES=(gpt_ar)
 
 # Run ablation studies
 for lr in "${LRS[@]}"; do
@@ -37,14 +37,15 @@ for lr in "${LRS[@]}"; do
                     --data_dir "${DATA_DIR}" \
                     --exp_name "${exp_name}" \
                     --n_iter 5000 \
-                    --batch_size 64 \
+                    --batch_size 512 \
                     --learning_rate ${lr} \
                     --n_layers ${n_layers} \
                     --size ${size} \
-                    --max_replay_buffer_size 1000000 \
-                    --save_freq 10 \
-                    --val_freq 5 \
-                    --policy_type ${policy}
+                    --max_replay_buffer_size 100000000 \
+                    --save_freq 1000 \
+                    --val_freq 10 \
+                    --policy_type ${policy} \
+                    --seed 1
                 
                 echo "Completed experiment: ${exp_name}"
                 echo "----------------------------------------"
