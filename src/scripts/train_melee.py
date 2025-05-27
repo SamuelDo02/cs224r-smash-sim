@@ -99,7 +99,6 @@ def train_bc(params):
         # Sample training data
         observations, actions = replay_buffer.sample(params['batch_size'], 
                                                      frame_window=params['frame_window'])
-        
         # Train the agent
         train_log = agent.train(observations, actions)
         # Print log probs every 500 iterations
