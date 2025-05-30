@@ -133,8 +133,8 @@ def train_bc(params):
             val_log = agent.train(val_observations, val_actions, train=False)
             val_loss = val_log["Training Loss"]
             # print(f'Validation Loss: {val_loss:.4f}')
-            print(f'Validation Loss: {val_loss:.4f}')
-            print(f'Validation Success Rate: {val_log["Success Rate"]:.4f}')
+            # print(f'Validation Loss: {val_loss:.4f}')
+            # print(f'Validation Success Rate: {val_log["Success Rate"]:.4f}')
             
             # Log validation metrics
             wandb.log({
@@ -166,6 +166,13 @@ def train_bc(params):
             agent.save(save_path)
             # print(f'Checkpoint saved to {save_path}')
             wandb.save(save_path)
+
+        # eval the best model on the Env
+        
+
+    print('Stopping environment...')
+    env.stop()
+    print('Training complete!')
 
 def main():
     parser = argparse.ArgumentParser()

@@ -198,3 +198,8 @@ hal/
 
 # Sam's Python venv
 .smash
+
+squashfs-root/
+melee.iso
+Logs/
+replays/
