@@ -114,6 +114,9 @@ class MeleeEnv(gym.Env):
         self.game_ended = False
         self.max_frames = 10800  # 3 minutes at 60fps
         self.gamestate = None
+        self.num_stocks = 3
+        self.p1_reward = self.num_stocks * 400
+        self.p2_reward = self.num_stocks * 400
 
         self.start_game()
 
@@ -277,7 +280,7 @@ class MeleeEnv(gym.Env):
         # Take a step in the environment
         self.gamestate = self.console.step()
         if self.gamestate is None:
-            return None, 0, True, {}
+            return None, 0, True, {"issue": "gamestate is None"}
                 
         self.frame_count += 1
             
@@ -312,16 +315,21 @@ class MeleeEnv(gym.Env):
                     replay_file.rename(new_replay_path)
                     print(f"Replay moved to: {new_replay_path}")
 
-                return obs, 0, True, {}
+                return obs, 0, True, {"issue": "game ended"}
             
             # Progress indicator
             if self.frame_count % 300 == 0:  # Every 5 seconds
                 logger.info(f"Frame {self.frame_count} ({self.frame_count/60:.1f}s) - P1: {p1.stock} stocks, {p1.percent:.1f}%, P2: {p2.stock} stocks, {p2.percent:.1f}%")
 
-            return obs, 0, False, {}
-        else:
-            # If players aren't loaded yet, return zeros
-            return obs, 0, True, {}
+            p1_reward = (int(p1.stock) * 400 - int(p1.percent)) if p1.stock > 0 else -10000
+            p2_reward = (int(p2.stock) * 400 - int(p2.percent)) if p2.stock > 0 else -10000
+            last_reward = self.p1_reward - self.p2_reward
+            reward = (p1_reward - p2_reward) - last_reward
+            self.p1_reward = p1_reward
+            self.p2_reward = p2_reward
+            return obs, reward, False, {"issue": "game in progress"}
+
+        return obs, 0, False, {"issue": "game not started"}
 
     def render(self):
         """Render the environment"""

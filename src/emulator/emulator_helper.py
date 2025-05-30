@@ -43,6 +43,7 @@ def send_controller_inputs(controller: melee.Controller, inputs: Dict[str, Any])
         controller (melee.Controller): Controller object.
         inputs (Dict[str, Any]): Dictionary of controller inputs
     """
+    print(f'Inputs: {inputs}')
     controller.tilt_analog(
         melee.Button.BUTTON_MAIN,
         inputs["main_stick"][0],

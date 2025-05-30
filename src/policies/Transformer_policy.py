@@ -103,7 +103,12 @@ class TransformerPolicySL(nn.Module):
         dist = self.forward(observation)
         action = dist.sample()
         
-        return action.cpu().detach().numpy()
+        # Ensure output has correct shape (12,) and clamp values between -1 and 1
+        action = action.cpu().detach().numpy().squeeze()
+        if len(action.shape) > 1:
+            action = action.squeeze()
+        action = np.clip(action, -1.0, 1.0)
+        return action
 
     def forward(self, observation: torch.FloatTensor) -> distributions.Distribution:
         """

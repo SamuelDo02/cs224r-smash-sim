@@ -6,5 +6,5 @@ ORIGINAL_BUTTONS: Tuple[str, ...] = (
     "BUTTON_X",
     "BUTTON_Y",
     "BUTTON_Z",
-    "BUTTON_START"
+    "BUTTON_D_UP",
 )
