@@ -18,19 +18,21 @@ def process_inputs(actions: np.ndarray) -> Dict[str, Any]:
         "buttons": []                            # List to store pressed buttons
     }
 
-    button_map = {
-        6: ORIGINAL_BUTTONS[0],
-        7: ORIGINAL_BUTTONS[1], 
-        8: ORIGINAL_BUTTONS[2],
-        9: ORIGINAL_BUTTONS[3],
-        10: ORIGINAL_BUTTONS[4],
-        11: ORIGINAL_BUTTONS[5]
-    }
+    # Only process buttons if we have enough action dimensions
+    if len(actions) >= 12:
+        button_map = {
+            6: ORIGINAL_BUTTONS[0],
+            7: ORIGINAL_BUTTONS[1], 
+            8: ORIGINAL_BUTTONS[2],
+            9: ORIGINAL_BUTTONS[3],
+            10: ORIGINAL_BUTTONS[4],
+            11: ORIGINAL_BUTTONS[5]
+        }
 
-    # Add pressed buttons to list
-    for idx, val in button_map.items():
-        if actions[idx] > 0.5:
-            inputs["buttons"].append(val)
+        # Add pressed buttons to list
+        for idx, val in button_map.items():
+            if actions[idx] > 0.5:
+                inputs["buttons"].append(val)
     return inputs
 
 def send_controller_inputs(controller: melee.Controller, inputs: Dict[str, Any]) -> None:
@@ -41,6 +43,7 @@ def send_controller_inputs(controller: melee.Controller, inputs: Dict[str, Any])
         controller (melee.Controller): Controller object.
         inputs (Dict[str, Any]): Dictionary of controller inputs
     """
+    print(f'Inputs: {inputs}')
     controller.tilt_analog(
         melee.Button.BUTTON_MAIN,
         inputs["main_stick"][0],
