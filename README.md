@@ -38,6 +38,8 @@ After setting up an instance, make sure to delete the two pre-existing conda env
 
 ### CS224R-Smash-Sim Repo
 ```
+sudo apt-get install libasound2
+sudo apt-get install -y libegl1
 conda create -n melee python=3.11
 conda activate melee
 python -m pip install -r requirements.txt
