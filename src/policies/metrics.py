@@ -59,5 +59,17 @@ def compute_success_rate(pred_actions: torch.Tensor, target_actions: torch.Tenso
         Success rate as a float between 0 and 1
     """
     abs_errors = torch.abs(pred_actions - target_actions)
-    success = (abs_errors <= success_threshold).all(dim=-1).float().mean().item()
-    return success 
+    
+    # Split into continuous and discrete components
+    continuous_errors = abs_errors[..., :6]  # First 6 dims are continuous
+    discrete_errors = abs_errors[..., 6:]    # Last 6 dims are buttons
+    
+    # Continuous success: within threshold
+    continuous_success = (continuous_errors <= success_threshold).all(dim=-1)
+    
+    # Discrete success: exact match
+    discrete_success = (discrete_errors <= 0.5).all(dim=-1)  # 0.5 threshold for binary values
+    
+    # Overall success requires both continuous and discrete success
+    success = (continuous_success & discrete_success).float().mean().item()
+    return success

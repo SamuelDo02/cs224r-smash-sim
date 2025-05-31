@@ -101,6 +101,7 @@ def train_bc(params):
                                                      frame_window=params['frame_window'])
         # Train the agent
         train_log = agent.train(observations, actions)
+        # print(train_log)
         # Print log probs every 500 iterations
         # if (itr + 1) % 500 == 0:
         #     print(agent.actor.get_action(observations[0]), actions[0], observations[0])
