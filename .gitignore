@@ -198,3 +198,9 @@ hal/
 
 # Sam's Python venv
 .smash
+
+squashfs-root/
+melee.iso
+Logs/
+replays/
+Slippi_Online-x86_64-ExiAI.AppImage

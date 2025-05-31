@@ -71,7 +71,7 @@ class PKLReplayBuffer:
             data['p1_button_x'][frame_idx],        # X button
             data['p1_button_y'][frame_idx],        # Y button
             data['p1_button_z'][frame_idx],        # Z button
-            data['p1_button_start'][frame_idx]     # Start button
+            data['p1_button_d_up'][frame_idx]     # D up button
         ], dtype=np.float32)
         
         return action

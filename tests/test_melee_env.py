@@ -4,7 +4,7 @@ import os
 import sys
 import time
 from pathlib import Path
-
+import numpy as np
 # Add the src directory to the path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src" / "infrastructure"))
 
@@ -38,7 +38,10 @@ def test_melee_env():
         # Run game loop
         print("🚀 Starting game loop...")
         while env.gaming():
-            env.step(None)
+            # Create action array with first value 1, rest 0
+            action = np.zeros(12)
+            action[0] = 1
+            env.step(action)
         
         # Check for replay generation
         print("🔍 Checking for replay files...")

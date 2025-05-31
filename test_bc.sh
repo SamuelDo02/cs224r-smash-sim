@@ -11,10 +11,10 @@ LRS=(1e-3)
 
 # Number of layers to test
 
-LAYERS=(15 20 30)
+LAYERS=(15)
 
 # Hidden layer sizes to test
-SIZES=(1024 2048)
+SIZES=(1024)
 
 # Policy types to test
 POLICIES=(mlp)
