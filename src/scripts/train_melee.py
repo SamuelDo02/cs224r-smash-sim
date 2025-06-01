@@ -217,7 +217,7 @@ def main():
     if not os.path.exists(data_path):
         os.makedirs(data_path)
     
-    logdir = f"melee_bc_{args.exp_name}_{time.strftime('%d-%m-%Y_%H-%M-%S')}"
+    logdir = f"{args.exp_name}_{time.strftime('%d-%m-%Y_%H-%M-%S')}"
     logdir = os.path.join(data_path, logdir)
     if not os.path.exists(logdir):
         os.makedirs(logdir)

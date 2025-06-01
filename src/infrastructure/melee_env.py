@@ -57,7 +57,7 @@ class MeleeEnv(gym.Env):
         print(f"Console kwargs: {console_kwargs}")
 
         self.action_space = spaces.Box(
-            low=-1.0,
+            low=0,
             high=1.0,
             shape=(12,),  # [main_x, main_y, c_x, c_y, l_trigger, r_trigger, a, b, x, y, z, start]
             dtype=np.float32

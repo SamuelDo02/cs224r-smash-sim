@@ -62,9 +62,9 @@ def evaluate_model(params):
         agent.value_net.load_state_dict(state_dict['value_state_dict'])
         agent.q_net.load_state_dict(state_dict['q_state_dict'])
         agent.actor.load_state_dict(state_dict['policy_state_dict'])
+        agent.value_net.eval()
+        agent.q_net.eval()
     agent.actor.eval()  # Set to evaluation mode
-    agent.value_net.eval()
-    agent.q_net.eval()
 
     # Evaluation loop
     print('Starting evaluation...')
@@ -150,6 +150,8 @@ def main():
                       help='Number of steps to evaluate')
     parser.add_argument('--method', type=str, default='bc',
                       help='Method to use for training')
+    parser.add_argument('--seed', type=int, default=1,
+                      help='Random seed')
     args = parser.parse_args()
 
     # Convert arguments to dictionary

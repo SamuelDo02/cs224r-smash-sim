@@ -1,8 +1,9 @@
 """Adapted from Karpathy's nanoGPT: https://github.com/karpathy/nanoGPT."""
 import math
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 import attr
+from emulator.constants import JOYSTICK_POINTS, NUM_JOYSTICK_POSITIONS
 import numpy as np
 from policies.metrics import compute_action_accuracy, compute_success_rate
 from policies.preprocessor import Preprocessor
@@ -22,7 +23,7 @@ class GPTConfig:
     dropout: float = 0.0
     bias: bool = True  # True: bias in Linears and LayerNorms, like GPT-2. False: a bit better and faster
     learning_rate: float = 1e-3  # Default learning rate
-    multi_token_heads: tuple[int, ...] = (2,)  # Numbers of frames in the future to predict
+    multi_token_heads: tuple[int, ...] = (1,)  # Numbers of frames in the future to predict
 
 class CausalSelfAttentionRelativePosition(nn.Module):
     def __init__(self, config: GPTConfig) -> None:
@@ -141,10 +142,13 @@ class GPTARPolicy(nn.Module):
         main_stick_output_dim = self.target_shapes_by_head["main_stick"][0]
         button_output_dim = self.target_shapes_by_head["buttons"][0]
 
+        # Update output dimensions for one-hot predictions
+        self.num_joystick_positions = len(JOYSTICK_POINTS)
+        
         # Multiply output sizes by number of future frames to predict
         shoulder_output_size = shoulder_output_dim * self.num_multi_token_output_heads
-        c_stick_output_size = c_stick_output_dim * self.num_multi_token_output_heads
-        main_stick_output_size = main_stick_output_dim * self.num_multi_token_output_heads
+        c_stick_output_size = self.num_joystick_positions * self.num_multi_token_output_heads  # One-hot for C-stick
+        main_stick_output_size = self.num_joystick_positions * self.num_multi_token_output_heads  # One-hot for main stick
         button_output_size = button_output_dim * self.num_multi_token_output_heads
 
         # Input sizes for each head
@@ -153,7 +157,7 @@ class GPTARPolicy(nn.Module):
         main_stick_input_size = self.n_embd + shoulder_output_size + c_stick_output_size
         button_input_size = self.n_embd + shoulder_output_size + c_stick_output_size + main_stick_output_size
 
-        # Put shoulder and c-stick first because they are less complex and they modify/override other inputs
+        # Update output heads with softmax for one-hot predictions
         self.shoulder_head = nn.Sequential(
             nn.LayerNorm(shoulder_input_size, bias=gpt_config.bias),
             nn.Linear(shoulder_input_size, shoulder_input_size // 2),
@@ -166,6 +170,7 @@ class GPTARPolicy(nn.Module):
             nn.Linear(c_stick_input_size, c_stick_input_size // 2),
             nn.GELU(),
             nn.Linear(c_stick_input_size // 2, c_stick_output_size),
+            nn.Softmax(dim=-1)  # Add softmax for one-hot prediction
         )
 
         self.main_stick_head = nn.Sequential(
@@ -173,6 +178,7 @@ class GPTARPolicy(nn.Module):
             nn.Linear(main_stick_input_size, main_stick_input_size // 2),
             nn.GELU(),
             nn.Linear(main_stick_input_size // 2, main_stick_output_size),
+            nn.Softmax(dim=-1)  # Add softmax for one-hot prediction
         )
 
         self.button_head = nn.Sequential(
@@ -225,25 +231,45 @@ class GPTARPolicy(nn.Module):
             x_BLD = block(x_BLD)
         x_BLD = self.transformer.ln_f(x_BLD)
 
-        # Process all time steps at once for each output mode, autoregressively decode next head
-        shoulder = self.shoulder_head(x_BLD)
-        c_stick = self.c_stick_head(torch.cat((x_BLD, shoulder.detach()), dim=-1))
-        main_stick = self.main_stick_head(torch.cat((x_BLD, shoulder.detach(), c_stick.detach()), dim=-1))
-        button = self.button_head(torch.cat((x_BLD, shoulder.detach(), c_stick.detach(), main_stick.detach()), dim=-1))
-
-        # Reshape outputs to include future frame dimension
-        shoulder = shoulder.view(B, L, self.num_multi_token_output_heads, self.target_shapes_by_head["shoulder"][0])
-        c_stick = c_stick.view(B, L, self.num_multi_token_output_heads, self.target_shapes_by_head["c_stick"][0])
-        main_stick = main_stick.view(B, L, self.num_multi_token_output_heads, self.target_shapes_by_head["main_stick"][0])
-        button = button.view(B, L, self.num_multi_token_output_heads, self.target_shapes_by_head["buttons"][0])
-
-        # Create result dictionary with predictions for each future frame
+        # Initialize result dictionary
         result = {}
-        for i, offset in enumerate(self.multi_token_heads):
-            result[f"shoulder_{offset}"] = shoulder[:, :, i, :]
-            result[f"c_stick_{offset}"] = c_stick[:, :, i, :]
-            result[f"main_stick_{offset}"] = main_stick[:, :, i, :]
-            result[f"buttons_{offset}"] = button[:, :, i, :]
+        
+        # For each future frame we want to predict
+        for offset in self.multi_token_heads:
+            # Get the current sequence up to this point
+            current_x = x_BLD
+            
+            # Process all time steps at once for each output mode, autoregressively decode next head
+            shoulder = self.shoulder_head(current_x)
+            c_stick = self.c_stick_head(torch.cat((current_x, shoulder.detach()), dim=-1))
+            main_stick = self.main_stick_head(torch.cat((current_x, shoulder.detach(), c_stick.detach()), dim=-1))
+            button = self.button_head(torch.cat((current_x, shoulder.detach(), c_stick.detach(), main_stick.detach()), dim=-1))
+
+            # Store predictions for this frame
+            result[f"shoulder_{offset}"] = shoulder[:, :, :]  # Take last timestep
+            result[f"c_stick_{offset}"] = c_stick[:, :, :]
+            result[f"main_stick_{offset}"] = main_stick[:, :, :]
+            result[f"buttons_{offset}"] = button[:, :, :]
+
+            # If we're not at the last frame, update the input sequence with our predictions
+            if offset < self.multi_token_heads[-1]:
+                # Create new input for next frame by appending current predictions
+                new_input = torch.cat([
+                    inputs["gamestate"],
+                    shoulder[:, :, -1, :],
+                    c_stick[:, :, -1, :],
+                    main_stick[:, :, -1, :],
+                    button[:, :, -1, :]
+                ], dim=-1)
+                
+                # Update the input sequence
+                inputs["gamestate"] = new_input
+                combined_inputs_BLG = self._embed_inputs(inputs)
+                proj_inputs_BLD = self.transformer.proj_down(combined_inputs_BLG)
+                x_BLD = self.transformer.drop(proj_inputs_BLD)
+                for block in self.transformer.h:
+                    x_BLD = block(x_BLD)
+                x_BLD = self.transformer.ln_f(x_BLD)
 
         return TensorDict(result, batch_size=(B, L))
     
@@ -251,21 +277,37 @@ class GPTARPolicy(nn.Module):
         """Get action from the policy."""
         inputs = self.preprocessor.preprocess_observation(obs)
         outputs = self.forward(inputs)
+        
         # map this to the action space 
         # [main_x, main_y, c_x, c_y, l_trigger, r_trigger, a, b, x, y, z, start]
         action = np.zeros(12)
-        action[0] = outputs['main_stick_2'][0, -1, 0]
-        action[1] = outputs['main_stick_2'][0, -1, 1]
-        action[2] = outputs['c_stick_2'][0, -1, 0]
-        action[3] = outputs['c_stick_2'][0, -1, 1]
-        action[4] = outputs['shoulder_2'][0, -1, 0]
-        action[5] = outputs['shoulder_2'][0, -1, 1]
-        action[6] = outputs['buttons_2'][0, -1, 0]
-        action[7] = outputs['buttons_2'][0, -1, 1]
-        action[8] = outputs['buttons_2'][0, -1, 2]
-        action[9] = outputs['buttons_2'][0, -1, 3]
-        action[10] = outputs['buttons_2'][0, -1, 4]
-        action[11] = outputs['buttons_2'][0, -1, 5]
+        
+        # Get the predicted one-hot vectors for the joysticks
+        main_stick_onehot = outputs['main_stick_1'][0, -1, :NUM_JOYSTICK_POSITIONS]
+        c_stick_onehot = outputs['c_stick_1'][0, -1, :NUM_JOYSTICK_POSITIONS]
+        
+        # Convert one-hot predictions to indices
+        main_stick_idx = torch.argmax(main_stick_onehot).item()
+        c_stick_idx = torch.argmax(c_stick_onehot).item()
+        
+        # Get coordinates from predefined points
+        main_x, main_y = JOYSTICK_POINTS[main_stick_idx]
+        c_x, c_y = JOYSTICK_POINTS[c_stick_idx]
+        
+        # Fill in the action array
+        action[0] = main_x
+        action[1] = main_y
+        action[2] = c_x
+        action[3] = c_y
+        action[4] = outputs['shoulder_1'][0, -1, 0].item()  # L trigger
+        action[5] = outputs['shoulder_1'][0, -1, 1].item()  # R trigger
+        action[6] = outputs['buttons_1'][0, -1, 0].item()   # A
+        action[7] = outputs['buttons_1'][0, -1, 1].item()   # B
+        action[8] = outputs['buttons_1'][0, -1, 2].item()   # X
+        action[9] = outputs['buttons_1'][0, -1, 3].item()   # Y
+        action[10] = outputs['buttons_1'][0, -1, 4].item()  # Z
+        action[11] = outputs['buttons_1'][0, -1, 5].item()  # Start
+        
         return action
     
 
@@ -296,12 +338,14 @@ class GPTARPolicy(nn.Module):
         # Get action distribution
         outputs = self.forward(observations)
 
-        # Compute MSE loss for each component and future frame
+        # Compute loss for each component and future frame
         loss = 0.0
         loss_dict = {}
         
         # Get the base component names without the frame offset
         base_components = ["buttons", "main_stick", "c_stick", "shoulder"]
+
+        # print(actions["main_stick"])
         
         for component in base_components:
             component_loss = 0.0
@@ -310,9 +354,24 @@ class GPTARPolicy(nn.Module):
                 output_key = f"{component}_{offset}"
                 # Only compute loss for frames we have ground truth for
                 if offset <= actions[component].shape[1]:
-                    frame_loss = F.mse_loss(outputs[output_key], actions[component])
+                    if component in ["main_stick", "c_stick"]:
+                        # print(actions[component])
+                        # action component is the one hot encoded joystick point
+                        target_indices = actions[component][0].argmax(dim=-1)   
+                        
+                            
+                        # Use cross entropy loss for one-hot predictions
+                        frame_loss = F.cross_entropy(
+                            outputs[output_key][0].view(-1, len(JOYSTICK_POINTS)),
+                            target_indices.view(-1)
+                        )
+                    else:
+                        # Use MSE loss for other components
+                        frame_loss = F.mse_loss(outputs[output_key][0], actions[component][0])
+                    
                     component_loss += frame_loss
                     loss_dict[f'{output_key}_loss'] = frame_loss.item()
+            
             loss += component_loss
             loss_dict[f'{component}_total_loss'] = component_loss.item()
 

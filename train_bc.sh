@@ -42,7 +42,7 @@ for lr in "${LRS[@]}"; do
                     --n_layers ${n_layers} \
                     --size ${size} \
                     --max_replay_buffer_size 1000000 \
-                    --save_freq 100 \
+                    --save_freq 10 \
                     --val_freq 10 \
                     --policy_type ${policy} \
                     --seed 1
