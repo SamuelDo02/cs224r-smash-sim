@@ -9,7 +9,7 @@ def process_inputs(actions: np.ndarray) -> Dict[str, Any]:
     """
     Process the actions into a dictionary of controller inputs
     """
-    print(f'Actions: {actions}')
+    # print(f'Actions: {actions}')
     # Map continuous action values to controller inputs
     inputs = {
         "main_stick": [actions[0], actions[1]],  # Main stick X,Y
@@ -44,7 +44,7 @@ def send_controller_inputs(controller: melee.Controller, inputs: Dict[str, Any])
         controller (melee.Controller): Controller object.
         inputs (Dict[str, Any]): Dictionary of controller inputs
     """
-    print(f'Inputs: {inputs}')
+    # print(f'Inputs: {inputs}')
     controller.tilt_analog(
         melee.Button.BUTTON_MAIN,
         inputs["main_stick"][0],

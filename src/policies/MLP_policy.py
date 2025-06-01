@@ -130,7 +130,7 @@ class MLPPolicySL(nn.Module):
 
         # Convert to tensor and get action
         observation = torch.as_tensor(observation, dtype=torch.float32).to(self.device)
-        print(f'Observation: {observation}')
+        # print(f'Observation: {observation}')
         dist = self.forward(observation)
         action = dist.sample()
         # print(f'Action: {action}')

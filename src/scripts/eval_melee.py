@@ -55,8 +55,16 @@ def evaluate_model(params):
     # Load the best model
     model_path = os.path.join(params['logdir'], 'best_policy.pt')
     print(f'Loading model from {model_path}')
-    agent.actor.load_state_dict(torch.load(model_path))
+    if params['method'] == 'bc':
+        agent.actor.load_state_dict(torch.load(model_path))
+    elif params['method'] == 'iql':
+        state_dict = torch.load(model_path)
+        agent.value_net.load_state_dict(state_dict['value_state_dict'])
+        agent.q_net.load_state_dict(state_dict['q_state_dict'])
+        agent.actor.load_state_dict(state_dict['policy_state_dict'])
     agent.actor.eval()  # Set to evaluation mode
+    agent.value_net.eval()
+    agent.q_net.eval()
 
     # Evaluation loop
     print('Starting evaluation...')
@@ -152,3 +160,4 @@ def main():
 
 if __name__ == "__main__":
     main() 
+
