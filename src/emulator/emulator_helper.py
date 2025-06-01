@@ -9,6 +9,7 @@ def process_inputs(actions: np.ndarray) -> Dict[str, Any]:
     """
     Process the actions into a dictionary of controller inputs
     """
+    print(f'Actions: {actions}')
     # Map continuous action values to controller inputs
     inputs = {
         "main_stick": [actions[0], actions[1]],  # Main stick X,Y

@@ -246,16 +246,27 @@ class GPTARPolicy(nn.Module):
             result[f"buttons_{offset}"] = button[:, :, i, :]
 
         return TensorDict(result, batch_size=(B, L))
-
-    def get_action(
-        self,
-        inputs: TensorDict,
-        deterministic: bool = True,
-        **kwargs: Any,
-    ) -> Tuple[TensorDict, Optional[Dict[str, Any]]]:
+    
+    def get_action(self, obs: np.ndarray) -> np.ndarray:
         """Get action from the policy."""
+        inputs = self.preprocessor.preprocess_observation(obs)
         outputs = self.forward(inputs)
-        return outputs, None
+        # map this to the action space 
+        # [main_x, main_y, c_x, c_y, l_trigger, r_trigger, a, b, x, y, z, start]
+        action = np.zeros(12)
+        action[0] = outputs['main_stick_2'][0, -1, 0]
+        action[1] = outputs['main_stick_2'][0, -1, 1]
+        action[2] = outputs['c_stick_2'][0, -1, 0]
+        action[3] = outputs['c_stick_2'][0, -1, 1]
+        action[4] = outputs['shoulder_2'][0, -1, 0]
+        action[5] = outputs['shoulder_2'][0, -1, 1]
+        action[6] = outputs['buttons_2'][0, -1, 0]
+        action[7] = outputs['buttons_2'][0, -1, 1]
+        action[8] = outputs['buttons_2'][0, -1, 2]
+        action[9] = outputs['buttons_2'][0, -1, 3]
+        action[10] = outputs['buttons_2'][0, -1, 4]
+        action[11] = outputs['buttons_2'][0, -1, 5]
+        return action
     
 
     def update(self, observations, actions, train=True):

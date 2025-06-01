@@ -4,20 +4,20 @@
 DATA_DIR="data/"
 
 # Base experiment name
-BASE_EXP="melee_bc"
+BASE_EXP="melee_iql"
 
 # Learning rates to test
-LRS=(1e-3)
+LRS=(1e-4)
 
 # Number of layers to test
 
 LAYERS=(15)
 
 # Hidden layer sizes to test
-SIZES=(1024)
+SIZES=(128)
 
 # Policy types to test
-POLICIES=(gpt_ar)
+POLICIES=(mlp)
 
 # Run ablation studies
 for lr in "${LRS[@]}"; do
@@ -41,11 +41,12 @@ for lr in "${LRS[@]}"; do
                     --learning_rate ${lr} \
                     --n_layers ${n_layers} \
                     --size ${size} \
-                    --max_replay_buffer_size 100000000 \
-                    --save_freq 1000 \
+                    --max_replay_buffer_size 1000000 \
+                    --save_freq 100 \
                     --val_freq 10 \
                     --policy_type ${policy} \
-                    --seed 1
+                    --seed 1 \
+                    --method iql
                 
                 echo "Completed experiment: ${exp_name}"
                 echo "----------------------------------------"

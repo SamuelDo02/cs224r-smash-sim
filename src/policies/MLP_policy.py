@@ -133,7 +133,7 @@ class MLPPolicySL(nn.Module):
         print(f'Observation: {observation}')
         dist = self.forward(observation)
         action = dist.sample()
-        print(f'Action: {action}')
+        # print(f'Action: {action}')
         
         # Ensure output has correct shape (12,)
         action = action.cpu().detach().numpy().squeeze()

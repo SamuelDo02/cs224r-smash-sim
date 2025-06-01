@@ -4,9 +4,11 @@ Evaluate a trained behavior cloning agent on the Melee environment
 
 import os
 import argparse
+from agents.iql_agent import IQLAgent
 import torch
 import numpy as np
 from pathlib import Path
+from collections import deque
 
 from agents.bc_agent import BCAgent
 from infrastructure.melee_env import MeleeEnv
@@ -42,10 +44,13 @@ def evaluate_model(params):
         'size': params['size'],
         'learning_rate': params['learning_rate'],
         'max_replay_buffer_size': params['max_replay_buffer_size'],
-        'policy_type': params['policy_type']
+        'policy_type': params['policy_type'],
+        'method': params['method']
     }
-
-    agent = BCAgent(env, agent_params)
+    if params['method'] == 'bc':
+        agent = BCAgent(env, agent_params)
+    elif params['method'] == 'iql':
+        agent = IQLAgent(env, agent_params)
 
     # Load the best model
     model_path = os.path.join(params['logdir'], 'best_policy.pt')
@@ -60,28 +65,31 @@ def evaluate_model(params):
     max_steps = params['n_steps']
     obs = env.get_frame_history()
     done = False
+    past_observations = deque(maxlen=params['frame_window'])
+    for i in range(params['frame_window'] - 1):
+        past_observations.append(np.zeros_like(obs))
+    past_observations.append(obs)
 
     while step_count < max_steps:
         # Get action from policy
         with torch.no_grad():
-            action = agent.actor.get_action(obs)
-            # action = np.random.uniform(-1, 1, env.action_space.shape[0])
-            # action = np.clip(action, -1.0, 1.0)
-            # action = np.sin(2 * np.pi * step_count / 1000) * np.ones(env.action_space.shape[0])
-            # Keep first 4 values, set rest to 0
-  
-            # action = np.clip(action, -1.0, 1.0)
-            # action = np.zeros(env.action_space.shape[0])
-            print(f'Action: {action} for step {step_count + 1}')
-            # print(f'Action: {action} for episode {episode_count + 1}')
+            if params['policy_type'] == 'gpt_ar':
+                stacked_obs = torch.from_numpy(np.stack(past_observations)).float().unsqueeze(0)
+                # print(stacked_obs.shape)
+                action = agent.actor.get_action(stacked_obs)
+            else:
+                action = agent.actor.get_action(obs)
+            
+            # print(f'Action: {action} for step {step_count + 1}')
             wandb.log({"action": action.tolist()}, step=step_count)
         
         # Take step in environment
         obs, reward, done, info = env.step(action)
+        past_observations.append(obs)
         total_reward += reward
 
-        print(f'Step {step_count + 1} finished with reward: {reward:.2f}')
-        print(f'Info: {info}')
+        # print(f'Step {step_count + 1} finished with reward: {reward:.2f}')
+        # print(f'Info: {info}')
         wandb.log({
             "step_reward": reward,
             "step": step_count
@@ -132,6 +140,8 @@ def main():
                       help='Name of the experiment')
     parser.add_argument('--n_steps', type=int, default=10000,
                       help='Number of steps to evaluate')
+    parser.add_argument('--method', type=str, default='bc',
+                      help='Method to use for training')
     args = parser.parse_args()
 
     # Convert arguments to dictionary
