@@ -238,15 +238,11 @@ class GPTPolicy(nn.Module):
             batch_size=(B, L),
         )
 
-    def get_action(
-        self,
-        inputs: TensorDict,
-        deterministic: bool = True,
-        **kwargs: Any,
-    ) -> Tuple[TensorDict, Optional[Dict[str, Any]]]:
+    def get_action(self, obs: np.ndarray) -> np.ndarray:
         """Get action from the policy."""
+        inputs = self.preprocessor.preprocess_observation(obs)
         outputs = self.forward(inputs)
-        return outputs, None
+        return outputs
     
 
     def update(self, observations, actions, train=True):

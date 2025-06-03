@@ -6,6 +6,7 @@ from policies.GPT_policy import GPTPolicy
 from policies.MLP_policy import MLPPolicySL
 from policies.Transformer_policy import TransformerPolicySL
 from policies.preprocessor import Preprocessor
+import torch
 
 class BCAgent:
     """
@@ -20,7 +21,8 @@ class BCAgent:
         # Initialize variables
         self.env = env
         self.agent_params = agent_params
-
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        # print(self.agent_params)
         # Create policy class as our actor
         if self.agent_params['policy_type'] == 'transformer':
             self.actor = TransformerPolicySL(

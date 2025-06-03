@@ -202,5 +202,5 @@ hal/
 squashfs-root/
 melee.iso
 Logs/
-replays/
+# replays/
 Slippi_Online-x86_64-ExiAI.AppImage

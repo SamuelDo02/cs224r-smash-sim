@@ -4,12 +4,13 @@ from typing import Any, Dict, List
 
 import numpy as np
 
-
 def process_inputs(actions: np.ndarray) -> Dict[str, Any]:
     """
     Process the actions into a dictionary of controller inputs
     """
+    # print(f'Actions: {actions}')
     # Map continuous action values to controller inputs
+
     inputs = {
         "main_stick": [actions[0], actions[1]],  # Main stick X,Y
         "c_stick": [actions[2], actions[3]],     # C-stick X,Y
@@ -19,7 +20,7 @@ def process_inputs(actions: np.ndarray) -> Dict[str, Any]:
     }
 
     # Only process buttons if we have enough action dimensions
-    if len(actions) >= 12:
+    if len(actions) >= 12: 
         button_map = {
             6: ORIGINAL_BUTTONS[0],
             7: ORIGINAL_BUTTONS[1], 
@@ -44,6 +45,7 @@ def send_controller_inputs(controller: melee.Controller, inputs: Dict[str, Any])
         inputs (Dict[str, Any]): Dictionary of controller inputs
     """
     print(f'Inputs: {inputs}')
+
     controller.tilt_analog(
         melee.Button.BUTTON_MAIN,
         inputs["main_stick"][0],
@@ -75,4 +77,5 @@ def send_controller_inputs(controller: melee.Controller, inputs: Dict[str, Any])
         else:
             controller.release_button(button)
 
+    controller.flush()
     controller.flush()

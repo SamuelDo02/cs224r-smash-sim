@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 from typing import Dict, Tuple
 
+from emulator.constants import NUM_JOYSTICK_POSITIONS, get_closest_joystick_point
 import torch
 from tensordict import TensorDict
 from melee import Action
@@ -111,12 +112,30 @@ class Preprocessor:
         
         # Split action into components based on MeleeEnv action space:
         # [main_x, main_y, c_x, c_y, l_trigger, r_trigger, a, b, x, y, z, start]
+        
+        # Convert continuous joystick values to one-hot tensors
+        main_stick_onehot = torch.zeros((B, L, NUM_JOYSTICK_POSITIONS), device=action.device)
+        c_stick_onehot = torch.zeros((B, L, NUM_JOYSTICK_POSITIONS), device=action.device)
+        
+        # Process each batch and timestep
+        for b in range(B):
+            for l in range(L):
+                # Get main stick coordinates
+                main_x = action[b, l, 0].item()
+                main_y = action[b, l, 1].item()
+                main_stick_onehot[b, l] = get_closest_joystick_point(main_x, main_y)
+                
+                # Get C-stick coordinates
+                c_x = action[b, l, 2].item()
+                c_y = action[b, l, 3].item()
+                c_stick_onehot[b, l] = get_closest_joystick_point(c_x, c_y)
+        
         return TensorDict(
             {
-                "main_stick": action[:, :, 0:2],      # main_x, main_y
-                "c_stick": action[:, :, 2:4],         # c_x, c_y  
-                "shoulder": action[:, :, 4:6],        # l_trigger, r_trigger
-                "buttons": action[:, :, 6:12],        # a, b, x, y, z, start
+                "main_stick": main_stick_onehot,  # One-hot encoded main stick
+                "c_stick": c_stick_onehot,        # One-hot encoded C-stick
+                "shoulder": action[:, :, 4:6],    # l_trigger, r_trigger
+                "buttons": action[:, :, 6:12],    # a, b, x, y, z, start
             },
             batch_size=(B, L)
         )

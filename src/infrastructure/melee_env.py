@@ -18,7 +18,7 @@ EMULATOR_PATH = GIT_ROOT / "squashfs-root" / "usr" / "bin" / "dolphin-emu"
 ISO_PATH = GIT_ROOT / "melee.iso"
 REPLAY_DIR = GIT_ROOT / "replays"
 
-def get_gui_console_kwargs():
+def get_gui_console_kwargs(replay_dir_subfolder=None):
     """Get console kwargs for GUI-enabled emulator (modified from hal project)."""
     REPLAY_DIR.mkdir(exist_ok=True, parents=True)
     console_kwargs = {
@@ -26,7 +26,7 @@ def get_gui_console_kwargs():
         "is_dolphin": True,
         "tmp_home_directory": True,
         "copy_home_directory": False,
-        "replay_dir": str(REPLAY_DIR),
+        "replay_dir": str(REPLAY_DIR) + (f"/{replay_dir_subfolder}" if replay_dir_subfolder else ""),
         "blocking_input": False,
         "slippi_port": 51441,  # must use default port for local mainline/Ishiiruka
         "online_delay": 0,  # 0 frame delay for local evaluation
@@ -44,20 +44,21 @@ class MeleeEnv(gym.Env):
     """
     A gym environment wrapper for Super Smash Bros. Melee
     """
-    def __init__(self):
+    def __init__(self, replay_dir_subfolder=None):
         super().__init__()
 
         print("Starting Slippi Online emulator with bot vs CPU match...")
 
         # Set up logging for the match
         self.log = melee.Logger()
+        self.replay_dir_subfolder = replay_dir_subfolder
 
         # Create console with GUI settings but still headless-friendly
-        console_kwargs = get_gui_console_kwargs()
+        console_kwargs = get_gui_console_kwargs(replay_dir_subfolder)
         print(f"Console kwargs: {console_kwargs}")
 
         self.action_space = spaces.Box(
-            low=-1.0,
+            low=0,
             high=1.0,
             shape=(12,),  # [main_x, main_y, c_x, c_y, l_trigger, r_trigger, a, b, x, y, z, start]
             dtype=np.float32

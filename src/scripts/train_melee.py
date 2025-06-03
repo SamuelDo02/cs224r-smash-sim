@@ -13,6 +13,7 @@ import wandb
 from tqdm import tqdm
 
 from agents.bc_agent import BCAgent
+from agents.iql_agent import IQLAgent
 from infrastructure.melee_env import MeleeEnv
 from data.pkl_replay_buffer import PKLReplayBuffer
 
@@ -24,15 +25,17 @@ def train_bc(params):
     ## INIT
     #######################
 
+    name = "train-" + params['exp_name']
+
     # Initialize wandb
     wandb.init(
-        project="melee-bc",
-        name=params['exp_name'],
+        project=f"melee-{params['method']}",
+        name=name,
         config=params
     )
 
     # Create the Melee environment
-    env = MeleeEnv()
+    env = MeleeEnv(replay_dir_subfolder=name)
 
     if 'seed' not in params:
         params['seed'] = np.random.randint(0, 1000000)
@@ -75,10 +78,27 @@ def train_bc(params):
         'size': params['size'],
         'learning_rate': params['learning_rate'],
         'max_replay_buffer_size': params['max_replay_buffer_size'],
-        'policy_type': params['policy_type']
+        'policy_type': params['policy_type'],
+        'method': params['method']
     }
 
-    agent = BCAgent(env, agent_params)
+    if params['method'] == 'iql':
+        print('Initializing IQL agent...')
+        agent = IQLAgent(env, agent_params)
+    else:
+        print('Initializing BC agent...')
+        agent = BCAgent(env, agent_params)
+
+    if params['loaddir'] is not None:
+        model_path = os.path.join(params['loaddir'], 'best_policy.pt')
+        print(f'Loading model from {model_path}')
+        if params['policy_type'] == 'mlp':
+            agent.actor.load_state_dict(torch.load(model_path))
+        elif params['policy_type'] == 'gpt_ar':
+            state_dict = torch.load(model_path)
+            agent.value_net.load_state_dict(state_dict['value_state_dict'])
+            agent.q_net.load_state_dict(state_dict['q_state_dict'])
+            agent.actor.load_state_dict(state_dict['policy_state_dict'])
     
     #######################
     ## TRAIN AGENT
@@ -116,7 +136,7 @@ def train_bc(params):
         # Log to wandb
         wandb.log({
             "train/loss": train_log["Training Loss"],
-            "train/success_rate": train_log["Success Rate"],
+            # "train/success_rate": train_log["Success Rate"],
             "train/steps": steps_so_far
         })
         
@@ -140,7 +160,7 @@ def train_bc(params):
             # Log validation metrics
             wandb.log({
                 "val/loss": val_loss,
-                "val/success_rate": val_log["Success Rate"],
+                # "val/success_rate": val_log["Success Rate"],
                 "val/best_loss": best_val_loss
             })
             
@@ -203,6 +223,10 @@ def main():
                       help='How many frames to use per observation')
     parser.add_argument('--policy_type', type=str, default='mlp',
                       help='Type of policy network to use')
+    parser.add_argument('--method', type=str, default='bc',
+                      help='Method to use for training')
+    parser.add_argument('--loaddir', type=str, default=None,
+                      help='Directory to load model from')
     args = parser.parse_args()
 
     # Create experiment directory
@@ -210,7 +234,7 @@ def main():
     if not os.path.exists(data_path):
         os.makedirs(data_path)
     
-    logdir = f"melee_bc_{args.exp_name}_{time.strftime('%d-%m-%Y_%H-%M-%S')}"
+    logdir = f"{args.exp_name}_{time.strftime('%d-%m-%Y_%H-%M-%S')}"
     logdir = os.path.join(data_path, logdir)
     if not os.path.exists(logdir):
         os.makedirs(logdir)
