@@ -51,9 +51,10 @@ class MeleeEnv(gym.Env):
 
         # Set up logging for the match
         self.log = melee.Logger()
+        self.replay_dir_subfolder = replay_dir_subfolder
 
         # Create console with GUI settings but still headless-friendly
-        console_kwargs = get_gui_console_kwargs()
+        console_kwargs = get_gui_console_kwargs(replay_dir_subfolder)
         print(f"Console kwargs: {console_kwargs}")
 
         self.action_space = spaces.Box(

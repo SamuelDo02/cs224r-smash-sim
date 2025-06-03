@@ -14,10 +14,10 @@ LRS=(1e-3)
 LAYERS=(15)
 
 # Hidden layer sizes to test
-SIZES=(1024)
+SIZES=(128)
 
 # Policy types to test
-POLICIES=(gpt_ar)
+POLICIES=(mlp)
 
 # Run ablation studies
 for lr in "${LRS[@]}"; do

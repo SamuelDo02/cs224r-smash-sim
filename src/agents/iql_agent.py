@@ -7,6 +7,7 @@ from policies.Transformer_policy import TransformerPolicySL
 from policies.GPT_policy import GPTPolicy
 from policies.GPT_AR_policy import GPTARPolicy
 from policies.preprocessor import Preprocessor
+from .iql_reward import IQLReward
 
 class IQLAgent:
     """
@@ -19,6 +20,7 @@ class IQLAgent:
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         
         # Create policy class as our actor
+        print(f'Initializing {self.params["policy_type"]} policy...')   
         if self.params['policy_type'] == 'transformer':
             self.actor = TransformerPolicySL(
                 self.params['ac_dim'],
@@ -44,31 +46,36 @@ class IQLAgent:
                 learning_rate=self.params['learning_rate'],
             )
         
-        # Initialize value function
+        # Initialize value function with smaller network
         self.value_net = nn.Sequential(
-            nn.Linear(params['ob_dim'], params['size']),
-            *[nn.Linear(params['size'], params['size']) for _ in range(params['n_layers']-2)],
-            nn.Linear(params['size'], 1)
+            nn.Linear(params['ob_dim'], params['size']//2),
+            nn.ReLU(),
+            nn.Linear(params['size']//2, params['size']//4),
+            nn.ReLU(), 
+            nn.Linear(params['size']//4, 1)
         ).to(self.device)
         
-        # Initialize Q-function
-        # Input is observation + action dimensions
+        # Initialize Q-function with smaller network
         q_input_dim = params['ob_dim'] + params['ac_dim']
         self.q_net = nn.Sequential(
-            nn.Linear(q_input_dim, params['size']),
-            *[nn.Linear(params['size'], params['size']) for _ in range(params['n_layers']-2)],
-            nn.Linear(params['size'], 1)
+            nn.Linear(q_input_dim, params['size']//2),
+            nn.ReLU(),
+            nn.Linear(params['size']//2, params['size']//4),
+            nn.ReLU(),
+            nn.Linear(params['size']//4, 1)
         ).to(self.device)
-        
         # Initialize optimizers with gradient clipping
         self.value_optimizer = torch.optim.Adam(self.value_net.parameters(), lr=params['learning_rate'])
         self.q_optimizer = torch.optim.Adam(self.q_net.parameters(), lr=params['learning_rate']/10)
         self.optimizer = torch.optim.Adam(self.actor.parameters(), lr=params['learning_rate'])
         
-        # IQL hyperparameters
-        self.temperature = 10  # Temperature for value function
-        self.expectile = 0.9995    # Expectile parameter for value function
-        self.max_grad_norm = 1.0  # Maximum gradient norm for clipping
+        # Initialize reward function
+        self.reward_fn = IQLReward(
+            temperature=10.0,
+            expectile=0.9995,
+            max_grad_norm=1.0
+        )
+        
         
     def train(self, ob_no, ac_na, train=True):
         """
@@ -92,35 +99,31 @@ class IQLAgent:
         with torch.no_grad():
             q_values = self.q_net(torch.cat([obs, actions], dim=-1))
         value_pred = self.value_net(obs)
-        value_loss = self._expectile_loss(q_values, value_pred)
+        value_loss = self.reward_fn.compute_value_loss(q_values, value_pred)
         
         if train:
             self.value_optimizer.zero_grad()
             value_loss.backward()
-            torch.nn.utils.clip_grad_norm_(self.value_net.parameters(), self.max_grad_norm)
+            torch.nn.utils.clip_grad_norm_(self.value_net.parameters(), self.reward_fn.max_grad_norm)
             self.value_optimizer.step()
         
         # Update Q-function
         with torch.no_grad():
             value_pred = self.value_net(obs)
         q_pred = self.q_net(torch.cat([obs, actions], dim=-1))
-        q_loss = F.mse_loss(q_pred, value_pred)
+        q_loss = self.reward_fn.compute_q_loss(q_pred, value_pred)
         
         if train:
             self.q_optimizer.zero_grad()
             q_loss.backward()
-            torch.nn.utils.clip_grad_norm_(self.q_net.parameters(), self.max_grad_norm)
+            torch.nn.utils.clip_grad_norm_(self.q_net.parameters(), self.reward_fn.max_grad_norm)
             self.q_optimizer.step()
         
         # Update policy with weighted BC loss
         with torch.no_grad():
             value_pred = self.value_net(obs)
             q_values = self.q_net(torch.cat([obs, actions], dim=-1))
-            advantages = q_values - value_pred
-            # Clip advantages to prevent extreme values
-            advantages = torch.clamp(advantages, min=-10.0, max=10.0)
-            weights = torch.exp(advantages / self.temperature)
-            weights = weights / (weights.mean() + 1e-8)  # Normalize weights with epsilon
+            _, weights = self.reward_fn.compute_advantages(q_values, value_pred)
         
         # Get policy predictions
         dist = self.actor.forward(obs)
@@ -133,7 +136,7 @@ class IQLAgent:
         if train:
             self.optimizer.zero_grad()
             weighted_bc_loss.backward()
-            torch.nn.utils.clip_grad_norm_(self.actor.parameters(), self.max_grad_norm)
+            torch.nn.utils.clip_grad_norm_(self.actor.parameters(), self.reward_fn.max_grad_norm)
             self.optimizer.step()
         
         return {
@@ -142,16 +145,6 @@ class IQLAgent:
             'Q Loss': q_loss.item(),
             'BC Loss': bc_loss.item(),
         }
-    
-    def _expectile_loss(self, q_values, value_pred):
-        """
-        Compute expectile loss for value function
-        """
-        diff = q_values - value_pred
-        # Clip differences to prevent extreme values
-        diff = torch.clamp(diff, min=-10.0, max=10.0)
-        weight = torch.where(diff > 0, self.expectile, 1 - self.expectile)
-        return (weight * (diff ** 2)).mean()
     
     def save(self, path):
         """

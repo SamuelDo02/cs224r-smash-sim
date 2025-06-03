@@ -83,9 +83,22 @@ def train_bc(params):
     }
 
     if params['method'] == 'iql':
+        print('Initializing IQL agent...')
         agent = IQLAgent(env, agent_params)
     else:
+        print('Initializing BC agent...')
         agent = BCAgent(env, agent_params)
+
+    if params['loaddir'] is not None:
+        model_path = os.path.join(params['loaddir'], 'best_policy.pt')
+        print(f'Loading model from {model_path}')
+        if params['policy_type'] == 'mlp':
+            agent.actor.load_state_dict(torch.load(model_path))
+        elif params['policy_type'] == 'gpt_ar':
+            state_dict = torch.load(model_path)
+            agent.value_net.load_state_dict(state_dict['value_state_dict'])
+            agent.q_net.load_state_dict(state_dict['q_state_dict'])
+            agent.actor.load_state_dict(state_dict['policy_state_dict'])
     
     #######################
     ## TRAIN AGENT
@@ -212,6 +225,8 @@ def main():
                       help='Type of policy network to use')
     parser.add_argument('--method', type=str, default='bc',
                       help='Method to use for training')
+    parser.add_argument('--loaddir', type=str, default=None,
+                      help='Directory to load model from')
     args = parser.parse_args()
 
     # Create experiment directory

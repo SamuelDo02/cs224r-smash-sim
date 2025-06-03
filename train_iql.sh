@@ -46,7 +46,8 @@ for lr in "${LRS[@]}"; do
                     --val_freq 10 \
                     --policy_type ${policy} \
                     --seed 1 \
-                    --method iql
+                    --method iql \
+                    --loaddir replays/train-melee_bc_mlp_lr=1e-3_layers=15_size=128/melee_bc_mlp_lr=1e-3_layers=15_size=128_03-06-2025_14-43-54
                 
                 echo "Completed experiment: ${exp_name}"
                 echo "----------------------------------------"
