@@ -25,15 +25,17 @@ def train_bc(params):
     ## INIT
     #######################
 
+    name = "train-" + params['exp_name']
+
     # Initialize wandb
     wandb.init(
         project=f"melee-{params['method']}",
-        name=params['exp_name'],
+        name=name,
         config=params
     )
 
     # Create the Melee environment
-    env = MeleeEnv()
+    env = MeleeEnv(replay_dir_subfolder=name)
 
     if 'seed' not in params:
         params['seed'] = np.random.randint(0, 1000000)

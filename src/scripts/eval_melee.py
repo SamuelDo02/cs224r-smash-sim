@@ -20,14 +20,16 @@ def evaluate_model(params):
     Evaluate a trained model on the Melee environment
     """
 
+    name = "eval-" + params['exp_name']
+
     wandb.init(
         project="melee-bc",
-        name="eval-" + params['exp_name'],
+        name=name,
         config=params
     )
 
     # Create the Melee environment
-    env = MeleeEnv()
+    env = MeleeEnv(replay_dir_subfolder=name)
 
     # Set random seeds
     if 'seed' not in params:
