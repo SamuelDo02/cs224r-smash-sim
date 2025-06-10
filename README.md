@@ -10,7 +10,7 @@
 
 ### Set up keyboard controls
 * Click the gear icon on the top right of the launcher
-* Under Settings/Game, press the “Launch Dolphin” button.
+* Under Settings/Game, press the "Launch Dolphin" button.
 * Back on the home screen, press Play
 * In Dolphin:
     - Go to `Controllers` on the top right
@@ -57,10 +57,88 @@ Run the following to extract the AppImage into binaries in a squashfs-root folde
 
 Get melee.iso and squashfs-root and put them at the root of the directory (i.e. cs224r-smash-sim/)
 
+## Training and Evaluation
+The codebase supports three types of agents:
+1. Behavior Cloning (BC)
+2. Implicit Q-Learning (IQL)
+3. Proximal Policy Optimization (PPO)
+
 ### Example of running the emulator
 Checkout test_melee_env.py
 
-### Example of training
+### Training
+#### Behavior Cloning
 ```
-python src/scripts/train_melee.py --data_dir=data --exp_name=initial_train
+python src/scripts/train_melee.py --data_dir=data --exp_name=bc_train --method=bc
+```
+
+#### Implicit Q-Learning
+```
+python src/scripts/train_melee.py --data_dir=data --exp_name=iql_train --method=iql
+```
+
+#### Proximal Policy Optimization
+```
+python src/scripts/train_melee.py --data_dir=data --exp_name=ppo_train --method=ppo \
+    --gamma=0.99 \
+    --gae_lambda=0.95 \
+    --ppo_epochs=10 \
+    --clip_ratio=0.2 \
+    --value_coef=0.5 \
+    --entropy_coef=0.01 \
+    --max_steps=1000
+```
+
+### Evaluation
+#### Behavior Cloning
+```
+python src/scripts/eval_melee.py --logdir=data/bc_train --exp_name=bc_eval --method=bc
+```
+
+#### Implicit Q-Learning
+```
+python src/scripts/eval_melee.py --logdir=data/iql_train --exp_name=iql_eval --method=iql
+```
+
+#### Proximal Policy Optimization
+```
+python src/scripts/eval_melee.py --logdir=data/ppo_train --exp_name=ppo_eval --method=ppo \
+    --gamma=0.99 \
+    --gae_lambda=0.95 \
+    --ppo_epochs=10 \
+    --clip_ratio=0.2 \
+    --value_coef=0.5 \
+    --entropy_coef=0.01
+```
+
+### Common Parameters
+- `--policy_type`: Type of policy network ('mlp', 'transformer', 'gpt', 'gpt_ar')
+- `--n_layers`: Number of layers in policy network
+- `--size`: Size of hidden layers
+- `--learning_rate`: Learning rate
+- `--batch_size`: Batch size for training
+- `--frame_window`: Number of frames to use per observation
+- `--n_episodes`: Number of episodes for evaluation
+- `--max_steps`: Maximum steps per episode
+
+### PPO-Specific Parameters
+- `--gamma`: Discount factor (default: 0.99)
+- `--gae_lambda`: GAE lambda parameter (default: 0.95)
+- `--ppo_epochs`: Number of PPO epochs (default: 10)
+- `--clip_ratio`: PPO clip ratio (default: 0.2)
+- `--value_coef`: Value loss coefficient (default: 0.5)
+- `--entropy_coef`: Entropy coefficient (default: 0.01)
+
+### Fine-tuning with PPO
+You can fine-tune a pre-trained BC or IQL model using PPO by loading the pre-trained weights:
+```
+python src/scripts/train_melee.py --data_dir=data --exp_name=ppo_finetune --method=ppo \
+    --loaddir=data/bc_train \
+    --gamma=0.99 \
+    --gae_lambda=0.95 \
+    --ppo_epochs=10 \
+    --clip_ratio=0.2 \
+    --value_coef=0.5 \
+    --entropy_coef=0.01 \
+    --max_steps=1000
 ```

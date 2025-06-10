@@ -14,12 +14,13 @@ from tqdm import tqdm
 
 from agents.bc_agent import BCAgent
 from agents.iql_agent import IQLAgent
+from agents.ppo_agent import PPOAgent
 from infrastructure.melee_env import MeleeEnv
 from data.pkl_replay_buffer import PKLReplayBuffer
 
-def train_bc(params):
+def train_agent(params):
     """
-    Runs behavior cloning with the specified parameters
+    Runs training with the specified parameters
     """
     #######################
     ## INIT
@@ -48,24 +49,25 @@ def train_bc(params):
     ## LOAD EXPERT DATA
     #######################
     
-    print('Loading expert data from...', params['data_dir'])
-    replay_buffer = PKLReplayBuffer(max_size=params['max_replay_buffer_size'])
-    
-    # Load training data
-    train_dir = os.path.join(params['data_dir'], 'train')
-    print("\nLoading training data...")
-    replay_buffer.add_directory(train_dir)
-    print(f"Loaded {replay_buffer.current_size} frames")
-    
-    # Optionally load validation data
-    val_dir = os.path.join(params['data_dir'], 'val')
-    if os.path.exists(val_dir):
-        print("\nLoading validation data...")
-        val_buffer = PKLReplayBuffer(max_size=params['max_replay_buffer_size'])
-        val_buffer.add_directory(val_dir)
-        print(f"Loaded {val_buffer.current_size} frames")
-    else:
-        val_buffer = None
+    if params['method'] in ['bc', 'iql']:
+        print('Loading expert data from...', params['data_dir'])
+        replay_buffer = PKLReplayBuffer(max_size=params['max_replay_buffer_size'])
+        
+        # Load training data
+        train_dir = os.path.join(params['data_dir'], 'train')
+        print("\nLoading training data...")
+        replay_buffer.add_directory(train_dir)
+        print(f"Loaded {replay_buffer.current_size} frames")
+        
+        # Optionally load validation data
+        val_dir = os.path.join(params['data_dir'], 'val')
+        if os.path.exists(val_dir):
+            print("\nLoading validation data...")
+            val_buffer = PKLReplayBuffer(max_size=params['max_replay_buffer_size'])
+            val_buffer.add_directory(val_dir)
+            print(f"Loaded {val_buffer.current_size} frames")
+        else:
+            val_buffer = None
 
     #######################
     ## SETUP AGENT
@@ -82,9 +84,24 @@ def train_bc(params):
         'method': params['method']
     }
 
+    # Add PPO-specific parameters
+    if params['method'] == 'ppo':
+        agent_params.update({
+            'batch_size': params['batch_size'],
+            'gamma': params['gamma'],
+            'gae_lambda': params['gae_lambda'],
+            'ppo_epochs': params['ppo_epochs'],
+            'clip_ratio': params['clip_ratio'],
+            'value_coef': params['value_coef'],
+            'entropy_coef': params['entropy_coef']
+        })
+
     if params['method'] == 'iql':
         print('Initializing IQL agent...')
         agent = IQLAgent(env, agent_params)
+    elif params['method'] == 'ppo':
+        print('Initializing PPO agent...')
+        agent = PPOAgent(env, agent_params)
     else:
         print('Initializing BC agent...')
         agent = BCAgent(env, agent_params)
@@ -116,16 +133,49 @@ def train_bc(params):
 
     pbar = tqdm(range(params['n_iter']), desc='Training')
     for itr in pbar:
-        # Sample training data
-        observations, actions = replay_buffer.sample(params['batch_size'], 
-                                                     frame_window=params['frame_window'])
-        # Train the agent
-        train_log = agent.train(observations, actions)
-        # print(train_log)
-        # Print log probs every 500 iterations
-        # if (itr + 1) % 500 == 0:
-        #     print(agent.actor.get_action(observations[0]), actions[0], observations[0])
-        steps_so_far += params['batch_size']
+        if params['method'] == 'ppo':
+            # PPO training loop
+            obs = env.reset()
+            episode_reward = 0
+            episode_steps = 0
+            
+            while episode_steps < params['max_steps']:
+                # Select action
+                action, log_prob, value = agent.select_action(obs)
+                
+                # Take step in environment
+                next_obs, reward, done, info = env.step(action)
+                
+                # Store transition
+                agent.memory.store_memory(
+                    obs, action, log_prob, value, reward, done
+                )
+                
+                # Update observation and counters
+                obs = next_obs
+                episode_reward += reward
+                episode_steps += 1
+                
+                # End episode if done
+                if done:
+                    break
+            
+            # Train agent if we have enough samples
+            if len(agent.memory.states) >= params['batch_size']:
+                train_log = agent.train(
+                    agent.memory.states,
+                    agent.memory.actions,
+                    agent.memory.rewards,
+                    agent.memory.vals,
+                    agent.memory.dones
+                )
+                steps_so_far += params['batch_size']
+        else:
+            # BC/IQL training loop
+            observations, actions = replay_buffer.sample(params['batch_size'], 
+                                                         frame_window=params['frame_window'])
+            train_log = agent.train(observations, actions)
+            steps_so_far += params['batch_size']
         
         # Update progress bar
         pbar.set_postfix({
@@ -147,8 +197,8 @@ def train_bc(params):
                     f"train/{metric_name}": metric_value
                 })
         
-        # Validate if we have validation data
-        if val_buffer is not None and (itr + 1) % params['val_freq'] == 0:
+        # Validate if we have validation data (only for BC/IQL)
+        if params['method'] in ['bc', 'iql'] and val_buffer is not None and (itr + 1) % params['val_freq'] == 0:
             val_observations, val_actions = val_buffer.sample(params['batch_size'],
                                                               frame_window=params['frame_window'])
             val_log = agent.train(val_observations, val_actions, train=False)
@@ -190,7 +240,6 @@ def train_bc(params):
 
         # eval the best model on the Env
         
-
     print('Stopping environment...')
     env.stop()
     print('Training complete!')
@@ -224,9 +273,27 @@ def main():
     parser.add_argument('--policy_type', type=str, default='mlp',
                       help='Type of policy network to use')
     parser.add_argument('--method', type=str, default='bc',
+                      choices=['bc', 'iql', 'ppo'],
                       help='Method to use for training')
     parser.add_argument('--loaddir', type=str, default=None,
                       help='Directory to load model from')
+    
+    # PPO-specific arguments
+    parser.add_argument('--gamma', type=float, default=0.99,
+                      help='Discount factor for PPO')
+    parser.add_argument('--gae_lambda', type=float, default=0.95,
+                      help='GAE lambda for PPO')
+    parser.add_argument('--ppo_epochs', type=int, default=10,
+                      help='Number of PPO epochs')
+    parser.add_argument('--clip_ratio', type=float, default=0.2,
+                      help='PPO clip ratio')
+    parser.add_argument('--value_coef', type=float, default=0.5,
+                      help='Value loss coefficient for PPO')
+    parser.add_argument('--entropy_coef', type=float, default=0.01,
+                      help='Entropy coefficient for PPO')
+    parser.add_argument('--max_steps', type=int, default=1000,
+                      help='Maximum steps per episode for PPO')
+    
     args = parser.parse_args()
 
     # Create experiment directory
@@ -244,7 +311,7 @@ def main():
     params['logdir'] = logdir
     
     # Run training
-    train_bc(params)
+    train_agent(params)
 
 if __name__ == "__main__":
     main() 
